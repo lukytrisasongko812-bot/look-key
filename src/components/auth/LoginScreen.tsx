@@ -124,7 +124,7 @@ export function LoginScreen() {
     }
 
     setLoading(true)
-    const res = await verifyOtp(pendingUserId, code)
+    const res = await verifyOtp(pendingUserId, code, email)
     setLoading(false)
 
     if (res.success) {

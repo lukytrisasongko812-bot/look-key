@@ -50,17 +50,28 @@ export async function POST(request: NextRequest) {
 
     // Real Two-Factor Authentication (OTP)
     if (user.twoFactorEnabled) {
-      const realOtpCode = Math.floor(100000 + Math.random() * 900000).toString()
-      user.twoFactorCode = realOtpCode
-      user.twoFactorExpires = new Date(Date.now() + 5 * 60 * 1000) // 5 minutes
-      await user.save()
+      const now = Date.now()
+      const expiresTime = user.twoFactorExpires ? new Date(user.twoFactorExpires).getTime() : 0
+      // If user already has an active, valid OTP requested within the last 2 minutes, reuse it to avoid race conditions
+      let otpCodeToUse = user.twoFactorCode
+      const hasRecentValidCode =
+        Boolean(user.twoFactorCode) &&
+        expiresTime > now &&
+        expiresTime - now > 8 * 60 * 1000 // >8 min left of 10 min means created < 2 min ago
+
+      if (!hasRecentValidCode || !otpCodeToUse) {
+        otpCodeToUse = Math.floor(100000 + Math.random() * 900000).toString()
+        user.twoFactorCode = otpCodeToUse
+        user.twoFactorExpires = new Date(now + 10 * 60 * 1000) // 10 minutes validity
+        await user.save()
+      }
 
       // Send real email from official@risetrack.id
       const emailResult = await sendOtpEmail({
         to: user.email,
         userName: user.employeeName,
-        otpCode: realOtpCode,
-        expiresInMinutes: 5,
+        otpCode: otpCodeToUse,
+        expiresInMinutes: 10,
       })
 
       return NextResponse.json({

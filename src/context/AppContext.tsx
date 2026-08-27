@@ -107,7 +107,7 @@ interface AppContextType {
   isSidebarCollapsed: boolean
   searchQuery: string
   login: (email: string, password: string) => Promise<{ success: boolean; require2FA?: boolean; userId?: string; codeHint?: string; error?: string }>
-  verifyOtp: (userId: string, code: string) => Promise<{ success: boolean; error?: string }>
+  verifyOtp: (userId: string, code: string, email?: string) => Promise<{ success: boolean; error?: string }>
   ssoLogin: (email: string) => Promise<{ success: boolean; error?: string }>
   logout: () => void
   setCurrentView: (view: ViewType, subTab?: 'new' | 'progress') => void
@@ -255,12 +255,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }
 
   // Real Verify OTP
-  const verifyOtp = async (userId: string, code: string) => {
+  const verifyOtp = async (userId: string, code: string, email?: string) => {
     try {
       const res = await fetch('/api/auth/verify-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, code }),
+        body: JSON.stringify({ userId, code, email }),
       })
       const data = await res.json()
       if (!res.ok) {

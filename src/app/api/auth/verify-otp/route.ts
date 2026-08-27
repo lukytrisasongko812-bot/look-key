@@ -4,33 +4,48 @@ import { User } from '@/models/User'
 import { LoginHistoryModel } from '@/models/LoginHistory'
 import { signToken } from '@/lib/auth'
 
+export const dynamic = 'force-dynamic'
+
 export async function POST(request: NextRequest) {
   try {
     await connectToDatabase()
-    const { userId, code } = await request.json()
+    const { userId, email, code } = await request.json()
 
-    if (!userId || !code) {
-      return NextResponse.json({ error: 'User ID dan kode OTP diperlukan.' }, { status: 400 })
+    if ((!userId && !email) || !code) {
+      return NextResponse.json({ error: 'User ID atau Email dan kode OTP diperlukan.' }, { status: 400 })
     }
 
-    const user = await User.findById(userId)
+    let user = null
+    if (userId) {
+      user = await User.findById(userId).catch(() => null)
+    }
+    if (!user && email) {
+      user = await User.findOne({ email: email.toLowerCase().trim() })
+    }
+
     if (!user) {
       return NextResponse.json({ error: 'Pengguna tidak ditemukan.' }, { status: 404 })
     }
 
     if (!user.twoFactorCode || !user.twoFactorExpires) {
-      return NextResponse.json({ error: 'Tidak ada permintaan OTP aktif untuk akun ini.' }, { status: 400 })
+      return NextResponse.json({ error: 'Tidak ada permintaan OTP aktif untuk akun ini. Silakan login kembali.' }, { status: 400 })
     }
 
-    if (new Date() > user.twoFactorExpires) {
+    const now = new Date()
+    if (now > user.twoFactorExpires) {
       user.twoFactorCode = null
       user.twoFactorExpires = null
       await user.save()
-      return NextResponse.json({ error: 'Kode OTP telah kedaluwarsa. Silakan login kembali.' }, { status: 400 })
+      return NextResponse.json({ error: 'Kode OTP telah kedaluwarsa. Silakan minta kode baru.' }, { status: 400 })
     }
 
-    if (user.twoFactorCode !== code.trim()) {
-      return NextResponse.json({ error: 'Kode OTP salah. Silakan coba lagi.' }, { status: 400 })
+    const cleanInputCode = String(code).replace(/\D/g, '').trim()
+    const cleanStoredCode = String(user.twoFactorCode).replace(/\D/g, '').trim()
+
+    if (cleanStoredCode !== cleanInputCode) {
+      return NextResponse.json({
+        error: 'Kode OTP tidak cocok. Pastikan Anda memasukkan kode dari email terbaru.',
+      }, { status: 400 })
     }
 
     // OTP matched! Clear code and record successful login
