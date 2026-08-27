@@ -78,7 +78,7 @@ export async function sendOtpEmail({
   userName,
   otpCode,
   expiresInMinutes = 5,
-}: SendOtpEmailOptions): Promise<{ success: boolean; provider?: string; error?: string }> {
+}: SendOtpEmailOptions): Promise<{ success: boolean; provider?: string; emailId?: string; error?: string }> {
   const fromAddress = process.env.EMAIL_FROM || 'RISE Security <official@risetrack.id>'
   const subject = `[RISE] Kode Verifikasi 2FA Anda: ${otpCode}`
   const html = generateOtpHtml(userName, otpCode, expiresInMinutes)
@@ -87,7 +87,7 @@ export async function sendOtpEmail({
   const resendApiKey = process.env.RESEND_API_KEY
   if (resendApiKey) {
     try {
-      const response = await fetch('https://api.resend.com/emails', {
+      let response = await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${resendApiKey}`,
@@ -101,14 +101,33 @@ export async function sendOtpEmail({
         }),
       })
 
-      const data = await response.json()
+      let data = await response.json()
+      // If custom domain is pending verification in Resend, gracefully fallback
+      if (!response.ok && (data.message?.includes('not verified') || data.statusCode === 403)) {
+        console.warn(`[Resend Notice] ${fromAddress} pending domain verification. Delivering via verified fallback...`)
+        response = await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${resendApiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            from: 'RISE Security <onboarding@resend.dev>',
+            to: [to],
+            subject,
+            html,
+          }),
+        })
+        data = await response.json()
+      }
+
       if (!response.ok) {
         console.error('[Resend Error]', data)
         return { success: false, provider: 'resend', error: data.message || 'Resend API failed' }
       }
 
       console.log(`[Email Sent via Resend] To: ${to}, ID: ${data.id}`)
-      return { success: true, provider: 'resend' }
+      return { success: true, provider: 'resend', emailId: data.id }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Unknown Resend error'
       console.error('[Resend Exception]', msg)
