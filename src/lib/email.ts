@@ -84,7 +84,7 @@ export async function sendOtpEmail({
   const html = generateOtpHtml(userName, otpCode, expiresInMinutes)
 
   // 1. Resend API Strategy (Recommended & fastest on Vercel)
-  const resendApiKey = process.env.RESEND_API_KEY
+  const resendApiKey = process.env.RESEND_API_KEY || 'REDACTED_RESEND_KEY'
   if (resendApiKey) {
     try {
       let response = await fetch('https://api.resend.com/emails', {

@@ -6,6 +6,8 @@ import { signToken } from '@/lib/auth'
 import { seedDatabase } from '@/lib/seed'
 import { sendOtpEmail } from '@/lib/email'
 
+export const dynamic = 'force-dynamic'
+
 export async function POST(request: NextRequest) {
   try {
     await connectToDatabase()
