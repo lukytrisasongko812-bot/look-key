@@ -119,7 +119,7 @@ Contract Start  : ${doc.contractStart ? new Date(doc.contractStart).toLocaleDate
 Contract End    : ${doc.contractEnd ? new Date(doc.contractEnd).toLocaleDateString('en-GB') : 'N/A'}
 ${doc.decision ? `Decision        : ${doc.decision.type.toUpperCase()} (${doc.decision.justification})` : ''}
 
-Generated automatically from RISE Local MongoDB Platform.`
+Generated automatically from RISE Platform.`
 
     const blob = new Blob([content], { type: 'text/plain;charset=utf-8' })
     const url = URL.createObjectURL(blob)
@@ -140,7 +140,7 @@ Generated automatically from RISE Local MongoDB Platform.`
       pic: editPic,
     })
     if (ok) {
-      toast.success(`Dokumen ${editModalDoc.docNumber} berhasil diperbarui di MongoDB!`)
+      toast.success(`Dokumen ${editModalDoc.docNumber} berhasil diperbarui!`)
     } else {
       toast.error('Gagal memperbarui dokumen.')
     }
@@ -149,7 +149,7 @@ Generated automatically from RISE Local MongoDB Platform.`
 
   // Handle Delete
   const handleDelete = async (doc: DocumentItem) => {
-    if (!confirm(`Apakah Anda yakin ingin menghapus permanen dokumen ${doc.docNumber} (${doc.name}) dari MongoDB?`)) {
+    if (!confirm(`Apakah Anda yakin ingin menghapus permanen dokumen ${doc.docNumber} (${doc.name})?`)) {
       return
     }
     const ok = await deleteDocument(doc._id)
@@ -437,7 +437,7 @@ Generated automatically from RISE Local MongoDB Platform.`
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="text-[#0B2147]">Ubah Data — {editModalDoc?.docNumber}</DialogTitle>
-            <DialogDescription>Perbarui nama dokumen dan penanggung jawab legal langsung di database MongoDB.</DialogDescription>
+            <DialogDescription>Perbarui nama dokumen dan penanggung jawab legal.</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-3.5 pt-2">

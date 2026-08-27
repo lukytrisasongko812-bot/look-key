@@ -8,7 +8,6 @@ import {
   Files,
   UserCog,
   SlidersHorizontal,
-  CircleDot,
 } from 'lucide-react'
 import { RISE_LOGO_BASE64 } from '@/lib/assets'
 
@@ -128,25 +127,14 @@ export function Sidebar() {
           })}
         </div>
 
-        {/* System Health Status Footer */}
+        {/* Corporate Brand Footer */}
         {!isSidebarCollapsed && (
-          <div className="p-3.5 border-t border-[#F1F5F9] bg-[#F8FAFC]/60 space-y-2.5">
-            <div>
-              <div className="flex items-center gap-2 text-[11px] font-semibold text-[#0F172A]">
-                <CircleDot className="h-3 w-3 text-[#10B981] animate-pulse" />
-                <span>MongoDB Connected</span>
-              </div>
-              <div className="text-[10px] text-[#64748B] mt-0.5 truncate">
-                Database: rise_db (Local)
-              </div>
-            </div>
-            <div className="pt-2 border-t border-[#E2E8F0] flex items-center justify-center opacity-75 hover:opacity-100 transition-opacity">
-              <img
-                src={RISE_LOGO_BASE64}
-                alt="MIND ID - Mining Industry Indonesia"
-                className="h-3.5 w-auto object-contain"
-              />
-            </div>
+          <div className="p-3.5 border-t border-[#F1F5F9] bg-[#F8FAFC]/60 flex items-center justify-center opacity-80 hover:opacity-100 transition-opacity">
+            <img
+              src={RISE_LOGO_BASE64}
+              alt="MIND ID - Mining Industry Indonesia"
+              className="h-3.5 w-auto object-contain"
+            />
           </div>
         )}
       </aside>

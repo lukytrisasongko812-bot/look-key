@@ -64,7 +64,7 @@ export function MyAccountView() {
     })
     if (ok) {
       setIsSaved(true)
-      toast.success('Profil berhasil diperbarui di MongoDB!')
+      toast.success('Profil berhasil diperbarui!')
       setTimeout(() => setIsSaved(false), 2500)
     } else {
       toast.error('Gagal menyimpan profil.')
@@ -250,7 +250,7 @@ export function MyAccountView() {
                   <div className="flex items-center justify-between pt-2 border-t border-[#F1F5F9]">
                     {isSaved ? (
                       <span className="flex items-center gap-1.5 text-xs font-semibold text-[#10B981]">
-                        <Check className="h-4 w-4 stroke-[2.5]" /> Perubahan profil berhasil disimpan di MongoDB!
+                        <Check className="h-4 w-4 stroke-[2.5]" /> Perubahan profil berhasil disimpan!
                       </span>
                     ) : <span />}
                     <Button type="submit" className="h-11 px-6 bg-[#163A70] hover:bg-[#0B2147] font-bold rounded-xl shadow-md">
@@ -269,7 +269,7 @@ export function MyAccountView() {
                         Ubah Kata Sandi
                       </span>
                       <span className="text-[11px] text-[#64748B]">
-                        Perbarui kata sandi dengan validasi keamanan MongoDB
+                        Perbarui kata sandi dengan proteksi keamanan terenkripsi
                       </span>
                     </div>
                     <Button
@@ -327,7 +327,7 @@ export function MyAccountView() {
                         Sesi Browser Aktif <b>(Perangkat ini)</b>
                       </span>
                       <span className="text-[11px] text-[#64748B]">
-                        Terautentikasi melalui JWT Token di MongoDB · IP: 127.0.0.1
+                        Sesi terotentikasi aktif · 2FA Terverifikasi
                       </span>
                     </div>
                   </div>

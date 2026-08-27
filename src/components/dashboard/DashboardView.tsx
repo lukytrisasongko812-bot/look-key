@@ -139,7 +139,7 @@ export function DashboardView() {
     })
 
     if (ok) {
-      toast.success(`Keputusan ${decisionType === 'renew' ? 'Perpanjangan' : 'Terminasi'} untuk ${decisionDoc.docNumber} berhasil disimpan di MongoDB.`)
+      toast.success(`Keputusan ${decisionType === 'renew' ? 'Perpanjangan' : 'Terminasi'} untuk ${decisionDoc.docNumber} berhasil disimpan.`)
       setIsDecisionOpen(false)
     } else {
       toast.error('Gagal menyimpan keputusan ke database.')
@@ -187,7 +187,7 @@ export function DashboardView() {
               Selamat Datang, {user?.employeeName || 'Luky'}
             </h1>
             <p className="text-xs text-white/80 mt-1 max-w-xl">
-              Berikut adalah ringkasan real-time perizinan, persetujuan legal, dan pengingat masa berlaku kontrak korporat Anda di MongoDB.
+              Berikut adalah ringkasan perizinan, persetujuan legal, dan pemantauan masa berlaku kontrak korporat Anda.
             </p>
           </div>
 
@@ -217,7 +217,7 @@ export function DashboardView() {
             <div className="text-2xl sm:text-3xl font-extrabold text-[#0B2147] mt-0.5">
               {totalCount}
             </div>
-            <div className="text-[11px] text-[#94A3B8] mt-1">Seluruh arsip di MongoDB</div>
+            <div className="text-[11px] text-[#94A3B8] mt-1">Seluruh arsip dokumen aktif</div>
           </CardContent>
         </Card>
 
@@ -286,10 +286,10 @@ export function DashboardView() {
               </div>
               <div>
                 <h2 className="text-base font-bold font-display text-[#0B2147]">
-                  Pengingat Jatuh Tempo &amp; Perpanjangan Kontrak (Real-Time)
+                  Pengingat Jatuh Tempo &amp; Perpanjangan Kontrak
                 </h2>
                 <p className="text-xs text-[#64748B] mt-0.5">
-                  Dokumen kontrak yang mendekati tanggal berakhir (&le; 60 hari dari hari ini). Keputusan langsung ter-update di MongoDB.
+                  Dokumen kontrak yang mendekati tanggal berakhir (&le; 60 hari dari hari ini).
                 </p>
               </div>
             </div>
@@ -472,7 +472,7 @@ export function DashboardView() {
                 Status Alur Persetujuan Dokumen
               </h2>
               <p className="text-xs text-[#64748B] mt-0.5">
-                Pemantauan langsung 7 tahapan legal drafting dan penandatanganan dari database MongoDB.
+                Pemantauan langsung 7 tahapan legal drafting dan penandatanganan resmi.
               </p>
             </div>
 

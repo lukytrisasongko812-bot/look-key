@@ -344,7 +344,7 @@ export function LoginScreen() {
               <DialogTitle className="text-[#0B2147]">Perbarui Kata Sandi</DialogTitle>
             </div>
             <DialogDescription>
-              Masukkan email akun Anda beserta kata sandi baru yang ingin diterapkan di MongoDB.
+              Masukkan email akun Anda beserta kata sandi baru yang ingin diterapkan.
             </DialogDescription>
           </DialogHeader>
 

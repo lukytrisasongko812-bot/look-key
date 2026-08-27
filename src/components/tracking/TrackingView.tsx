@@ -33,6 +33,8 @@ import {
   AlertTriangle,
   XCircle,
   CheckCircle2,
+  BarChart3,
+  Plus,
 } from 'lucide-react'
 import {
   Dialog,
@@ -178,7 +180,7 @@ export function TrackingView() {
     setIsSubmitting(false)
 
     if (newDoc) {
-      toast.success(`Pengajuan ${newDoc.docNumber} berhasil dibuat dan disimpan di MongoDB!`)
+      toast.success(`Pengajuan ${newDoc.docNumber} berhasil dibuat!`)
       setSelectedDocNumber(newDoc.docNumber)
       setTrackSubTab('progress')
     }
@@ -229,7 +231,7 @@ export function TrackingView() {
       <div>
         <h1 className="text-2xl font-bold font-display text-[#0B2147]">Document Tracking</h1>
         <p className="text-xs text-[#64748B] mt-1">
-          Pengajuan berkas legal baru serta pemantauan dan persetujuan tahapan dokumen di MongoDB.
+          Pengajuan berkas legal baru serta pemantauan dan persetujuan tahapan dokumen.
         </p>
       </div>
 
@@ -244,7 +246,8 @@ export function TrackingView() {
                 : 'border-transparent text-[#64748B] hover:text-[#0F172A]'
             }`}
           >
-            <span>＋ Formulir Pengajuan Baru</span>
+            <Plus className="h-3.5 w-3.5" />
+            <span>Formulir Pengajuan Baru</span>
           </button>
         )}
         <button
@@ -255,9 +258,10 @@ export function TrackingView() {
               : 'border-transparent text-[#64748B] hover:text-[#0F172A]'
           }`}
         >
-          <span>📊 Lacak Progres Approval</span>
+          <BarChart3 className="h-3.5 w-3.5" />
+          <span>Lacak Progres Approval</span>
           <span className="rounded-full bg-[#EBF2FF] px-2 py-0.5 text-[10px] font-bold text-[#163A70]">
-            Live MongoDB
+            {documents.length} Dokumen
           </span>
         </button>
       </div>
@@ -638,7 +642,7 @@ export function TrackingView() {
                       Inspeksi Tahapan &amp; Eksekusi Alur Kerja
                     </h2>
                     <span className="text-[11px] text-[#64748B]">
-                      Aksi di bawah ini langsung mengeksekusi perubahan status dan tahapan dokumen ke MongoDB.
+                      Aksi di bawah ini langsung mengeksekusi perubahan status dan tahapan dokumen.
                     </span>
                   </div>
 
@@ -1140,7 +1144,7 @@ export function TrackingView() {
                       considerations,
                     })
                     if (ok) {
-                      toast.success('Keputusan berhasil disimpan ke MongoDB!')
+                      toast.success('Keputusan berhasil disimpan!')
                       setIsDecisionOpen(false)
                     }
                   }}

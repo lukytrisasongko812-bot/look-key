@@ -17,10 +17,8 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog'
 import {
-  Database,
   ShieldCheck,
   Bell,
-  RotateCcw,
   Users,
   UserPlus,
   Sparkles,
@@ -35,16 +33,12 @@ export function SettingsView() {
     token,
     allUsers,
     updateUserRole,
-    fetchDocuments,
     fetchAllUsers,
   } = useApp()
 
-  const [dbStatus, setDbStatus] = useState<'checking' | 'connected' | 'error'>('checking')
-  const [dbHost, setDbHost] = useState('mongodb://127.0.0.1:27017/rise_db')
   const [emailNotif, setEmailNotif] = useState(true)
   const [waNotif, setWaNotif] = useState(true)
   const [reminderNotif, setReminderNotif] = useState(true)
-  const [reseedLoading, setReseedLoading] = useState(false)
 
   // Invite User Modal State
   const [isInviteOpen, setIsInviteOpen] = useState(false)
@@ -56,52 +50,14 @@ export function SettingsView() {
   const [invitePassword, setInvitePassword] = useState('Password123!')
   const [inviteLoading, setInviteLoading] = useState(false)
 
-  const checkDb = async () => {
-    setDbStatus('checking')
-    try {
-      const res = await fetch('/api/health')
-      const data = await res.json()
-      if (res.ok && data.database === 'connected') {
-        setDbStatus('connected')
-        toast.success('Koneksi MongoDB lokal aktif!')
-      } else {
-        setDbStatus('error')
-        toast.error('Gagal terhubung ke MongoDB lokal.')
-      }
-    } catch {
-      setDbStatus('error')
-      toast.error('Gagal terhubung ke endpoint health.')
-    }
-  }
-
   useEffect(() => {
-    checkDb()
     fetchAllUsers()
   }, [fetchAllUsers])
-
-  const handleReseed = async () => {
-    if (!confirm('Apakah Anda yakin ingin mereset seluruh data dokumen dan akun ke kondisi default?')) return
-    setReseedLoading(true)
-    try {
-      const res = await fetch('/api/seed?force=true')
-      if (res.ok) {
-        await fetchDocuments()
-        await fetchAllUsers()
-        toast.success('Database MongoDB lokal berhasil di-reseed!')
-      } else {
-        toast.error('Gagal mereset database.')
-      }
-    } catch {
-      toast.error('Reseed error.')
-    } finally {
-      setReseedLoading(false)
-    }
-  }
 
   const handleRoleChange = async (userId: string, newRole: UserRole) => {
     const ok = await updateUserRole(userId, newRole)
     if (ok) {
-      toast.success(`Hak akses pengguna berhasil diperbarui menjadi ${newRole} di MongoDB!`)
+      toast.success(`Hak akses pengguna berhasil diperbarui menjadi ${newRole}!`)
     } else {
       toast.error('Gagal mengubah hak akses peran.')
     }
@@ -155,80 +111,11 @@ export function SettingsView() {
       <div>
         <h1 className="text-2xl font-bold font-display text-[#0B2147]">Settings &amp; Manajemen Pengguna</h1>
         <p className="text-xs text-[#64748B] mt-1">
-          Konfigurasi konektivitas MongoDB lokal, manajemen hak akses peran pengguna real-time, serta preferensi notifikasi korporat.
+          Kelola otorisasi hak akses pengguna korporat, preferensi notifikasi sistem, serta matriks perizinan RISE.
         </p>
       </div>
 
-      {/* Database Connection Card */}
-      <Card className="border-[#E2E8F0] shadow-sm">
-        <CardContent className="p-6 space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#EBF2FF] text-[#163A70]">
-                <Database className="h-5 w-5" />
-              </div>
-              <div>
-                <h2 className="text-base font-bold font-display text-[#0B2147]">
-                  Koneksi MongoDB Lokal
-                </h2>
-                <p className="text-xs text-[#64748B]">
-                  Layanan database MongoDB yang terhubung pada sistem backend RISE.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <span className="relative flex h-2.5 w-2.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#10B981] opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#10B981]"></span>
-              </span>
-              <span className="text-xs font-bold text-[#10B981]">Active &amp; Persistent</span>
-            </div>
-          </div>
-
-          <div className="space-y-1.5 pt-1">
-            <Label>MongoDB Connection URI</Label>
-            <Input value={dbHost} onChange={(e) => setDbHost(e.target.value)} disabled className="bg-[#F8FAFC] h-11 text-xs font-mono" />
-          </div>
-
-          <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
-            <div className="flex items-center gap-2">
-              <Button size="sm" variant="outline" onClick={checkDb} className="text-xs h-9 rounded-xl">
-                Tes Koneksi
-              </Button>
-              <Badge
-                variant={
-                  dbStatus === 'connected'
-                    ? 'success'
-                    : dbStatus === 'checking'
-                    ? 'secondary'
-                    : 'destructive'
-                }
-                className="text-xs font-bold py-1 px-2.5"
-              >
-                {dbStatus === 'connected'
-                  ? 'Connected · 127.0.0.1:27017'
-                  : dbStatus === 'checking'
-                  ? 'Memeriksa status...'
-                  : 'Gagal terhubung'}
-              </Badge>
-            </div>
-
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={handleReseed}
-              disabled={reseedLoading}
-              className="text-xs text-[#D97706] border-[#FDE68A] bg-[#FFFBEB] hover:bg-[#FEF3C7] h-9 rounded-xl font-semibold cursor-pointer"
-            >
-              <RotateCcw className="h-3.5 w-3.5 mr-1" />
-              {reseedLoading ? 'Mereset database...' : 'Reseed Data Awal'}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Real User & Role Management Table in MongoDB */}
+      {/* User & Role Management Table */}
       <Card className="border-[#E2E8F0] shadow-sm">
         <CardContent className="p-6 space-y-4">
           <div className="flex items-center justify-between">
@@ -238,10 +125,10 @@ export function SettingsView() {
               </div>
               <div>
                 <h2 className="text-base font-bold font-display text-[#0B2147]">
-                  Manajemen Pengguna &amp; Peran (Real Database RBAC)
+                  Manajemen Pengguna &amp; Peran (RBAC)
                 </h2>
                 <p className="text-xs text-[#64748B]">
-                  Kelola hak akses pengguna resmi yang terdaftar langsung di koleksi MongoDB `users`.
+                  Kelola hak akses pengguna resmi yang terdaftar pada sistem RISE.
                 </p>
               </div>
             </div>
@@ -277,7 +164,7 @@ export function SettingsView() {
                 {allUsers.length === 0 ? (
                   <tr>
                     <td colSpan={4} className="py-4 text-center text-[#64748B]">
-                      Memuat data pengguna dari MongoDB...
+                      Memuat data pengguna...
                     </td>
                   </tr>
                 ) : (
