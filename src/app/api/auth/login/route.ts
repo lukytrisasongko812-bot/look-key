@@ -66,7 +66,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         require2FA: true,
         userId: user._id.toString(),
-        codeHint: realOtpCode, // For testing convenience
         message: 'Kode OTP 6-digit telah dikirimkan ke email terdaftar.',
         emailSent: emailResult.success,
         emailProvider: emailResult.provider,

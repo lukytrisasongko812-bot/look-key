@@ -44,7 +44,7 @@ export function LoginScreen() {
   const [isOtpOpen, setIsOtpOpen] = useState(false)
   const [pendingUserId, setPendingUserId] = useState('')
   const [otpValues, setOtpValues] = useState(['', '', '', '', '', ''])
-  const [otpHint, setOtpHint] = useState('')
+  const [resendingOtp, setResendingOtp] = useState(false)
 
   // Register Modal State
   const [isRegisterOpen, setIsRegisterOpen] = useState(false)
@@ -79,16 +79,28 @@ export function LoginScreen() {
     if (result.success) {
       if (result.require2FA && result.userId) {
         setPendingUserId(result.userId)
-        setOtpHint(result.codeHint || '')
         setOtpValues(['', '', '', '', '', ''])
         setIsOtpOpen(true)
-        toast.info('Kode OTP 6-digit dikirimkan ke akun Anda.')
+        toast.success(`Kode OTP 6-digit telah dikirimkan ke email ${email}.`)
       } else {
         toast.success('Login berhasil! Mengalihkan ke dashboard...')
       }
     } else {
       setErrorMessage(result.error || 'Login gagal. Periksa kembali email dan password Anda.')
       toast.error(result.error || 'Login gagal.')
+    }
+  }
+
+  const handleResendOtp = async () => {
+    if (!email || !password) return
+    setResendingOtp(true)
+    const result = await login(email, password)
+    setResendingOtp(false)
+    if (result.success && result.require2FA) {
+      toast.success(`Kode OTP baru telah dikirimkan ke email ${email}.`)
+      setOtpValues(['', '', '', '', '', ''])
+    } else {
+      toast.error('Gagal mengirim ulang kode OTP ke email.')
     }
   }
 
@@ -398,15 +410,9 @@ export function LoginScreen() {
               Two-Factor Authentication (2FA)
             </DialogTitle>
             <DialogDescription className="text-center text-xs text-[#64748B]">
-              Masukkan 6-digit kode verifikasi real yang dibuat oleh server database Anda.
+              Kode otentikasi 6-digit telah dikirimkan ke email <strong className="text-[#0F172A]">{email}</strong>. Silakan periksa kotak masuk atau folder spam Anda.
             </DialogDescription>
           </DialogHeader>
-
-          {otpHint && (
-            <div className="rounded-xl bg-[#ECFDF5] border border-[#A7F3D0] p-2.5 text-xs text-[#065F46] font-semibold">
-              Kode OTP terverifikasi Anda: <span className="font-mono text-base font-extrabold tracking-widest">{otpHint}</span>
-            </div>
-          )}
 
           <div className="flex justify-center gap-2.5 my-3">
             {otpValues.map((digit, idx) => (
@@ -428,14 +434,11 @@ export function LoginScreen() {
             </Button>
             <button
               type="button"
-              onClick={() => {
-                const newCode = Math.floor(100000 + Math.random() * 900000).toString()
-                setOtpHint(newCode)
-                toast.info(`Kode OTP baru diterbitkan: ${newCode}`)
-              }}
-              className="text-xs text-[#163A70] hover:underline cursor-pointer pt-1"
+              disabled={resendingOtp}
+              onClick={handleResendOtp}
+              className="text-xs text-[#163A70] hover:underline cursor-pointer pt-1 disabled:opacity-50"
             >
-              Kirim ulang kode OTP
+              {resendingOtp ? 'Mengirimkan kode baru...' : 'Kirim ulang kode OTP ke email'}
             </button>
           </DialogFooter>
         </DialogContent>
