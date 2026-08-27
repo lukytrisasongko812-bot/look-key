@@ -27,7 +27,6 @@ import {
   Clock4,
   Sparkles,
   ChevronRight,
-  Info,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -363,55 +362,6 @@ export function LoginScreen() {
               {loading ? 'Memverifikasi...' : 'Sign In Securely'}
               <ChevronRight className="h-4 w-4 ml-1" />
             </Button>
-
-            {/* Quick Credentials Assistant */}
-            <div className="rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-2.5 text-[11px] text-[#64748B] space-y-1">
-              <div className="font-bold text-[#163A70] flex items-center gap-1">
-                <Info className="h-3.5 w-3.5" /> Pilihan Cepat Kredensial Akun Terdaftar:
-              </div>
-              <div className="flex flex-wrap gap-1.5 pt-0.5">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEmail('luky.pratama@resourcesid.co.id')
-                    setPassword('Password123!')
-                  }}
-                  className="rounded-md bg-white border border-[#CBD5E1] px-2 py-0.5 font-mono text-[10px] hover:border-[#163A70] cursor-pointer"
-                >
-                  Legal Officer
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEmail('sinta.wahyuni@resourcesid.co.id')
-                    setPassword('Password123!')
-                  }}
-                  className="rounded-md bg-white border border-[#CBD5E1] px-2 py-0.5 font-mono text-[10px] hover:border-[#163A70] cursor-pointer"
-                >
-                  Legal Manager
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEmail('budi.santoso@resourcesid.co.id')
-                    setPassword('Password123!')
-                  }}
-                  className="rounded-md bg-white border border-[#CBD5E1] px-2 py-0.5 font-mono text-[10px] hover:border-[#163A70] cursor-pointer"
-                >
-                  Director / BOD
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEmail('admin@resourcesid.co.id')
-                    setPassword('Password123!')
-                  }}
-                  className="rounded-md bg-white border border-[#CBD5E1] px-2 py-0.5 font-mono text-[10px] hover:border-[#163A70] cursor-pointer"
-                >
-                  Administrator
-                </button>
-              </div>
-            </div>
 
             <p className="text-center text-xs text-[#64748B] pt-1">
               Belum memiliki akun?{' '}
