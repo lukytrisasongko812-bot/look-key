@@ -20,7 +20,6 @@ import {
   EyeOff,
   Mail,
   KeyRound,
-  UserPlus,
   Lock,
   Sparkles,
   ChevronRight,
@@ -42,17 +41,6 @@ export function LoginScreen() {
   const [pendingUserId, setPendingUserId] = useState('')
   const [otpValues, setOtpValues] = useState(['', '', '', '', '', ''])
   const [resendingOtp, setResendingOtp] = useState(false)
-
-  // Register Modal State
-  const [isRegisterOpen, setIsRegisterOpen] = useState(false)
-  const [regName, setRegName] = useState('')
-  const [regEmail, setRegEmail] = useState('')
-  const [regPosition, setRegPosition] = useState('')
-  const [regDivision, setRegDivision] = useState('Direktorat Umum')
-  const [regPassword, setRegPassword] = useState('')
-  const [regConfirm, setRegConfirm] = useState('')
-  const [regError, setRegError] = useState('')
-  const [regSuccess, setRegSuccess] = useState('')
 
   // Forgot Password Modal State
   const [isForgotOpen, setIsForgotOpen] = useState(false)
@@ -129,53 +117,6 @@ export function LoginScreen() {
       toast.success('Verifikasi 2FA berhasil! Selamat datang.')
     } else {
       toast.error(res.error || 'Kode OTP tidak cocok.')
-    }
-  }
-
-  const handleRegisterSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setRegError('')
-    setRegSuccess('')
-
-    if (!regName || !regEmail || !regPassword) {
-      setRegError('Mohon lengkapi semua kolom wajib.')
-      return
-    }
-
-    if (regPassword.length < 8) {
-      setRegError('Password minimal 8 karakter.')
-      return
-    }
-
-    if (regPassword !== regConfirm) {
-      setRegError('Konfirmasi password tidak cocok.')
-      return
-    }
-
-    try {
-      const res = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          employeeName: regName,
-          email: regEmail,
-          password: regPassword,
-          position: regPosition,
-          division: regDivision,
-        }),
-      })
-      const data = await res.json()
-      if (!res.ok) {
-        setRegError(data.error || 'Pendaftaran gagal.')
-      } else {
-        setRegSuccess('Akun berhasil dibuat di MongoDB! Anda dapat langsung masuk.')
-        setEmail(regEmail)
-        setPassword(regPassword)
-        toast.success('Akun berhasil dibuat!')
-        setTimeout(() => setIsRegisterOpen(false), 1200)
-      }
-    } catch {
-      setRegError('Gagal terhubung ke server.')
     }
   }
 
@@ -340,16 +281,11 @@ export function LoginScreen() {
               <ChevronRight className="h-4 w-4 ml-1" />
             </Button>
 
-            <p className="text-center text-xs text-[#64748B] pt-1">
-              Belum memiliki akun?{' '}
-              <button
-                type="button"
-                onClick={() => setIsRegisterOpen(true)}
-                className="font-bold text-[#163A70] hover:underline cursor-pointer"
-              >
-                Daftar / Registrasi Baru
-              </button>
-            </p>
+            <div className="pt-2 text-center">
+              <p className="text-[11.5px] text-[#94A3B8] leading-relaxed">
+                Akses sistem internal &amp; privat. Registrasi akun baru hanya melalui <span className="font-medium text-[#475569]">undangan Administrator</span>.
+              </p>
+            </div>
           </form>
         </div>
       </div>
@@ -396,110 +332,6 @@ export function LoginScreen() {
               {resendingOtp ? 'Mengirimkan kode baru...' : 'Kirim ulang kode OTP ke email'}
             </button>
           </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Register Modal */}
-      <Dialog open={isRegisterOpen} onOpenChange={setIsRegisterOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <div className="flex items-center gap-2">
-              <UserPlus className="h-5 w-5 text-[#163A70]" />
-              <DialogTitle className="text-[#0B2147]">Registrasi Akun RISE</DialogTitle>
-            </div>
-            <DialogDescription>
-              Data akun baru akan tersimpan langsung ke MongoDB lokal dengan password ter-enkripsi.
-            </DialogDescription>
-          </DialogHeader>
-
-          {regError && (
-            <div className="rounded-xl bg-[#FEF2F2] border border-[#FCA5A5] p-3 text-xs font-semibold text-[#EF4444]">
-              {regError}
-            </div>
-          )}
-          {regSuccess && (
-            <div className="rounded-xl bg-[#ECFDF5] border border-[#6EE7B7] p-3 text-xs font-semibold text-[#10B981]">
-              {regSuccess}
-            </div>
-          )}
-
-          <form onSubmit={handleRegisterSubmit} className="space-y-3.5 pt-1">
-            <div className="space-y-1">
-              <Label>Nama Lengkap</Label>
-              <Input
-                placeholder="e.g. Luky Pratama"
-                value={regName}
-                onChange={(e) => setRegName(e.target.value)}
-                required
-                className="h-10 text-xs rounded-lg"
-              />
-            </div>
-            <div className="space-y-1">
-              <Label>Email Korporat</Label>
-              <Input
-                type="email"
-                placeholder="nama@resourcesid.co.id"
-                value={regEmail}
-                onChange={(e) => setRegEmail(e.target.value)}
-                required
-                className="h-10 text-xs rounded-lg"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-2.5">
-              <div className="space-y-1">
-                <Label>Divisi</Label>
-                <select
-                  value={regDivision}
-                  onChange={(e) => setRegDivision(e.target.value)}
-                  className="flex h-10 w-full rounded-lg border border-[#E2E8F0] bg-white px-3 text-xs text-[#0F172A]"
-                >
-                  <option>Direktorat Umum</option>
-                  <option>Direktorat Keuangan</option>
-                  <option>Direktorat Operasi</option>
-                  <option>Human Capital</option>
-                </select>
-              </div>
-              <div className="space-y-1">
-                <Label>Jabatan / Posisi</Label>
-                <Input
-                  placeholder="e.g. Legal Officer"
-                  value={regPosition}
-                  onChange={(e) => setRegPosition(e.target.value)}
-                  className="h-10 text-xs rounded-lg"
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-2.5">
-              <div className="space-y-1">
-                <Label>Password</Label>
-                <Input
-                  type="password"
-                  placeholder="Min. 8 karakter"
-                  value={regPassword}
-                  onChange={(e) => setRegPassword(e.target.value)}
-                  required
-                  className="h-10 text-xs rounded-lg"
-                />
-              </div>
-              <div className="space-y-1">
-                <Label>Konfirmasi Password</Label>
-                <Input
-                  type="password"
-                  placeholder="Ulangi password"
-                  value={regConfirm}
-                  onChange={(e) => setRegConfirm(e.target.value)}
-                  required
-                  className="h-10 text-xs rounded-lg"
-                />
-              </div>
-            </div>
-            <DialogFooter className="mt-4">
-              <Button type="button" variant="ghost" onClick={() => setIsRegisterOpen(false)}>
-                Batal
-              </Button>
-              <Button type="submit" className="bg-[#163A70] font-bold">Daftarkan Akun</Button>
-            </DialogFooter>
-          </form>
         </DialogContent>
       </Dialog>
 

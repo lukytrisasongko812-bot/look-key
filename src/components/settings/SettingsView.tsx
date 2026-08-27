@@ -9,11 +9,20 @@ import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Badge } from '@/components/ui/badge'
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog'
+import {
   Database,
   ShieldCheck,
   Bell,
   RotateCcw,
   Users,
+  UserPlus,
   Sparkles,
   Check,
   Minus,
@@ -23,6 +32,7 @@ import { toast } from 'sonner'
 export function SettingsView() {
   const {
     user,
+    token,
     allUsers,
     updateUserRole,
     fetchDocuments,
@@ -35,6 +45,16 @@ export function SettingsView() {
   const [waNotif, setWaNotif] = useState(true)
   const [reminderNotif, setReminderNotif] = useState(true)
   const [reseedLoading, setReseedLoading] = useState(false)
+
+  // Invite User Modal State
+  const [isInviteOpen, setIsInviteOpen] = useState(false)
+  const [inviteName, setInviteName] = useState('')
+  const [inviteEmail, setInviteEmail] = useState('')
+  const [invitePosition, setInvitePosition] = useState('Legal Officer')
+  const [inviteDivision, setInviteDivision] = useState('Direktorat Umum')
+  const [inviteRole, setInviteRole] = useState<UserRole>('Legal Officer')
+  const [invitePassword, setInvitePassword] = useState('Password123!')
+  const [inviteLoading, setInviteLoading] = useState(false)
 
   const checkDb = async () => {
     setDbStatus('checking')
@@ -84,6 +104,49 @@ export function SettingsView() {
       toast.success(`Hak akses pengguna berhasil diperbarui menjadi ${newRole} di MongoDB!`)
     } else {
       toast.error('Gagal mengubah hak akses peran.')
+    }
+  }
+
+  const handleInviteSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!inviteName.trim() || !inviteEmail.trim()) {
+      toast.error('Nama dan email wajib diisi.')
+      return
+    }
+
+    setInviteLoading(true)
+    try {
+      const res = await fetch('/api/users', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          employeeName: inviteName.trim(),
+          email: inviteEmail.trim(),
+          position: invitePosition.trim() || 'Legal Officer',
+          division: inviteDivision,
+          role: inviteRole,
+          password: invitePassword || 'Password123!',
+        }),
+      })
+
+      const data = await res.json()
+      if (res.ok) {
+        toast.success(`Undangan berhasil dikirimkan ke ${inviteEmail}!`)
+        setIsInviteOpen(false)
+        setInviteName('')
+        setInviteEmail('')
+        setInvitePosition('Legal Officer')
+        await fetchAllUsers()
+      } else {
+        toast.error(data.error || 'Gagal mengundang pengguna baru.')
+      }
+    } catch {
+      toast.error('Gagal terhubung ke server untuk mengirim undangan.')
+    } finally {
+      setInviteLoading(false)
     }
   }
 
@@ -183,9 +246,21 @@ export function SettingsView() {
               </div>
             </div>
 
-            <Badge variant="default" className="bg-[#163A70]">
-              Akun Anda: {user?.role || 'Legal Officer'}
-            </Badge>
+            <div className="flex items-center gap-2">
+              <Badge variant="default" className="bg-[#163A70]">
+                Akun Anda: {user?.role || 'Legal Officer'}
+              </Badge>
+              {(user?.role === 'Administrator' || user?.role === 'Director / BOD') && (
+                <Button
+                  size="sm"
+                  onClick={() => setIsInviteOpen(true)}
+                  className="bg-[#059669] hover:bg-[#047857] text-white font-bold h-8 text-xs gap-1.5 rounded-lg cursor-pointer shadow-2xs"
+                >
+                  <UserPlus className="h-3.5 w-3.5" />
+                  Undang Pengguna
+                </Button>
+              )}
+            </div>
           </div>
 
           <div className="overflow-x-auto rounded-xl border border-[#E2E8F0]">
@@ -344,6 +419,118 @@ export function SettingsView() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Modal Undang Pengguna Baru (Enterprise RBAC Invite) */}
+      <Dialog open={isInviteOpen} onOpenChange={setIsInviteOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <div className="flex items-center gap-2">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#ECFDF5] text-[#059669]">
+                <UserPlus className="h-5 w-5" />
+              </div>
+              <DialogTitle className="text-[#0B2147]">Undang Pengguna Baru</DialogTitle>
+            </div>
+            <DialogDescription className="text-xs text-[#64748B]">
+              Kirimkan undangan resmi ke email korporat. Akun akan dibuat otomatis di database dengan proteksi otentikasi 2FA.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleInviteSubmit} className="space-y-3.5 pt-2">
+            <div className="space-y-1">
+              <Label className="text-xs font-semibold text-[#0F172A]">Nama Lengkap Karyawan</Label>
+              <Input
+                placeholder="e.g. Raden Arya Wirawan"
+                value={inviteName}
+                onChange={(e) => setInviteName(e.target.value)}
+                required
+                className="h-10 text-xs rounded-lg"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <Label className="text-xs font-semibold text-[#0F172A]">Email Korporat</Label>
+              <Input
+                type="email"
+                placeholder="nama@resourcesid.co.id"
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+                required
+                className="h-10 text-xs rounded-lg"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-2.5">
+              <div className="space-y-1">
+                <Label className="text-xs font-semibold text-[#0F172A]">Divisi</Label>
+                <select
+                  value={inviteDivision}
+                  onChange={(e) => setInviteDivision(e.target.value)}
+                  className="flex h-10 w-full rounded-lg border border-[#E2E8F0] bg-white px-3 text-xs text-[#0F172A]"
+                >
+                  <option>Direktorat Umum</option>
+                  <option>Legal &amp; Compliance</option>
+                  <option>Direktorat Keuangan</option>
+                  <option>Direktorat Operasi</option>
+                  <option>Human Capital</option>
+                  <option>IT &amp; Corporate Governance</option>
+                </select>
+              </div>
+
+              <div className="space-y-1">
+                <Label className="text-xs font-semibold text-[#0F172A]">Jabatan / Posisi</Label>
+                <Input
+                  placeholder="e.g. Legal Officer"
+                  value={invitePosition}
+                  onChange={(e) => setInvitePosition(e.target.value)}
+                  className="h-10 text-xs rounded-lg"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2.5">
+              <div className="space-y-1">
+                <Label className="text-xs font-semibold text-[#0F172A]">Peran Akses (Role)</Label>
+                <select
+                  value={inviteRole}
+                  onChange={(e) => setInviteRole(e.target.value as UserRole)}
+                  className="flex h-10 w-full rounded-lg border border-[#E2E8F0] bg-white px-3 text-xs text-[#0F172A] font-semibold"
+                >
+                  <option>User</option>
+                  <option>Legal Officer</option>
+                  <option>Legal Manager</option>
+                  <option>Department Manager</option>
+                  <option>Director / BOD</option>
+                  <option>Administrator</option>
+                </select>
+              </div>
+
+              <div className="space-y-1">
+                <Label className="text-xs font-semibold text-[#0F172A]">Kata Sandi Awal</Label>
+                <Input
+                  type="text"
+                  placeholder="Default: Password123!"
+                  value={invitePassword}
+                  onChange={(e) => setInvitePassword(e.target.value)}
+                  className="h-10 text-xs rounded-lg font-mono"
+                />
+              </div>
+            </div>
+
+            <DialogFooter className="mt-4 gap-2">
+              <Button type="button" variant="ghost" onClick={() => setIsInviteOpen(false)}>
+                Batal
+              </Button>
+              <Button
+                type="submit"
+                disabled={inviteLoading}
+                className="bg-[#059669] hover:bg-[#047857] text-white font-bold"
+              >
+                {inviteLoading ? 'Mengirimkan...' : 'Kirim Undangan & Terbitkan Akun'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
