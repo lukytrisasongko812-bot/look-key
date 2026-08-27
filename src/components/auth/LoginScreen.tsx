@@ -23,7 +23,6 @@ import {
   KeyRound,
   UserPlus,
   Lock,
-  Building2,
   FileCheck2,
   Clock4,
   Sparkles,
@@ -33,13 +32,12 @@ import {
 import { toast } from 'sonner'
 
 export function LoginScreen() {
-  const { login, verifyOtp, ssoLogin } = useApp()
+  const { login, verifyOtp } = useApp()
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [rememberMe, setRememberMe] = useState(true)
-  const [notRobot, setNotRobot] = useState(true)
   const [loading, setLoading] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
 
@@ -75,11 +73,6 @@ export function LoginScreen() {
       return
     }
 
-    if (!notRobot) {
-      setErrorMessage("Silakan centang 'I'm not a robot' terlebih dahulu.")
-      return
-    }
-
     setLoading(true)
     const result = await login(email, password)
     setLoading(false)
@@ -97,24 +90,6 @@ export function LoginScreen() {
     } else {
       setErrorMessage(result.error || 'Login gagal. Periksa kembali email dan password Anda.')
       toast.error(result.error || 'Login gagal.')
-    }
-  }
-
-  const handleSsoClick = async () => {
-    if (!email || !email.includes('@')) {
-      setErrorMessage('Ketik email korporat Anda di atas terlebih dahulu untuk menggunakan Company SSO.')
-      return
-    }
-
-    setLoading(true)
-    const result = await ssoLogin(email)
-    setLoading(false)
-
-    if (result.success) {
-      toast.success(`Berhasil masuk otomatis sebagai ${email}`)
-    } else {
-      setErrorMessage(result.error || 'SSO gagal.')
-      toast.error(result.error || 'SSO gagal.')
     }
   }
 
@@ -278,15 +253,15 @@ export function LoginScreen() {
                 <ShieldCheck className="h-4 w-4" />
               </div>
               <div>
-                <div className="text-xs font-bold text-white">Local MongoDB Storage</div>
-                <div className="text-[11px] text-white/70">Semua data dan otentikasi tersimpan aman di database lokal</div>
+                <div className="text-xs font-bold text-white">Enterprise Access Governance</div>
+                <div className="text-[11px] text-white/70">Otentikasi 2FA terenkripsi dan role-based access control</div>
               </div>
             </div>
           </div>
 
           <div className="text-[10px] text-white/60 border-t border-white/10 pt-4 flex items-center justify-between">
             <span>RISE Platform Production</span>
-            <span>Database: MongoDB 8.x</span>
+            <span>risetrack.id</span>
           </div>
         </div>
 
@@ -301,7 +276,7 @@ export function LoginScreen() {
               Masuk ke Akun Anda
             </h2>
             <p className="text-xs text-[#64748B] mt-1">
-              Gunakan email korporat dan kata sandi Anda yang terdaftar di MongoDB.
+              Gunakan email korporat dan kata sandi Anda yang terdaftar.
             </p>
           </div>
 
@@ -380,19 +355,6 @@ export function LoginScreen() {
               </label>
             </div>
 
-            <div className="flex items-center gap-2.5 rounded-xl border border-dashed border-[#CBD5E1] p-3 text-xs text-[#64748B] bg-[#F8FAFC]">
-              <input
-                type="checkbox"
-                id="botCheck"
-                checked={notRobot}
-                onChange={(e) => setNotRobot(e.target.checked)}
-                className="rounded text-[#163A70] focus:ring-[#163A70] h-4 w-4"
-              />
-              <label htmlFor="botCheck" className="cursor-pointer select-none text-xs font-medium text-[#334155]">
-                I&apos;m not a robot <span className="text-[10px] text-[#94A3B8] ml-1">(Security check)</span>
-              </label>
-            </div>
-
             <Button
               type="submit"
               disabled={loading}
@@ -462,38 +424,6 @@ export function LoginScreen() {
               </button>
             </p>
           </form>
-
-          {/* Divider */}
-          <div className="relative my-5 text-center text-xs text-[#94A3B8]">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-[#E2E8F0]" />
-            </div>
-            <span className="relative bg-white px-3 text-[11px] font-semibold text-[#64748B]">
-              atau masuk dengan email perusahaan
-            </span>
-          </div>
-
-          {/* One-Click Company SSO Button */}
-          <button
-            type="button"
-            onClick={handleSsoClick}
-            className="flex items-center justify-center gap-2 h-11 w-full rounded-xl border border-[#CBD5E1] bg-white hover:bg-[#EBF2FF] hover:border-[#163A70] text-xs font-bold text-[#163A70] shadow-2xs transition-all cursor-pointer"
-          >
-            <Building2 className="h-4 w-4 text-[#163A70]" />
-            <span>One-Click Corporate SSO (Domain Verification)</span>
-          </button>
-
-          {/* Session Security Strip */}
-          <div className="mt-6 border-t border-[#E2E8F0] pt-4 text-[11px] text-[#64748B] flex items-center justify-between">
-            <div className="flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-[#10B981] animate-pulse" />
-              <span>TLS 1.3 Active</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <ShieldCheck className="h-3.5 w-3.5 text-[#10B981]" />
-              <span>MongoDB Authenticated</span>
-            </div>
-          </div>
 
           {/* MIND ID Brand Footer from prototype HTML */}
           <div className="mt-4 pt-3 border-t border-[#F1F5F9] flex items-center justify-center gap-2 text-[11px] text-[#94A3B8]">
