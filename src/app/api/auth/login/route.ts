@@ -4,6 +4,7 @@ import { User } from '@/models/User'
 import { LoginHistoryModel } from '@/models/LoginHistory'
 import { signToken } from '@/lib/auth'
 import { seedDatabase } from '@/lib/seed'
+import { sendOtpEmail } from '@/lib/email'
 
 export async function POST(request: NextRequest) {
   try {
@@ -52,11 +53,21 @@ export async function POST(request: NextRequest) {
       user.twoFactorExpires = new Date(Date.now() + 5 * 60 * 1000) // 5 minutes
       await user.save()
 
+      // Send real email from official@risetrack.id
+      const emailResult = await sendOtpEmail({
+        to: user.email,
+        userName: user.employeeName,
+        otpCode: realOtpCode,
+        expiresInMinutes: 5,
+      })
+
       return NextResponse.json({
         require2FA: true,
         userId: user._id.toString(),
-        codeHint: realOtpCode, // For local dev convenience, pass code to verify
+        codeHint: realOtpCode, // For testing convenience
         message: 'Kode OTP 6-digit telah dikirimkan ke email terdaftar.',
+        emailSent: emailResult.success,
+        emailProvider: emailResult.provider,
       })
     }
 
