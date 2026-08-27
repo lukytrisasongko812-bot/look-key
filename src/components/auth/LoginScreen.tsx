@@ -18,13 +18,10 @@ import {
 import {
   Eye,
   EyeOff,
-  ShieldCheck,
   Mail,
   KeyRound,
   UserPlus,
   Lock,
-  FileCheck2,
-  Clock4,
   Sparkles,
   ChevronRight,
 } from 'lucide-react'
@@ -223,6 +220,11 @@ export function LoginScreen() {
         
         {/* Left Side Hero Banner */}
         <div className="hidden md:flex md:col-span-5 flex-col justify-between bg-gradient-to-br from-[#0B2147] via-[#163A70] to-[#1E4D94] p-8 text-white relative overflow-hidden">
+          <img
+            src={RISE_ICON_BASE64}
+            alt=""
+            className="pointer-events-none absolute -bottom-10 -right-10 w-64 h-64 opacity-10 select-none"
+          />
           <div>
             <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-[11px] font-semibold tracking-wide text-white/90 backdrop-blur-md mb-6 border border-white/15">
               <img src={RISE_LOGO_BASE64} alt="MIND ID" className="h-3.5 w-auto brightness-0 invert opacity-95 object-contain" />
@@ -231,46 +233,9 @@ export function LoginScreen() {
             </div>
 
             <RiseLogo size="lg" whiteText showSubtitle />
-
-            <p className="text-xs text-white/80 leading-relaxed mt-6">
-              Sistem terintegrasi legal kontrak, pemantauan masa berlaku, dan tata kelola perizinan grup industri pertambangan Indonesia.
-            </p>
           </div>
 
-          {/* Value Props */}
-          <div className="space-y-4 my-8">
-            <div className="flex items-start gap-3">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white/10 text-[#60A5FA]">
-                <FileCheck2 className="h-4 w-4" />
-              </div>
-              <div>
-                <div className="text-xs font-bold text-white">Full Workflow Tracking</div>
-                <div className="text-[11px] text-white/70">7 tahapan legal drafting, review, hingga approval direksi</div>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-3">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white/10 text-[#34D399]">
-                <Clock4 className="h-4 w-4" />
-              </div>
-              <div>
-                <div className="text-xs font-bold text-white">Automated Expiry Alerts</div>
-                <div className="text-[11px] text-white/70">Perhitungan real-time H-60 hingga H-7 jatuh tempo</div>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-3">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white/10 text-[#FBBF24]">
-                <ShieldCheck className="h-4 w-4" />
-              </div>
-              <div>
-                <div className="text-xs font-bold text-white">Enterprise Access Governance</div>
-                <div className="text-[11px] text-white/70">Otentikasi 2FA terenkripsi dan role-based access control</div>
-              </div>
-            </div>
-          </div>
-
-          <div className="text-[10px] text-white/60 border-t border-white/10 pt-4 flex items-center justify-between">
+          <div className="text-[10px] text-white/60 border-t border-white/10 pt-4 flex items-center justify-between relative z-10">
             <span>RISE Platform Production</span>
             <span>risetrack.id</span>
           </div>
