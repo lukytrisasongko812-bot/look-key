@@ -351,16 +351,6 @@ export function LoginScreen() {
               </button>
             </p>
           </form>
-
-          {/* MIND ID Brand Footer from prototype HTML */}
-          <div className="mt-4 pt-3 border-t border-[#F1F5F9] flex items-center justify-center gap-2 text-[11px] text-[#94A3B8]">
-            <span className="text-[10.5px] text-[#94A3B8]">Member of</span>
-            <img
-              src={RISE_LOGO_BASE64}
-              alt="MIND ID - Mining Industry Indonesia"
-              className="h-4 w-auto object-contain opacity-80"
-            />
-          </div>
         </div>
       </div>
 
