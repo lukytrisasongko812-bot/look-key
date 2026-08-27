@@ -30,8 +30,18 @@ export async function seedDatabase(force = false) {
 
   const users = await User.insertMany([
     {
-      employeeName: 'Luky Pratama',
-      email: 'luky.pratama@resourcesid.co.id',
+      employeeName: 'Toto Rubianto',
+      email: 'toto.rubianto.17@gmail.com',
+      passwordHash: defaultPasswordHash,
+      position: 'Head of Digital Architecture & System Admin',
+      division: 'IT & Corporate Governance',
+      role: 'Administrator',
+      phone: '+62 811-0000-1111',
+      twoFactorEnabled: true,
+    },
+    {
+      employeeName: 'Luky Tri Sasongko',
+      email: 'lukytrisasongko812@gmail.com',
       passwordHash: defaultPasswordHash,
       position: 'Senior Legal Officer',
       division: 'Direktorat Umum',
