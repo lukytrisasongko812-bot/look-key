@@ -86,7 +86,7 @@ export function Sidebar() {
 
       {/* Sidebar Container (Sticky on Desktop) */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 mt-16 flex flex-col border-r border-[#E2E8F0] bg-white transition-all duration-300 md:sticky md:top-16 md:h-[calc(100vh-4rem)] md:shrink-0 ${
+        className={`fixed inset-y-0 left-0 z-50 mt-16 flex flex-col border-r border-[#E2E8F0] bg-white transition-all duration-300 md:sticky md:top-16 md:mt-0 md:h-[calc(100vh-4rem)] md:shrink-0 ${
           isSidebarCollapsed ? 'w-[72px]' : 'w-[245px]'
         } ${
           isMobileSidebarOpen
