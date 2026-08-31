@@ -4,420 +4,139 @@ import React, { useState, useEffect } from 'react'
 import { useApp, UserRole } from '@/context/AppContext'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Badge } from '@/components/ui/badge'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from '@/components/ui/dialog'
 import {
   ShieldCheck,
   Bell,
   Users,
-  UserPlus,
-  Sparkles,
   Check,
   Minus,
+  Settings,
+  Mail,
+  Smartphone,
+  Layers,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
 export function SettingsView() {
   const {
     user,
-    token,
     allUsers,
-    updateUserRole,
-    fetchAllUsers,
+    setCurrentView,
   } = useApp()
 
   const [emailNotif, setEmailNotif] = useState(true)
   const [waNotif, setWaNotif] = useState(true)
   const [reminderNotif, setReminderNotif] = useState(true)
 
-  // Invite User Modal State
-  const [isInviteOpen, setIsInviteOpen] = useState(false)
-  const [inviteName, setInviteName] = useState('')
-  const [inviteEmail, setInviteEmail] = useState('')
-  const [invitePosition, setInvitePosition] = useState('Legal Officer')
-  const [inviteDivision, setInviteDivision] = useState('Direktorat Umum')
-  const [inviteRole, setInviteRole] = useState<UserRole>('Legal Officer')
-  const [invitePassword, setInvitePassword] = useState('Password123!')
-  const [inviteLoading, setInviteLoading] = useState(false)
-
-  useEffect(() => {
-    fetchAllUsers()
-  }, [fetchAllUsers])
-
-  const handleRoleChange = async (userId: string, newRole: UserRole) => {
-    const ok = await updateUserRole(userId, newRole)
-    if (ok) {
-      toast.success(`Hak akses pengguna berhasil diperbarui menjadi ${newRole}!`)
-    } else {
-      toast.error('Gagal mengubah hak akses peran.')
-    }
-  }
-
-  const handleInviteSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!inviteName.trim() || !inviteEmail.trim()) {
-      toast.error('Nama dan email wajib diisi.')
-      return
-    }
-
-    setInviteLoading(true)
-    try {
-      const res = await fetch('/api/users', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          employeeName: inviteName.trim(),
-          email: inviteEmail.trim(),
-          position: invitePosition.trim() || 'Legal Officer',
-          division: inviteDivision,
-          role: inviteRole,
-          password: invitePassword || 'Password123!',
-        }),
-      })
-
-      const data = await res.json()
-      if (res.ok) {
-        toast.success(`Undangan berhasil dikirimkan ke ${inviteEmail}!`)
-        setIsInviteOpen(false)
-        setInviteName('')
-        setInviteEmail('')
-        setInvitePosition('Legal Officer')
-        await fetchAllUsers()
-      } else {
-        toast.error(data.error || 'Gagal mengundang pengguna baru.')
-      }
-    } catch {
-      toast.error('Gagal terhubung ke server untuk mengirim undangan.')
-    } finally {
-      setInviteLoading(false)
-    }
-  }
-
   return (
-    <div className="space-y-6 max-w-3xl animate-in fade-in duration-300">
+    <div className="space-y-6 max-w-5xl mx-auto pb-12 animate-in fade-in duration-300">
+      {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold font-display text-[#0B2147]">Settings &amp; Manajemen Pengguna</h1>
+        <h1 className="text-2xl font-bold font-display text-[#0B2147]">
+          Pengaturan &amp; Tata Kelola Sistem RIDE
+        </h1>
         <p className="text-xs text-[#64748B] mt-1">
-          Kelola otorisasi hak akses pengguna korporat, preferensi notifikasi sistem, serta matriks perizinan RISE.
+          Kelola preferensi notifikasi real-time, integrasi pengiriman email, serta wewenang operasional sistem.
         </p>
       </div>
 
-      {/* User & Role Management Table */}
+      {/* 1. Notification Preferences */}
       <Card className="border-[#E2E8F0] shadow-sm">
         <CardContent className="p-6 space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#EEF2FF] text-[#4F46E5]">
-                <Users className="h-5 w-5" />
-              </div>
-              <div>
-                <h2 className="text-base font-bold font-display text-[#0B2147]">
-                  Manajemen Pengguna &amp; Peran (RBAC)
-                </h2>
-                <p className="text-xs text-[#64748B]">
-                  Kelola hak akses pengguna resmi yang terdaftar pada sistem RISE.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Badge variant="default" className="bg-[#163A70]">
-                Akun Anda: {user?.role || 'Legal Officer'}
-              </Badge>
-              {(user?.role === 'Administrator' || user?.role === 'Director / BOD') && (
-                <Button
-                  size="sm"
-                  onClick={() => setIsInviteOpen(true)}
-                  className="bg-[#059669] hover:bg-[#047857] text-white font-bold h-8 text-xs gap-1.5 rounded-lg cursor-pointer shadow-2xs"
-                >
-                  <UserPlus className="h-3.5 w-3.5" />
-                  Undang Pengguna
-                </Button>
-              )}
-            </div>
-          </div>
-
-          <div className="overflow-x-auto rounded-xl border border-[#E2E8F0]">
-            <table className="w-full text-left text-xs border-collapse">
-              <thead>
-                <tr className="border-b border-[#E2E8F0] bg-[#F8FAFC] text-[11px] font-bold text-[#64748B] uppercase tracking-wider">
-                  <th className="py-3 px-4">Nama Karyawan</th>
-                  <th className="py-3 px-4">Email</th>
-                  <th className="py-3 px-4">Divisi / Posisi</th>
-                  <th className="py-3 px-4">Peran (Role RBAC)</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#E2E8F0] bg-white">
-                {allUsers.length === 0 ? (
-                  <tr>
-                    <td colSpan={4} className="py-4 text-center text-[#64748B]">
-                      Memuat data pengguna...
-                    </td>
-                  </tr>
-                ) : (
-                  allUsers.map((u) => (
-                    <tr key={u.id} className="hover:bg-[#F8FAFC]">
-                      <td className="py-3 px-4 font-bold text-[#0F172A]">
-                        {u.employeeName}
-                        {u.email === user?.email && (
-                          <span className="ml-1.5 text-[10px] text-[#10B981] font-semibold">(Anda)</span>
-                        )}
-                      </td>
-                      <td className="py-3 px-4 text-[#64748B] font-mono text-[11px]">
-                        {u.email}
-                      </td>
-                      <td className="py-3 px-4 text-[#64748B]">
-                        {u.division} · {u.position}
-                      </td>
-                      <td className="py-3 px-4">
-                        <select
-                          value={u.role}
-                          onChange={(e) => handleRoleChange(u.id, e.target.value as UserRole)}
-                          className="h-8 rounded-lg border border-[#CBD5E1] bg-white px-2 text-[11px] font-semibold text-[#163A70] focus:border-[#163A70]"
-                        >
-                          <option>User</option>
-                          <option>Legal Officer</option>
-                          <option>Legal Manager</option>
-                          <option>Department Manager</option>
-                          <option>Director / BOD</option>
-                          <option>Administrator</option>
-                        </select>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Notification Preferences */}
-      <Card className="border-[#E2E8F0] shadow-sm">
-        <CardContent className="p-6 space-y-4">
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#ECFDF5] text-[#059669]">
-              <Bell className="h-5 w-5" />
-            </div>
+          <div className="flex items-center gap-2 pb-3 border-b border-[#F1F5F9]">
+            <Bell className="h-5 w-5 text-[#163A70]" />
             <div>
-              <h2 className="text-base font-bold font-display text-[#0B2147]">
-                Preferensi Notifikasi
-              </h2>
-              <p className="text-xs text-[#64748B]">
-                Pengaturan notifikasi pengingat jatuh tempo kontrak dan persetujuan legal.
+              <h2 className="text-sm font-bold text-[#0B2147]">Preferensi Notifikasi Alur Kerja</h2>
+              <p className="text-[11px] text-[#64748B]">
+                Pemberitahuan otomatis ke email pengguna saat ada perubahan status berkas.
               </p>
             </div>
           </div>
 
-          <div className="divide-y divide-[#E2E8F0] text-xs pt-1">
-            <div className="flex items-center justify-between py-3.5">
-              <div>
-                <span className="font-bold text-[#0F172A] block">Notifikasi Email Otomatis</span>
-                <span className="text-[11px] text-[#64748B]">Kirim salinan digital approval ke email korporat</span>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between p-3.5 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0]">
+              <div className="space-y-0.5">
+                <div className="text-xs font-bold text-[#0F172A] flex items-center gap-2">
+                  <Mail className="h-4 w-4 text-[#163A70]" />
+                  Notifikasi Pengajuan &amp; Permintaan Revisi
+                </div>
+                <div className="text-[11px] text-[#64748B]">
+                  Kirim email otomatis saat ada draf baru (V0) atau catatan revisi dari reviewer.
+                </div>
               </div>
-              <Switch checked={emailNotif} onCheckedChange={setEmailNotif} />
+              <Switch
+                checked={emailNotif}
+                onCheckedChange={(val) => {
+                  setEmailNotif(val)
+                  toast.success(`Notifikasi email ${val ? 'diaktifkan' : 'dinonaktifkan'}`)
+                }}
+              />
             </div>
-            <div className="flex items-center justify-between py-3.5">
-              <div>
-                <span className="font-bold text-[#0F172A] block">Notifikasi WhatsApp Gateway</span>
-                <span className="text-[11px] text-[#64748B]">Pemberitahuan instan via bot WhatsApp corporate</span>
+
+            <div className="flex items-center justify-between p-3.5 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0]">
+              <div className="space-y-0.5">
+                <div className="text-xs font-bold text-[#0F172A] flex items-center gap-2">
+                  <ShieldCheck className="h-4 w-4 text-[#059669]" />
+                  Notifikasi Approval &amp; Dokumen Final Selesai
+                </div>
+                <div className="text-[11px] text-[#64748B]">
+                  Pemberitahuan instan saat dokumen telah disetujui Direksi atau diterbitkan berkas FINAL sah.
+                </div>
               </div>
-              <Switch checked={waNotif} onCheckedChange={setWaNotif} />
-            </div>
-            <div className="flex items-center justify-between py-3.5">
-              <div>
-                <span className="font-bold text-[#0F172A] block">
-                  Pengingat Jatuh Tempo (H-60, 45, 30, 15, 7, 0)
-                </span>
-                <span className="text-[11px] text-[#64748B]">
-                  Pemberitahuan berkala kepada divisi pemohon &amp; tim legal
-                </span>
-              </div>
-              <Switch checked={reminderNotif} onCheckedChange={setReminderNotif} />
+              <Switch
+                checked={reminderNotif}
+                onCheckedChange={(val) => {
+                  setReminderNotif(val)
+                  toast.success(`Notifikasi pengesahan ${val ? 'diaktifkan' : 'dinonaktifkan'}`)
+                }}
+              />
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Administrator Permission Matrix */}
-      <Card className="border-[#163A70]/30 shadow-md animate-in fade-in">
+      {/* 2. RBAC & Authority Matrix Quick Access */}
+      <Card className="border-[#E2E8F0] shadow-sm">
         <CardContent className="p-6 space-y-4">
-          <div className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-[#163A70]" />
-            <h2 className="text-base font-bold font-display text-[#0B2147]">
-              Matriks Kewenangan Hak Akses (RBAC Governance)
-            </h2>
+          <div className="flex items-center justify-between pb-3 border-b border-[#F1F5F9]">
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="h-5 w-5 text-[#163A70]" />
+              <div>
+                <h2 className="text-sm font-bold text-[#0B2147]">Matriks Kewenangan &amp; Akses Pengguna</h2>
+                <p className="text-[11px] text-[#64748B]">
+                  Struktur 5 peran: Requester, Reviewer, Approver, Document Controller, dan Administrator.
+                </p>
+              </div>
+            </div>
+
+            <Button
+              size="sm"
+              onClick={() => setCurrentView('matrix')}
+              className="bg-[#163A70] hover:bg-[#0B2147] text-white font-bold text-xs rounded-xl"
+            >
+              Buka Matriks Lengkap &rarr;
+            </Button>
           </div>
-          <div className="overflow-x-auto rounded-xl border border-[#E2E8F0]">
-            <table className="w-full text-left text-xs border-collapse">
-              <thead>
-                <tr className="border-b border-[#E2E8F0] bg-[#F8FAFC] text-[11px] font-bold text-[#64748B] uppercase tracking-wider">
-                  <th className="py-3 px-4 font-display">Peran Pengguna</th>
-                  <th className="py-3 px-4 font-display">Submit Form</th>
-                  <th className="py-3 px-4 font-display">Review &amp; Drafting</th>
-                  <th className="py-3 px-4 font-display">Approve / BOD</th>
-                  <th className="py-3 px-4 font-display">Arsip &amp; Unduh</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#E2E8F0]">
-                <tr>
-                  <td className="py-3.5 px-4 font-bold text-[#0F172A]">User</td>
-                  <td className="py-3.5 px-4"><Check className="h-4 w-4 text-[#10B981]" /></td>
-                  <td className="py-3.5 px-4"><Minus className="h-4 w-4 text-[#CBD5E1]" /></td>
-                  <td className="py-3.5 px-4"><Minus className="h-4 w-4 text-[#CBD5E1]" /></td>
-                  <td className="py-3.5 px-4"><Minus className="h-4 w-4 text-[#CBD5E1]" /></td>
-                </tr>
-                <tr>
-                  <td className="py-3.5 px-4 font-bold text-[#0F172A]">Legal Officer</td>
-                  <td className="py-3.5 px-4"><Check className="h-4 w-4 text-[#10B981]" /></td>
-                  <td className="py-3.5 px-4"><Check className="h-4 w-4 text-[#10B981]" /></td>
-                  <td className="py-3.5 px-4"><Minus className="h-4 w-4 text-[#CBD5E1]" /></td>
-                  <td className="py-3.5 px-4"><Check className="h-4 w-4 text-[#10B981]" /></td>
-                </tr>
-                <tr>
-                  <td className="py-3.5 px-4 font-bold text-[#0F172A]">Legal Manager</td>
-                  <td className="py-3.5 px-4"><Check className="h-4 w-4 text-[#10B981]" /></td>
-                  <td className="py-3.5 px-4"><Check className="h-4 w-4 text-[#10B981]" /></td>
-                  <td className="py-3.5 px-4"><Check className="h-4 w-4 text-[#10B981]" /></td>
-                  <td className="py-3.5 px-4"><Check className="h-4 w-4 text-[#10B981]" /></td>
-                </tr>
-                <tr>
-                  <td className="py-3.5 px-4 font-bold text-[#0F172A]">Director / BOD</td>
-                  <td className="py-3.5 px-4"><Minus className="h-4 w-4 text-[#CBD5E1]" /></td>
-                  <td className="py-3.5 px-4"><Minus className="h-4 w-4 text-[#CBD5E1]" /></td>
-                  <td className="py-3.5 px-4"><Check className="h-4 w-4 text-[#10B981]" /></td>
-                  <td className="py-3.5 px-4"><Minus className="h-4 w-4 text-[#CBD5E1]" /></td>
-                </tr>
-              </tbody>
-            </table>
+
+          <div className="p-4 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="text-xs text-[#475569]">
+              Saat ini terdapat <b>{allUsers.length} pengguna resmi</b> yang terdaftar pada sistem RIDE.
+            </div>
+
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setCurrentView('users')}
+              className="text-xs font-bold text-[#163A70] rounded-xl"
+            >
+              <Users className="h-3.5 w-3.5 mr-1.5" />
+              Kelola Pengguna &amp; Undangan
+            </Button>
           </div>
         </CardContent>
       </Card>
-
-      {/* Modal Undang Pengguna Baru (Enterprise RBAC Invite) */}
-      <Dialog open={isInviteOpen} onOpenChange={setIsInviteOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <div className="flex items-center gap-2">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#ECFDF5] text-[#059669]">
-                <UserPlus className="h-5 w-5" />
-              </div>
-              <DialogTitle className="text-[#0B2147]">Undang Pengguna Baru</DialogTitle>
-            </div>
-            <DialogDescription className="text-xs text-[#64748B]">
-              Kirimkan undangan resmi ke email korporat. Akun akan dibuat otomatis di database dengan proteksi otentikasi 2FA.
-            </DialogDescription>
-          </DialogHeader>
-
-          <form onSubmit={handleInviteSubmit} className="space-y-3.5 pt-2">
-            <div className="space-y-1">
-              <Label className="text-xs font-semibold text-[#0F172A]">Nama Lengkap Karyawan</Label>
-              <Input
-                placeholder="e.g. Raden Arya Wirawan"
-                value={inviteName}
-                onChange={(e) => setInviteName(e.target.value)}
-                required
-                className="h-10 text-xs rounded-lg"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <Label className="text-xs font-semibold text-[#0F172A]">Email Korporat</Label>
-              <Input
-                type="email"
-                placeholder="nama@resourcesid.co.id"
-                value={inviteEmail}
-                onChange={(e) => setInviteEmail(e.target.value)}
-                required
-                className="h-10 text-xs rounded-lg"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-2.5">
-              <div className="space-y-1">
-                <Label className="text-xs font-semibold text-[#0F172A]">Divisi</Label>
-                <select
-                  value={inviteDivision}
-                  onChange={(e) => setInviteDivision(e.target.value)}
-                  className="flex h-10 w-full rounded-lg border border-[#E2E8F0] bg-white px-3 text-xs text-[#0F172A]"
-                >
-                  <option>Direktorat Umum</option>
-                  <option>Legal &amp; Compliance</option>
-                  <option>Direktorat Keuangan</option>
-                  <option>Direktorat Operasi</option>
-                  <option>Human Capital</option>
-                  <option>IT &amp; Corporate Governance</option>
-                </select>
-              </div>
-
-              <div className="space-y-1">
-                <Label className="text-xs font-semibold text-[#0F172A]">Jabatan / Posisi</Label>
-                <Input
-                  placeholder="e.g. Legal Officer"
-                  value={invitePosition}
-                  onChange={(e) => setInvitePosition(e.target.value)}
-                  className="h-10 text-xs rounded-lg"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2.5">
-              <div className="space-y-1">
-                <Label className="text-xs font-semibold text-[#0F172A]">Peran Akses (Role)</Label>
-                <select
-                  value={inviteRole}
-                  onChange={(e) => setInviteRole(e.target.value as UserRole)}
-                  className="flex h-10 w-full rounded-lg border border-[#E2E8F0] bg-white px-3 text-xs text-[#0F172A] font-semibold"
-                >
-                  <option>User</option>
-                  <option>Legal Officer</option>
-                  <option>Legal Manager</option>
-                  <option>Department Manager</option>
-                  <option>Director / BOD</option>
-                  <option>Administrator</option>
-                </select>
-              </div>
-
-              <div className="space-y-1">
-                <Label className="text-xs font-semibold text-[#0F172A]">Kata Sandi Awal</Label>
-                <Input
-                  type="text"
-                  placeholder="Default: Password123!"
-                  value={invitePassword}
-                  onChange={(e) => setInvitePassword(e.target.value)}
-                  className="h-10 text-xs rounded-lg font-mono"
-                />
-              </div>
-            </div>
-
-            <DialogFooter className="mt-4 gap-2">
-              <Button type="button" variant="ghost" onClick={() => setIsInviteOpen(false)}>
-                Batal
-              </Button>
-              <Button
-                type="submit"
-                disabled={inviteLoading}
-                className="bg-[#059669] hover:bg-[#047857] text-white font-bold"
-              >
-                {inviteLoading ? 'Mengirimkan...' : 'Kirim Undangan & Terbitkan Akun'}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }

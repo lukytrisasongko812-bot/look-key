@@ -2,14 +2,27 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
 
-export type ViewType = 'dashboard' | 'tracking' | 'myDocuments' | 'myAccount' | 'settings'
+export type ViewType =
+  | 'dashboard'
+  | 'tracking'
+  | 'myDocuments'
+  | 'users'
+  | 'matrix'
+  | 'myAccount'
+  | 'settings'
+
 export type UserRole =
+  | 'Requester'
+  | 'Reviewer'
+  | 'Approver'
+  | 'Document Controller'
+  | 'Administrator'
+  // Legacy compatibility
   | 'User'
   | 'Legal Officer'
   | 'Legal Manager'
   | 'Department Manager'
   | 'Director / BOD'
-  | 'Administrator'
 
 export interface UserProfile {
   id: string
@@ -32,6 +45,16 @@ export interface DocumentFile {
   uploadedAt: string
 }
 
+export interface DocumentVersionItem {
+  version: string
+  file: DocumentFile
+  notes?: string
+  uploadedBy: string
+  uploadedAt: string
+  isFinal: boolean
+  fileType: 'initial' | 'revision' | 'supporting' | 'final'
+}
+
 export interface DocumentDecision {
   type: 'renew' | 'terminate'
   justification: string
@@ -45,6 +68,7 @@ export interface DocumentHistoryItem {
   action: string
   actor: string
   notes?: string
+  versionTag?: string
   timestamp: string
 }
 
@@ -56,37 +80,37 @@ export interface DocumentItem {
   division: string
   priority: 'Normal' | 'Urgent' | 'Critical'
   confidentiality: 'Internal' | 'Confidential' | 'Restricted'
-  contractStart: string | null
-  contractEnd: string | null
+  contractStart?: string | null
+  contractEnd?: string | null
   noDuration: boolean
-  notes: string
+  notes?: string
   stage: number
   stageStatus: 'waiting' | 'active' | 'completed' | 'revision' | 'rejected'
+  statusLabel?: string
   pic: string
+  picEmail?: string
   revisionRequested: boolean
   rejected: boolean
   files: DocumentFile[]
+  initialDocument?: DocumentFile | null
+  revisionDocuments: DocumentVersionItem[]
+  supportingDocuments: DocumentFile[]
+  finalDocument?: DocumentFile | null
+  versions: DocumentVersionItem[]
   decision?: DocumentDecision | null
   history: DocumentHistoryItem[]
+  createdBy?: string
   createdAt: string
   updatedAt: string
 }
 
 export interface NotificationItem {
   _id: string
+  userId?: string | null
   type: 'approved' | 'revision' | 'signed' | 'reminder' | 'email_sent' | 'whatsapp_sent' | 'decision'
   title: string
   description: string
   isRead: boolean
-  createdAt: string
-}
-
-export interface LoginHistoryItem {
-  _id: string
-  email: string
-  device: string
-  ip: string
-  status: string
   createdAt: string
 }
 
@@ -99,187 +123,189 @@ interface AppContextType {
   selectedDocNumber: string | null
   documents: DocumentItem[]
   notifications: NotificationItem[]
-  loginHistory: LoginHistoryItem[]
   allUsers: UserProfile[]
   unreadNotifCount: number
   isNotifOpen: boolean
   isMobileSidebarOpen: boolean
   isSidebarCollapsed: boolean
   searchQuery: string
-  login: (email: string, password: string) => Promise<{ success: boolean; require2FA?: boolean; userId?: string; codeHint?: string; error?: string }>
-  verifyOtp: (userId: string, code: string, email?: string) => Promise<{ success: boolean; error?: string }>
+  login: (email: string, pass: string) => Promise<{ success: boolean; requires2FA?: boolean; userId?: string; error?: string }>
+  verifyOtp: (userId: string, email: string, code: string) => Promise<{ success: boolean; error?: string }>
   ssoLogin: (email: string) => Promise<{ success: boolean; error?: string }>
   logout: () => void
   setCurrentView: (view: ViewType, subTab?: 'new' | 'progress') => void
-  setTrackSubTab: (tab: 'new' | 'progress') => void
-  setSelectedDocNumber: (no: string | null) => void
+  setTrackSubTab: (subTab: 'new' | 'progress') => void
+  setSelectedDocNumber: (docNo: string | null) => void
   setIsNotifOpen: (open: boolean) => void
   setIsMobileSidebarOpen: (open: boolean) => void
-  setIsSidebarCollapsed: (collapsed: boolean | ((prev: boolean) => boolean)) => void
+  setIsSidebarCollapsed: (collapsed: boolean) => void
   setSearchQuery: (query: string) => void
-  fetchDocuments: (query?: string, status?: string) => Promise<void>
+  fetchDocuments: (query?: string, status?: string, category?: string) => Promise<void>
   fetchNotifications: () => Promise<void>
   fetchAllUsers: () => Promise<void>
-  createDocument: (data: Partial<DocumentItem>) => Promise<DocumentItem | null>
-  updateDocument: (id: string, patch: Partial<DocumentItem>) => Promise<boolean>
+  createDocument: (docData: Partial<DocumentItem>) => Promise<DocumentItem | null>
+  updateDocument: (id: string, updates: Partial<DocumentItem>) => Promise<boolean>
   deleteDocument: (id: string) => Promise<boolean>
-  transitionDocument: (id: string, action: string, notes?: string) => Promise<{ success: boolean; message?: string; error?: string }>
-  submitDecision: (
-    id: string,
-    decision: { type: 'renew' | 'terminate'; justification: string; considerations: string[] }
-  ) => Promise<boolean>
+  transitionDocument: (id: string, action: string, notes?: string) => Promise<boolean>
+  uploadRevision: (id: string, file: DocumentFile, notes: string, versionTag?: string) => Promise<boolean>
+  uploadFinalDocument: (id: string, file: DocumentFile, notes: string) => Promise<boolean>
+  submitDecision: (id: string, decision: { type: 'renew' | 'terminate'; justification: string; considerations: string[] }) => Promise<boolean>
   markNotificationsRead: () => Promise<void>
-  updateProfile: (profile: Partial<UserProfile>) => Promise<boolean>
+  updateProfile: (profileData: Partial<UserProfile>) => Promise<boolean>
   updateUserRole: (userId: string, newRole: UserRole) => Promise<boolean>
   changePassword: (currentPassword: string, newPassword: string) => Promise<{ success: boolean; error?: string }>
 }
 
-const AppContext = createContext<AppContextType | null>(null)
+const AppContext = createContext<AppContextType | undefined>(undefined)
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(null)
   const [token, setToken] = useState<string | null>(null)
   const [currentView, setCurrentView] = useState<ViewType>('dashboard')
-  const [trackSubTab, setTrackSubTab] = useState<'new' | 'progress'>('new')
+  const [trackSubTab, setTrackSubTab] = useState<'new' | 'progress'>('progress')
   const [selectedDocNumber, setSelectedDocNumber] = useState<string | null>(null)
   const [documents, setDocuments] = useState<DocumentItem[]>([])
   const [notifications, setNotifications] = useState<NotificationItem[]>([])
-  const [loginHistory, setLoginHistory] = useState<LoginHistoryItem[]>([])
   const [allUsers, setAllUsers] = useState<UserProfile[]>([])
   const [isNotifOpen, setIsNotifOpen] = useState(false)
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
 
-  // Fetch documents from MongoDB
-  const fetchDocuments = useCallback(async (q?: string, status?: string) => {
+  // Fetch documents
+  const fetchDocuments = useCallback(async (query = '', status = '', category = '') => {
     try {
       const params = new URLSearchParams()
-      if (q) params.set('q', q)
-      if (status) params.set('status', status)
+      if (query) params.append('q', query)
+      if (status) params.append('status', status)
+      if (category) params.append('category', category)
+
       const res = await fetch(`/api/documents?${params.toString()}`)
       if (res.ok) {
         const data = await res.json()
         setDocuments(data)
-        if (data.length > 0 && !selectedDocNumber) {
-          setSelectedDocNumber(data[0].docNumber)
-        }
       }
     } catch (e) {
-      console.error('Error fetching documents', e)
+      console.error('Failed to fetch documents', e)
     }
-  }, [selectedDocNumber])
+  }, [])
 
   // Fetch notifications
   const fetchNotifications = useCallback(async () => {
     try {
-      const res = await fetch('/api/notifications')
+      const headers: Record<string, string> = {}
+      if (token) headers['Authorization'] = `Bearer ${token}`
+      const res = await fetch('/api/notifications', { headers })
       if (res.ok) {
         const data = await res.json()
         setNotifications(data)
       }
     } catch (e) {
-      console.error('Error fetching notifications', e)
+      console.error('Failed to fetch notifications', e)
     }
-  }, [])
+  }, [token])
 
-  // Fetch all users for Admin
+  // Fetch all users
   const fetchAllUsers = useCallback(async () => {
     try {
-      const res = await fetch('/api/users')
+      const headers: Record<string, string> = {}
+      if (token) headers['Authorization'] = `Bearer ${token}`
+      const res = await fetch('/api/users', { headers })
       if (res.ok) {
         const data = await res.json()
-        setAllUsers(data.map((u: any) => ({ ...u, id: u._id })))
+        setAllUsers(data)
       }
     } catch (e) {
-      console.error('Error fetching users', e)
+      console.error('Failed to fetch users', e)
     }
-  }, [])
+  }, [token])
 
-  // Initial load
+  // Load session on startup
   useEffect(() => {
-    const savedToken = localStorage.getItem('rise_token')
+    const savedToken = localStorage.getItem('ride_token') || localStorage.getItem('rise_token')
     if (savedToken) {
       setToken(savedToken)
       fetch('/api/auth/me', {
         headers: { Authorization: `Bearer ${savedToken}` },
       })
-        .then((r) => r.json())
-        .then((res) => {
-          if (res.user) {
-            setUser(res.user)
-          }
-          if (res.loginHistory) {
-            setLoginHistory(res.loginHistory)
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.user) {
+            setUser(data.user)
+          } else {
+            localStorage.removeItem('ride_token')
+            localStorage.removeItem('rise_token')
+            setToken(null)
           }
         })
-        .catch(() => {})
+        .catch(() => {
+          localStorage.removeItem('ride_token')
+          localStorage.removeItem('rise_token')
+          setToken(null)
+        })
     }
     fetchDocuments()
-    fetchNotifications()
-    fetchAllUsers()
-  }, [fetchDocuments, fetchNotifications, fetchAllUsers])
+  }, [fetchDocuments])
 
-  // Real Login
-  const login = async (email: string, password: string) => {
+  // Refetch notifications on token change
+  useEffect(() => {
+    if (token) {
+      fetchNotifications()
+      fetchAllUsers()
+    }
+  }, [token, fetchNotifications, fetchAllUsers])
+
+  const login = async (email: string, pass: string) => {
     try {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password: pass }),
       })
       const data = await res.json()
       if (!res.ok) {
         return { success: false, error: data.error || 'Login gagal' }
       }
-
-      if (data.require2FA) {
-        return {
-          success: true,
-          require2FA: true,
-          userId: data.userId,
-          codeHint: data.codeHint,
-        }
+      if (data.requires2FA) {
+        return { success: true, requires2FA: true, userId: data.userId }
       }
-
-      setToken(data.token)
-      setUser(data.user)
-      localStorage.setItem('rise_token', data.token)
-      await fetchDocuments()
-      await fetchNotifications()
-      return { success: true }
+      if (data.token && data.user) {
+        setToken(data.token)
+        setUser(data.user)
+        localStorage.setItem('ride_token', data.token)
+        return { success: true }
+      }
+      return { success: false, error: 'Respon otentikasi tidak valid' }
     } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : 'Network error'
-      return { success: false, error: message }
+      const msg = e instanceof Error ? e.message : 'Network error'
+      return { success: false, error: msg }
     }
   }
 
-  // Real Verify OTP
-  const verifyOtp = async (userId: string, code: string, email?: string) => {
+  const verifyOtp = async (userId: string, email: string, code: string) => {
     try {
       const res = await fetch('/api/auth/verify-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, code, email }),
+        body: JSON.stringify({ userId, email, code }),
       })
       const data = await res.json()
       if (!res.ok) {
-        return { success: false, error: data.error || 'Kode OTP salah' }
+        return { success: false, error: data.error || 'Kode OTP tidak valid atau kadaluarsa' }
       }
-
-      setToken(data.token)
-      setUser(data.user)
-      localStorage.setItem('rise_token', data.token)
-      await fetchDocuments()
-      await fetchNotifications()
-      return { success: true }
+      if (data.token && data.user) {
+        setToken(data.token)
+        setUser(data.user)
+        localStorage.setItem('ride_token', data.token)
+        return { success: true }
+      }
+      return { success: false, error: 'Otentikasi OTP gagal' }
     } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : 'Network error'
-      return { success: false, error: message }
+      const msg = e instanceof Error ? e.message : 'Network error'
+      return { success: false, error: msg }
     }
   }
 
-  // Company Email SSO Login
   const ssoLogin = async (email: string) => {
     try {
       const res = await fetch('/api/auth/sso', {
@@ -289,127 +315,170 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       })
       const data = await res.json()
       if (!res.ok) {
-        return { success: false, error: data.error || 'SSO failed' }
+        return { success: false, error: data.error || 'SSO Login gagal' }
       }
-      setToken(data.token)
-      setUser(data.user)
-      localStorage.setItem('rise_token', data.token)
-      await fetchDocuments()
-      await fetchNotifications()
-      return { success: true }
+      if (data.token && data.user) {
+        setToken(data.token)
+        setUser(data.user)
+        localStorage.setItem('ride_token', data.token)
+        return { success: true }
+      }
+      return { success: false, error: 'Respon SSO tidak valid' }
     } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : 'Network error'
-      return { success: false, error: message }
-    }
-  }
-
-  // Logout
-  const logout = () => {
-    setToken(null)
-    setUser(null)
-    localStorage.removeItem('rise_token')
-    setCurrentView('dashboard')
-  }
-
-  // Create Document
-  const createDocument = async (docData: Partial<DocumentItem>) => {
-    try {
-      const res = await fetch('/api/documents', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify(docData),
-      })
-      if (!res.ok) {
-        const err = await res.json()
-        throw new Error(err.error || 'Failed to create document')
-      }
-      const newDoc = await res.json()
-      await fetchDocuments()
-      await fetchNotifications()
-      return newDoc
-    } catch (e) {
-      console.error(e)
-      return null
-    }
-  }
-
-  // Update Document
-  const updateDocument = async (id: string, patch: Partial<DocumentItem>) => {
-    try {
-      const res = await fetch(`/api/documents/${id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify(patch),
-      })
-      if (res.ok) {
-        await fetchDocuments()
-        return true
-      }
-      return false
-    } catch {
-      return false
-    }
-  }
-
-  // Delete Document
-  const deleteDocument = async (id: string) => {
-    try {
-      const res = await fetch(`/api/documents/${id}`, {
-        method: 'DELETE',
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      })
-      if (res.ok) {
-        await fetchDocuments()
-        return true
-      }
-      return false
-    } catch {
-      return false
-    }
-  }
-
-  // Real Workflow Transition
-  const transitionDocument = async (id: string, action: string, notes?: string) => {
-    try {
-      const res = await fetch(`/api/documents/${id}/transition`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({ action, notes }),
-      })
-      const data = await res.json()
-      if (!res.ok) {
-        return { success: false, error: data.error || 'Aksi gagal' }
-      }
-      await fetchDocuments()
-      await fetchNotifications()
-      return { success: true, message: data.message }
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : 'Gagal memproses tahapan'
+      const msg = e instanceof Error ? e.message : 'Network error'
       return { success: false, error: msg }
     }
   }
 
-  // Submit Contract Renewal/Termination Decision
+  const logout = () => {
+    localStorage.removeItem('ride_token')
+    localStorage.removeItem('rise_token')
+    setUser(null)
+    setToken(null)
+    setCurrentView('dashboard')
+  }
+
+  const createDocument = async (docData: Partial<DocumentItem>): Promise<DocumentItem | null> => {
+    try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+      if (token) headers['Authorization'] = `Bearer ${token}`
+
+      const res = await fetch('/api/documents', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(docData),
+      })
+      if (res.ok) {
+        const created = await res.json()
+        await fetchDocuments()
+        await fetchNotifications()
+        return created
+      }
+      return null
+    } catch (e) {
+      console.error('Failed to create document', e)
+      return null
+    }
+  }
+
+  const updateDocument = async (id: string, updates: Partial<DocumentItem>): Promise<boolean> => {
+    try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+      if (token) headers['Authorization'] = `Bearer ${token}`
+
+      const res = await fetch(`/api/documents/${id}`, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify(updates),
+      })
+      if (res.ok) {
+        await fetchDocuments()
+        return true
+      }
+      return false
+    } catch (e) {
+      console.error('Failed to update document', e)
+      return false
+    }
+  }
+
+  const deleteDocument = async (id: string): Promise<boolean> => {
+    try {
+      const headers: Record<string, string> = {}
+      if (token) headers['Authorization'] = `Bearer ${token}`
+
+      const res = await fetch(`/api/documents/${id}`, {
+        method: 'DELETE',
+        headers,
+      })
+      if (res.ok) {
+        await fetchDocuments()
+        return true
+      }
+      return false
+    } catch (e) {
+      console.error('Failed to delete document', e)
+      return false
+    }
+  }
+
+  const transitionDocument = async (id: string, action: string, notes?: string): Promise<boolean> => {
+    try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+      if (token) headers['Authorization'] = `Bearer ${token}`
+
+      const res = await fetch(`/api/documents/${id}/transition`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ action, notes }),
+      })
+      if (res.ok) {
+        await fetchDocuments()
+        await fetchNotifications()
+        return true
+      }
+      return false
+    } catch (e) {
+      console.error('Failed to transition document', e)
+      return false
+    }
+  }
+
+  const uploadRevision = async (id: string, file: DocumentFile, notes: string, versionTag?: string): Promise<boolean> => {
+    try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+      if (token) headers['Authorization'] = `Bearer ${token}`
+
+      const res = await fetch(`/api/documents/${id}/version`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ file, notes, isFinal: false, versionTag }),
+      })
+      if (res.ok) {
+        await fetchDocuments()
+        await fetchNotifications()
+        return true
+      }
+      return false
+    } catch (e) {
+      console.error('Failed to upload revision', e)
+      return false
+    }
+  }
+
+  const uploadFinalDocument = async (id: string, file: DocumentFile, notes: string): Promise<boolean> => {
+    try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+      if (token) headers['Authorization'] = `Bearer ${token}`
+
+      const res = await fetch(`/api/documents/${id}/version`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ file, notes, isFinal: true, versionTag: 'FINAL' }),
+      })
+      if (res.ok) {
+        await fetchDocuments()
+        await fetchNotifications()
+        return true
+      }
+      return false
+    } catch (e) {
+      console.error('Failed to upload final document', e)
+      return false
+    }
+  }
+
   const submitDecision = async (
     id: string,
     decision: { type: 'renew' | 'terminate'; justification: string; considerations: string[] }
-  ) => {
+  ): Promise<boolean> => {
     try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+      if (token) headers['Authorization'] = `Bearer ${token}`
+
       const res = await fetch(`/api/documents/${id}/decision`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
+        headers,
         body: JSON.stringify(decision),
       })
       if (res.ok) {
@@ -418,76 +487,75 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         return true
       }
       return false
-    } catch {
+    } catch (e) {
+      console.error('Failed to submit decision', e)
       return false
     }
   }
 
-  // Mark all notifications read
   const markNotificationsRead = async () => {
     try {
-      await fetch('/api/notifications', { method: 'PATCH' })
+      const headers: Record<string, string> = {}
+      if (token) headers['Authorization'] = `Bearer ${token}`
+
+      await fetch('/api/notifications', { method: 'PATCH', headers })
       setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })))
     } catch (e) {
-      console.error(e)
+      console.error('Failed to mark notifications read', e)
     }
   }
 
-  // Update profile
-  const updateProfile = async (profile: Partial<UserProfile>) => {
+  const updateProfile = async (profileData: Partial<UserProfile>): Promise<boolean> => {
     try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+      if (token) headers['Authorization'] = `Bearer ${token}`
+
       const res = await fetch('/api/auth/me', {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify(profile),
+        headers,
+        body: JSON.stringify(profileData),
       })
       if (res.ok) {
         const data = await res.json()
-        setUser(data.user)
+        if (data.user) setUser(data.user)
         return true
       }
       return false
-    } catch {
+    } catch (e) {
+      console.error('Failed to update profile', e)
       return false
     }
   }
 
-  // Real update user role (Admin action)
-  const updateUserRole = async (userId: string, newRole: UserRole) => {
+  const updateUserRole = async (userId: string, newRole: UserRole): Promise<boolean> => {
     try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+      if (token) headers['Authorization'] = `Bearer ${token}`
+
       const res = await fetch(`/api/users/${userId}`, {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
+        headers,
         body: JSON.stringify({ role: newRole }),
       })
       if (res.ok) {
         await fetchAllUsers()
-        if (user && user.id === userId) {
-          setUser({ ...user, role: newRole })
-        }
         return true
       }
       return false
-    } catch {
+    } catch (e) {
+      console.error('Failed to update user role', e)
       return false
     }
   }
 
-  // Change Password
   const changePassword = async (currentPassword: string, newPassword: string) => {
     try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+      if (token) headers['Authorization'] = `Bearer ${token}`
+
       const res = await fetch('/api/auth/change-password', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
+        headers,
         body: JSON.stringify({ currentPassword, newPassword }),
       })
       const data = await res.json()
@@ -521,7 +589,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         selectedDocNumber,
         documents,
         notifications,
-        loginHistory,
         allUsers,
         unreadNotifCount,
         isNotifOpen,
@@ -546,6 +613,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         updateDocument,
         deleteDocument,
         transitionDocument,
+        uploadRevision,
+        uploadFinalDocument,
         submitDecision,
         markNotificationsRead,
         updateProfile,

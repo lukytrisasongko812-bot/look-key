@@ -2,12 +2,17 @@ import mongoose, { Schema, Document as MongooseDocument, Model } from 'mongoose'
 import bcrypt from 'bcryptjs'
 
 export type UserRole =
+  | 'Requester'
+  | 'Reviewer'
+  | 'Approver'
+  | 'Document Controller'
+  | 'Administrator'
+  // Legacy compatibility
   | 'User'
   | 'Legal Officer'
   | 'Legal Manager'
   | 'Department Manager'
   | 'Director / BOD'
-  | 'Administrator'
 
 export interface IUser extends MongooseDocument {
   employeeName: string
@@ -31,19 +36,24 @@ const UserSchema = new Schema<IUser>(
     employeeName: { type: String, required: true },
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
     passwordHash: { type: String, required: true },
-    position: { type: String, default: 'Legal Officer' },
+    position: { type: String, default: 'Reviewer' },
     division: { type: String, default: 'Direktorat Umum' },
     role: {
       type: String,
       enum: [
+        'Requester',
+        'Reviewer',
+        'Approver',
+        'Document Controller',
+        'Administrator',
+        // Legacy
         'User',
         'Legal Officer',
         'Legal Manager',
         'Department Manager',
         'Director / BOD',
-        'Administrator',
       ],
-      default: 'Legal Officer',
+      default: 'Requester',
     },
     phone: { type: String, default: '+62 812-9876-5432' },
     avatarUrl: { type: String, default: '' },

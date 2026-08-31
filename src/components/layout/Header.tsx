@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import { useApp } from '@/context/AppContext'
-import { RiseLogo } from '@/components/common/RiseLogo'
+import { RideLogo } from '@/components/common/RideLogo'
 import {
   Menu,
   Search,
@@ -12,6 +12,8 @@ import {
   LogOut,
   ChevronDown,
   Shield,
+  ShieldCheck,
+  Users,
 } from 'lucide-react'
 
 export function Header() {
@@ -20,6 +22,7 @@ export function Header() {
     unreadNotifCount,
     setIsNotifOpen,
     setIsMobileSidebarOpen,
+    isSidebarCollapsed,
     setIsSidebarCollapsed,
     setCurrentView,
     logout,
@@ -42,10 +45,10 @@ export function Header() {
         .slice(0, 2)
         .map((n) => n[0].toUpperCase())
         .join('')
-    : 'LP'
+    : 'RD'
 
   return (
-    <header className="sticky top-0 z-40 flex h-16 w-full items-center justify-between border-b border-[#E2E8F0] bg-white/85 backdrop-blur-md px-4 md:px-6 shadow-2xs">
+    <header className="sticky top-0 z-40 flex h-16 w-full items-center justify-between border-b border-[#E2E8F0] bg-white/90 backdrop-blur-md px-4 md:px-6 shadow-2xs transition-all">
       {/* Left side: Hamburger, Logo, Search */}
       <div className="flex items-center gap-3 sm:gap-4">
         <button
@@ -53,11 +56,11 @@ export function Header() {
             if (typeof window !== 'undefined' && window.innerWidth <= 980) {
               setIsMobileSidebarOpen(true)
             } else {
-              setIsSidebarCollapsed((prev) => !prev)
+              setIsSidebarCollapsed(!isSidebarCollapsed)
             }
           }}
           className="flex h-9 w-9 items-center justify-center rounded-xl text-[#163A70] hover:bg-[#EBF2FF] transition-colors cursor-pointer"
-          title="Toggle Navigation"
+          title="Buka / Tutup Navigasi"
         >
           <Menu className="h-5 w-5" />
         </button>
@@ -66,7 +69,7 @@ export function Header() {
           className="cursor-pointer transition-opacity hover:opacity-90"
           onClick={() => setCurrentView('dashboard')}
         >
-          <RiseLogo size="sm" />
+          <RideLogo size="sm" />
         </div>
 
         {/* Global Search Bar */}
@@ -88,17 +91,17 @@ export function Header() {
 
       {/* Right side: Role badge, Notification Bell, User Chip */}
       <div className="flex items-center gap-2.5 sm:gap-3.5">
-        {/* Real User Role Badge */}
+        {/* User Role Badge */}
         <div className="hidden lg:flex items-center gap-1.5 rounded-full bg-[#EBF2FF] px-2.5 py-1 text-[11px] font-bold text-[#163A70] border border-[#BFDBFE]">
           <Shield className="h-3 w-3" />
-          <span>Role: {user?.role || 'Legal Officer'}</span>
+          <span>Role: {user?.role || 'Reviewer'}</span>
         </div>
 
         {/* Notification Bell */}
         <button
           onClick={() => setIsNotifOpen(true)}
           className="relative flex h-10 w-10 items-center justify-center rounded-xl text-[#163A70] hover:bg-[#EBF2FF] transition-colors cursor-pointer"
-          title="Notifications"
+          title="Notifikasi"
         >
           <Bell className="h-5 w-5" />
           {unreadNotifCount > 0 && (
@@ -133,10 +136,10 @@ export function Header() {
 
             <div className="hidden text-left sm:block">
               <div className="text-xs font-bold text-[#0F172A] leading-tight">
-                {user?.employeeName || 'Luky Pratama'}
+                {user?.employeeName || 'Pengguna'}
               </div>
               <div className="text-[10px] text-[#64748B]">
-                {user?.role || 'Legal Officer'}
+                {user?.role || 'Reviewer'}
               </div>
             </div>
             <ChevronDown className="h-3.5 w-3.5 text-[#94A3B8] ml-0.5" />
@@ -151,13 +154,13 @@ export function Header() {
               <div className="absolute right-0 mt-2 z-50 w-56 rounded-2xl border border-[#E2E8F0] bg-white p-1.5 shadow-xl animate-card-in">
                 <div className="px-3 py-2.5 border-b border-[#F1F5F9] mb-1">
                   <div className="text-xs font-bold text-[#0F172A]">
-                    {user?.employeeName || 'Luky Pratama'}
+                    {user?.employeeName || 'Pengguna'}
                   </div>
                   <div className="text-[10px] text-[#64748B] truncate">
-                    {user?.email || 'luky.pratama@resourcesid.co.id'}
+                    {user?.email || 'user@resourcesid.co.id'}
                   </div>
                   <div className="mt-1.5 inline-block rounded-md bg-[#EBF2FF] px-2 py-0.5 text-[10px] font-bold text-[#163A70]">
-                    {user?.role || 'Legal Officer'}
+                    {user?.role || 'Reviewer'}
                   </div>
                 </div>
 
@@ -169,7 +172,27 @@ export function Header() {
                   className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-semibold text-[#0F172A] hover:bg-[#EBF2FF] hover:text-[#163A70] transition-colors cursor-pointer"
                 >
                   <UserIcon className="h-4 w-4" />
-                  My Account &amp; Profil
+                  Profil &amp; Keamanan Akun
+                </button>
+                <button
+                  onClick={() => {
+                    setIsDropdownOpen(false)
+                    setCurrentView('matrix')
+                  }}
+                  className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-semibold text-[#0F172A] hover:bg-[#EBF2FF] hover:text-[#163A70] transition-colors cursor-pointer"
+                >
+                  <ShieldCheck className="h-4 w-4" />
+                  Matriks Kewenangan (RBAC)
+                </button>
+                <button
+                  onClick={() => {
+                    setIsDropdownOpen(false)
+                    setCurrentView('users')
+                  }}
+                  className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-semibold text-[#0F172A] hover:bg-[#EBF2FF] hover:text-[#163A70] transition-colors cursor-pointer"
+                >
+                  <Users className="h-4 w-4" />
+                  Kelola Pengguna &amp; Undangan
                 </button>
                 <button
                   onClick={() => {
@@ -179,7 +202,7 @@ export function Header() {
                   className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-semibold text-[#0F172A] hover:bg-[#EBF2FF] hover:text-[#163A70] transition-colors cursor-pointer"
                 >
                   <SettingsIcon className="h-4 w-4" />
-                  Settings &amp; Manajemen Pengguna
+                  Pengaturan Sistem
                 </button>
                 <div className="my-1 h-[1px] bg-[#F1F5F9]" />
                 <button

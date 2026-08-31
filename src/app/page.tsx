@@ -11,6 +11,8 @@ import { TrackingView } from '@/components/tracking/TrackingView'
 import { MyDocumentsView } from '@/components/documents/MyDocumentsView'
 import { MyAccountView } from '@/components/account/MyAccountView'
 import { SettingsView } from '@/components/settings/SettingsView'
+import { UsersView } from '@/components/users/UsersView'
+import { AuthorityMatrixView } from '@/components/matrix/AuthorityMatrixView'
 
 export default function HomePage() {
   const { isAuthenticated, currentView } = useApp()
@@ -28,6 +30,8 @@ export default function HomePage() {
           {currentView === 'dashboard' && <DashboardView />}
           {currentView === 'tracking' && <TrackingView />}
           {currentView === 'myDocuments' && <MyDocumentsView />}
+          {currentView === 'users' && <UsersView />}
+          {currentView === 'matrix' && <AuthorityMatrixView />}
           {currentView === 'myAccount' && <MyAccountView />}
           {currentView === 'settings' && <SettingsView />}
         </main>

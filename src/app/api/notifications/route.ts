@@ -3,13 +3,15 @@ import { connectToDatabase } from '@/lib/db'
 import { NotificationModel } from '@/models/Notification'
 import { getUserFromRequest } from '@/lib/auth'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(request: NextRequest) {
   try {
     await connectToDatabase()
     const tokenUser = getUserFromRequest(request)
 
     const filter = tokenUser?.userId
-      ? { $or: [{ userId: tokenUser.userId }, { userId: null }] }
+      ? { $or: [{ userId: tokenUser.userId }, { userId: null }, { userId: { $exists: false } }] }
       : {}
 
     const notifications = await NotificationModel.find(filter)

@@ -9,6 +9,16 @@ export interface IDocFile {
   uploadedAt: Date
 }
 
+export interface IDocVersion {
+  version: string // 'V0' | 'Rev.01' | 'Rev.02' | 'FINAL'
+  file: IDocFile
+  notes?: string
+  uploadedBy: string
+  uploadedAt: Date
+  isFinal: boolean
+  fileType: 'initial' | 'revision' | 'supporting' | 'final'
+}
+
 export interface IDocDecision {
   type: 'renew' | 'terminate'
   justification: string
@@ -22,6 +32,7 @@ export interface IDocHistory {
   action: string
   actor: string
   notes?: string
+  versionTag?: string
   timestamp: Date
 }
 
@@ -36,12 +47,19 @@ export interface IDocumentRecord extends MongooseDocument {
   contractEnd?: Date | null
   noDuration: boolean
   notes?: string
-  stage: number // 0 to 6
+  stage: number // 0: Submitted, 1: Review, 2: Legal Drafting, 3: Legal Approval, 4: BOD Approval / Signed, 5: Archived, 6: Expired / Renewal
   stageStatus: 'waiting' | 'active' | 'completed' | 'revision' | 'rejected'
+  statusLabel?: string
   pic: string
+  picEmail?: string
   revisionRequested: boolean
   rejected: boolean
   files: IDocFile[]
+  initialDocument?: IDocFile | null
+  revisionDocuments: IDocVersion[]
+  supportingDocuments: IDocFile[]
+  finalDocument?: IDocFile | null
+  versions: IDocVersion[]
   decision?: IDocDecision | null
   history: IDocHistory[]
   createdBy?: mongoose.Types.ObjectId
@@ -57,6 +75,23 @@ const DocFileSchema = new Schema<IDocFile>(
     mimeType: { type: String, required: true },
     url: { type: String, required: true },
     uploadedAt: { type: Date, default: Date.now },
+  },
+  { _id: false }
+)
+
+const DocVersionSchema = new Schema<IDocVersion>(
+  {
+    version: { type: String, required: true },
+    file: { type: DocFileSchema, required: true },
+    notes: { type: String, default: '' },
+    uploadedBy: { type: String, required: true },
+    uploadedAt: { type: Date, default: Date.now },
+    isFinal: { type: Boolean, default: false },
+    fileType: {
+      type: String,
+      enum: ['initial', 'revision', 'supporting', 'final'],
+      default: 'initial',
+    },
   },
   { _id: false }
 )
@@ -78,6 +113,7 @@ const DocHistorySchema = new Schema<IDocHistory>(
     action: { type: String, required: true },
     actor: { type: String, required: true },
     notes: { type: String, default: '' },
+    versionTag: { type: String, default: '' },
     timestamp: { type: Date, default: Date.now },
   },
   { _id: false }
@@ -105,10 +141,17 @@ const DocumentSchema = new Schema<IDocumentRecord>(
       enum: ['waiting', 'active', 'completed', 'revision', 'rejected'],
       default: 'active',
     },
+    statusLabel: { type: String, default: 'Pengajuan Baru' },
     pic: { type: String, default: 'Luky P.' },
+    picEmail: { type: String, default: '' },
     revisionRequested: { type: Boolean, default: false },
     rejected: { type: Boolean, default: false },
     files: [DocFileSchema],
+    initialDocument: { type: DocFileSchema, default: null },
+    revisionDocuments: [DocVersionSchema],
+    supportingDocuments: [DocFileSchema],
+    finalDocument: { type: DocFileSchema, default: null },
+    versions: [DocVersionSchema],
     decision: { type: DocDecisionSchema, default: null },
     history: [DocHistorySchema],
     createdBy: { type: Schema.Types.ObjectId, ref: 'User' },

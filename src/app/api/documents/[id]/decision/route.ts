@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { connectToDatabase } from '@/lib/db'
 import { DocumentModel } from '@/models/Document'
 import { NotificationModel } from '@/models/Notification'
+import { User } from '@/models/User'
+import { sendNotificationEmail } from '@/lib/email'
 import { getUserFromRequest } from '@/lib/auth'
 import mongoose from 'mongoose'
 
@@ -41,13 +43,36 @@ export async function POST(
 
     await doc.save()
 
+    const decisionTitle = type === 'renew' ? 'Keputusan Perpanjangan Kontrak' : 'Keputusan Terminasi Kontrak'
+    const decisionDesc = `${doc.docNumber} (${doc.name}) ditetapkan: ${type === 'renew' ? 'PERPANJANGAN (RENEW)' : 'TERMINASI (TERMINATE)'}. Catatan: ${justification}`
+
     // Create notification
     await NotificationModel.create({
-      userId: tokenUser?.userId,
+      userId: doc.createdBy || undefined,
       type: 'decision',
-      title: type === 'renew' ? 'Renewal Requested' : 'Termination Requested',
-      description: `${doc.docNumber} has been marked for ${type === 'renew' ? 'contract renewal' : 'termination'}.`,
+      title: decisionTitle,
+      description: decisionDesc,
     })
+
+    // Dispatch real email via Resend
+    let targetEmail = doc.picEmail
+    if (!targetEmail && doc.createdBy) {
+      const creator = await User.findById(doc.createdBy)
+      targetEmail = creator?.email
+    }
+    if (!targetEmail) {
+      targetEmail = 'toto.rubianto.17@gmail.com'
+    }
+
+    if (targetEmail) {
+      await sendNotificationEmail({
+        to: targetEmail,
+        userName: doc.pic || 'Tim Legal & Direksi',
+        title: decisionTitle,
+        description: decisionDesc,
+        docNumber: doc.docNumber,
+      }).catch((err) => console.error('[Decision Email Failed]', err))
+    }
 
     return NextResponse.json({
       success: true,

@@ -17,10 +17,15 @@ const jakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "RISE — Resources Integrated System for Efficiency",
-  description: "Legal and contract management platform for Shared Service Center of MIND ID",
+  title: "RIDE — Request Integrated Document Ecosystem",
+  description: "Ekosistem terintegrasi untuk pemesanan, pengelolaan, dan tracking dokumen perusahaan.",
   icons: {
-    icon: "/favicon.ico",
+    icon: [
+      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/favicon.svg", type: "image/svg+xml" },
+    ],
+    shortcut: "/icon.svg",
+    apple: "/icon.svg",
   },
 };
 

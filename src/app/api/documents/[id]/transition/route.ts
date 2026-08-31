@@ -2,17 +2,21 @@ import { NextRequest, NextResponse } from 'next/server'
 import { connectToDatabase } from '@/lib/db'
 import { DocumentModel } from '@/models/Document'
 import { NotificationModel } from '@/models/Notification'
+import { User } from '@/models/User'
+import { sendNotificationEmail } from '@/lib/email'
 import { getUserFromRequest } from '@/lib/auth'
 import mongoose from 'mongoose'
 
+export const dynamic = 'force-dynamic'
+
 const STAGE_NAMES = [
-  'Submitted',
-  'Review',
-  'Legal Drafting',
-  'Legal Approval',
-  'BOD Approval / Signed',
-  'Archived',
-  'Expired / Renewal',
+  'Pengajuan Baru',
+  'Review Kelayakan',
+  'Penyusunan Draf (Drafting)',
+  'Persetujuan Legal (Approval)',
+  'Persetujuan Direksi (BOD Signed)',
+  'Selesai & Diarsipkan',
+  'Jatuh Tempo / Perpanjangan',
 ]
 
 export async function POST(
@@ -23,7 +27,7 @@ export async function POST(
     await connectToDatabase()
     const { id } = await params
     const tokenUser = getUserFromRequest(request)
-    const actorName = tokenUser?.employeeName || 'Staff Legal'
+    const actorName = tokenUser?.employeeName || 'Reviewer'
 
     const { action, notes } = await request.json()
 
@@ -43,11 +47,12 @@ export async function POST(
       case 'advance': {
         if (doc.stage < 6) {
           doc.stage += 1
-          doc.stageStatus = doc.stage === 5 || doc.stage === 6 ? 'completed' : 'active'
+          doc.stageStatus = doc.stage >= 5 ? 'completed' : 'active'
+          doc.statusLabel = STAGE_NAMES[doc.stage]
           doc.revisionRequested = false
           doc.rejected = false
           actionLabel = `Maju ke tahap: ${STAGE_NAMES[doc.stage]}`
-          notifTitle = `Tahapan Baru: ${STAGE_NAMES[doc.stage]}`
+          notifTitle = `Tahapan Dokumen: ${STAGE_NAMES[doc.stage]}`
           notifType = doc.stage >= 5 ? 'signed' : 'approved'
         }
         break
@@ -57,9 +62,11 @@ export async function POST(
         doc.revisionRequested = false
         if (doc.stage < 5) {
           doc.stage += 1
-          doc.stageStatus = doc.stage === 5 ? 'completed' : 'active'
+          doc.stageStatus = doc.stage >= 5 ? 'completed' : 'active'
+          doc.statusLabel = STAGE_NAMES[doc.stage]
         } else {
           doc.stageStatus = 'completed'
+          doc.statusLabel = 'Selesai / Dokumen Final'
         }
         actionLabel = `Disetujui oleh ${actorName}. Lanjut ke ${STAGE_NAMES[doc.stage]}`
         notifTitle = `Dokumen ${doc.docNumber} Disetujui`
@@ -69,15 +76,17 @@ export async function POST(
       case 'revision': {
         doc.revisionRequested = true
         doc.stageStatus = 'revision'
-        actionLabel = `Permintaan revisi diajukan: ${notes || 'Lengkapi dokumen pendukung'}`
-        notifTitle = `Revisi Diperlukan untuk ${doc.docNumber}`
+        doc.statusLabel = 'Perlu Revisi'
+        actionLabel = `Permintaan revisi diajukan: ${notes || 'Perlu perbaikan draf dokumen'}`
+        notifTitle = `Revisi Diperlukan: ${doc.docNumber}`
         notifType = 'revision'
         break
       }
       case 'resolve_revision': {
         doc.revisionRequested = false
         doc.stageStatus = 'active'
-        actionLabel = `Revisi telah diperbaiki oleh pemohon: ${notes || 'Draft revisi diunggah'}`
+        doc.statusLabel = 'Sedang Diproses'
+        actionLabel = `Revisi telah diselesaikan: ${notes || 'Draft revisi diverifikasi'}`
         notifTitle = `Revisi Selesai: ${doc.docNumber}`
         notifType = 'approved'
         break
@@ -85,7 +94,8 @@ export async function POST(
       case 'reject': {
         doc.rejected = true
         doc.stageStatus = 'rejected'
-        actionLabel = `Dokumen ditolak: ${notes || 'Tidak memenuhi kualifikasi legal'}`
+        doc.statusLabel = 'Ditolak'
+        actionLabel = `Dokumen ditolak: ${notes || 'Tidak memenuhi kualifikasi'}`
         notifTitle = `Dokumen ${doc.docNumber} Ditolak`
         notifType = 'revision'
         break
@@ -99,18 +109,39 @@ export async function POST(
       action: actionLabel,
       actor: actorName,
       notes: notes || '',
+      versionTag: doc.versions?.length ? doc.versions[doc.versions.length - 1].version : 'V0',
       timestamp: new Date(),
     })
 
     await doc.save()
 
-    // Create real notification in MongoDB
+    // Create real notification
     await NotificationModel.create({
-      userId: doc.createdBy,
+      userId: doc.createdBy || undefined,
       type: notifType,
       title: notifTitle,
       description: `${doc.docNumber} (${doc.name}) - ${actionLabel}`,
     })
+
+    // Real corporate email dispatch via Resend
+    let recipientEmail = doc.picEmail
+    if (!recipientEmail && doc.createdBy) {
+      const creator = await User.findById(doc.createdBy)
+      recipientEmail = creator?.email
+    }
+    if (!recipientEmail) {
+      recipientEmail = 'toto.rubianto.17@gmail.com'
+    }
+
+    if (recipientEmail) {
+      await sendNotificationEmail({
+        to: recipientEmail,
+        userName: doc.pic || 'Tim RIDE',
+        title: notifTitle,
+        description: `Dokumen ${doc.docNumber} (${doc.name}) diperbarui dengan status: "${actionLabel}". Catatan: ${notes || '-'}. Dieksekusi oleh: ${actorName}.`,
+        docNumber: doc.docNumber,
+      }).catch((err) => console.error('[Notification Email Failed]', err))
+    }
 
     return NextResponse.json({
       success: true,

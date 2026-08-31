@@ -59,8 +59,10 @@ export async function POST(request: NextRequest) {
     await sendInviteEmail({
       to: cleanEmail,
       userName: employeeName,
-      invitedByName: tokenUser.employeeName || 'Administrator RISE',
-      role: role || 'User',
+      division: division || 'Direktorat Umum',
+      position: position || 'Reviewer',
+      invitedByName: tokenUser.employeeName || 'Administrator RIDE',
+      role: role || 'Requester',
       temporaryPassword: tempPassword,
     })
 

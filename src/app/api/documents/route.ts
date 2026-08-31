@@ -2,8 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { connectToDatabase } from '@/lib/db'
 import { DocumentModel } from '@/models/Document'
 import { NotificationModel } from '@/models/Notification'
+import { sendNotificationEmail } from '@/lib/email'
 import { seedDatabase } from '@/lib/seed'
 import { getUserFromRequest } from '@/lib/auth'
+import mongoose from 'mongoose'
+
+export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   try {
@@ -38,25 +42,20 @@ export async function GET(request: NextRequest) {
     }
 
     // Status filter mapping:
-    // 0,1: Review | 2: Legal Drafting | 3,4: Waiting Approval | 5,6: Archived
     if (status) {
       if (status === 'Rejected') {
         filter.rejected = true
-      } else if (status === 'Revision Needed') {
+      } else if (status === 'Revision Needed' || status === 'Perlu Revisi') {
         filter.revisionRequested = true
         filter.rejected = false
-      } else if (status === 'Review') {
-        filter.stage = { $in: [0, 1] }
+      } else if (status === 'Review' || status === 'Sedang Diproses') {
+        filter.stage = { $in: [0, 1, 2] }
         filter.rejected = false
         filter.revisionRequested = false
-      } else if (status === 'Legal Drafting') {
-        filter.stage = 2
-        filter.rejected = false
-        filter.revisionRequested = false
-      } else if (status === 'Waiting Approval') {
+      } else if (status === 'Waiting Approval' || status === 'Menunggu Persetujuan') {
         filter.stage = { $in: [3, 4] }
         filter.rejected = false
-      } else if (status === 'Completed' || status === 'Archived') {
+      } else if (status === 'Completed' || status === 'Archived' || status === 'Selesai') {
         filter.stage = { $in: [5, 6] }
         filter.rejected = false
       }
@@ -90,12 +89,41 @@ export async function POST(request: NextRequest) {
     } = body
 
     if (!name || !category) {
-      return NextResponse.json({ error: 'Document name and category are required' }, { status: 400 })
+      return NextResponse.json({ error: 'Nama dan kategori dokumen wajib diisi.' }, { status: 400 })
     }
 
-    // Auto-generate document number
     const totalCount = await DocumentModel.countDocuments()
-    const docNumber = `RISE-2026-${(143 + totalCount).toString().padStart(4, '0')}`
+    const docNumber = `RIDE-2026-${(145 + totalCount).toString().padStart(4, '0')}`
+    const actorName = tokenUser?.employeeName || 'Requester'
+    const now = new Date()
+
+    const uploadedFilesList = files || []
+    const initialDocFile = uploadedFilesList.length > 0 ? uploadedFilesList[0] : null
+    const supportingFiles = uploadedFilesList.length > 1 ? uploadedFilesList.slice(1) : []
+
+    const versionsList = []
+    if (initialDocFile) {
+      versionsList.push({
+        version: 'V0',
+        file: initialDocFile,
+        notes: notes || 'Pengajuan draf dokumen awal.',
+        uploadedBy: actorName,
+        uploadedAt: now,
+        isFinal: false,
+        fileType: 'initial' as const,
+      })
+    }
+
+    const historyList = [
+      {
+        stage: 0,
+        action: 'Pengajuan Dokumen Awal (V0)',
+        actor: actorName,
+        notes: notes || 'Dokumen berhasil diajukan ke antrean verifikasi.',
+        versionTag: 'V0',
+        timestamp: now,
+      },
+    ]
 
     const newDoc = await DocumentModel.create({
       docNumber,
@@ -110,18 +138,36 @@ export async function POST(request: NextRequest) {
       notes: notes || '',
       stage: 0, // Submitted
       stageStatus: 'active',
-      pic: 'Luky P.',
-      files: files || [],
+      statusLabel: 'Pengajuan Baru (V0)',
+      pic: actorName,
+      picEmail: tokenUser?.email || '',
+      files: uploadedFilesList,
+      initialDocument: initialDocFile,
+      revisionDocuments: [],
+      supportingDocuments: supportingFiles,
+      finalDocument: null,
+      versions: versionsList,
+      history: historyList,
       createdBy: tokenUser?.userId,
     })
 
     // Create confirmation notification
     await NotificationModel.create({
-      userId: tokenUser?.userId,
+      userId: tokenUser?.userId ? new mongoose.Types.ObjectId(tokenUser.userId) : undefined,
       type: 'email_sent',
-      title: 'Request Submitted',
-      description: `Request ${docNumber} submitted — Email & WhatsApp notification sent`,
+      title: 'Pengajuan Dokumen Baru',
+      description: `Pengajuan ${docNumber} (${name}) berhasil didaftarkan ke sistem RIDE.`,
     })
+
+    // Send real email notification via Resend
+    const creatorEmail = tokenUser?.email || 'toto.rubianto.17@gmail.com'
+    await sendNotificationEmail({
+      to: creatorEmail,
+      userName: actorName,
+      title: `Pengajuan Dokumen Baru: ${docNumber}`,
+      description: `Dokumen "${name}" (${category}) berhasil didaftarkan ke portal RIDE dan masuk ke antrean Reviewer.`,
+      docNumber,
+    }).catch((err) => console.error('[Creation Email Failed]', err))
 
     return NextResponse.json(newDoc, { status: 201 })
   } catch (error: unknown) {

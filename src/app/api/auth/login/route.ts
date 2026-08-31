@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
     await LoginHistoryModel.create({
       userId: user._id,
       email: user.email,
-      device: userAgent.includes('Mobile') ? 'RISE Mobile / iOS' : 'Chrome / macOS',
+      device: userAgent.includes('Mobile') ? 'RIDE Mobile / iOS' : 'Chrome / macOS',
       ip,
       status: 'Success',
     })
