@@ -302,10 +302,10 @@ export function MyDocumentsView() {
                               <button
                                 onClick={() => {
                                   setSelectedDocNumber(doc.docNumber)
-                                  setCurrentView('tracking', 'expiry')
+                                  setCurrentView('tracking', 'progress')
                                 }}
                                 className="p-1.5 rounded-lg text-[#D97706] hover:bg-[#FFFBEB] cursor-pointer"
-                                title="Pengingat & Justifikasi Jatuh Tempo Kontrak"
+                                title="Lacak Pengingat & Justifikasi Jatuh Tempo Kontrak"
                               >
                                 <Clock className="h-4 w-4" />
                               </button>

@@ -296,10 +296,10 @@ export function DashboardView() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setCurrentView('tracking', 'expiry')}
+              onClick={() => setCurrentView('tracking', 'progress')}
               className="self-start sm:self-auto text-xs h-9 font-semibold text-[#163A70] rounded-xl cursor-pointer"
             >
-              <span>Kelola Pengingat &amp; Justifikasi Kontrak</span>
+              <span>Lacak Dokumen &amp; Jatuh Tempo</span>
               <ArrowRight className="h-3.5 w-3.5 ml-1" />
             </Button>
           </div>

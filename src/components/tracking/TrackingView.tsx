@@ -41,7 +41,11 @@ import {
   ShieldCheck,
   FolderOpen,
   Lock,
+  Bell,
+  BellRing,
+  FileEdit,
 } from 'lucide-react'
+import { Switch } from '@/components/ui/switch'
 import {
   Dialog,
   DialogContent,
@@ -51,16 +55,27 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog'
 import { toast } from 'sonner'
-import { ContractExpiryManager } from '@/components/contracts/ContractExpiryManager'
+import { ContractReminderConfig } from '@/context/AppContext'
 
 const STAGES = [
   { key: 'submitted', label: 'Pengajuan Baru', icon: Send },
-  { key: 'review', label: 'Review Kelayakan', icon: Search },
+  { key: 'review', label: 'Peninjauan Kelayakan', icon: Search },
   { key: 'drafting', label: 'Penyusunan Draf', icon: PenTool },
   { key: 'approval', label: 'Persetujuan Legal', icon: FileCheck2 },
   { key: 'bod', label: 'Persetujuan Direksi', icon: FileSignature },
   { key: 'archived', label: 'Selesai & Arsip', icon: Archive },
   { key: 'renewal', label: 'Jatuh Tempo', icon: Clock },
+]
+
+const CONSIDERATION_OPTIONS = [
+  'Performa dan kualitas layanan/barang vendor memuaskan',
+  'Kebutuhan operasional unit kerja masih berlanjut',
+  'Efisiensi biaya dan ketersediaan pagu anggaran',
+  'Tidak ada temuan ketidakpatuhan atau sengketa hukum',
+  'Terdapat perubahan ruang lingkup (Scope of Work)',
+  'Kebutuhan pengadaan telah selesai / tidak dilanjutkan',
+  'Tersedia alternatif vendor atau penyedia yang lebih kompetitif',
+  'Klausul kontrak memerlukan adendum atau penyesuaian harga/jangka waktu',
 ]
 
 export function TrackingView() {
@@ -75,6 +90,8 @@ export function TrackingView() {
     transitionDocument,
     uploadRevision,
     uploadFinalDocument,
+    submitDecision,
+    updateDocumentReminders,
     fetchDocuments,
   } = useApp()
 
@@ -269,6 +286,112 @@ export function TrackingView() {
     }
   }
 
+  // Contract Expiry & Reminders & Decision States
+  const [isDecisionOpen, setIsDecisionOpen] = useState(false)
+  const [decisionType, setDecisionType] = useState<'renew' | 'terminate' | 'amendment'>('renew')
+  const [considerations, setConsiderations] = useState<string[]>([])
+  const [justification, setJustification] = useState('')
+  const [submittingDecision, setSubmittingDecision] = useState(false)
+
+  const [isReminderModalOpen, setIsReminderModalOpen] = useState(false)
+  const [reminderConfig, setReminderConfig] = useState<ContractReminderConfig>({
+    h60: true,
+    h30: true,
+    h15: true,
+    h7: true,
+    h1: true,
+    customNotes: '',
+  })
+  const [savingReminder, setSavingReminder] = useState(false)
+
+  const now = new Date()
+
+  const getDiffDays = (doc: DocumentItem) => {
+    if (!doc.contractEnd) return 9999
+    const end = new Date(doc.contractEnd)
+    return Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+  }
+
+  const getMilestoneTag = (diffDays: number) => {
+    if (diffDays < 0) return { label: `Lewat ${Math.abs(diffDays)} Hari`, type: 'expired', color: 'bg-[#FEF2F2] text-[#DC2626] border-[#FCA5A5]' }
+    if (diffDays === 0) return { label: 'Jatuh Tempo Hari Ini', type: 'h1', color: 'bg-[#FEF2F2] text-[#DC2626] border-[#FCA5A5]' }
+    if (diffDays === 1) return { label: 'H-1 Jatuh Tempo', type: 'h1', color: 'bg-[#FEF2F2] text-[#DC2626] border-[#FCA5A5]' }
+    if (diffDays <= 7) return { label: `H-${diffDays} (Mendesak)`, type: 'h7', color: 'bg-[#FEF2F2] text-[#DC2626] border-[#FCA5A5]' }
+    if (diffDays <= 15) return { label: `H-${diffDays} (Peringatan)`, type: 'h15', color: 'bg-[#FFFBEB] text-[#D97706] border-[#FDE68A]' }
+    if (diffDays <= 30) return { label: `H-${diffDays} (Evaluasi)`, type: 'h30', color: 'bg-[#EFF6FF] text-[#2563EB] border-[#BFDBFE]' }
+    if (diffDays <= 60) return { label: `H-${diffDays} (Pra-Evaluasi)`, type: 'h60', color: 'bg-[#F8FAFC] text-[#475569] border-[#CBD5E1]' }
+    return { label: `Tersisa ${diffDays} Hari`, type: 'safe', color: 'bg-[#ECFDF5] text-[#059669] border-[#A7F3D0]' }
+  }
+
+  const handleOpenDecisionModal = (doc: DocumentItem, defType: 'renew' | 'terminate' | 'amendment' = 'renew') => {
+    setDecisionType(defType)
+    setConsiderations(doc.decision?.considerations || [])
+    setJustification(doc.decision?.justification || '')
+    setIsDecisionOpen(true)
+  }
+
+  const handleDecisionSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!activeDoc) return
+    if (!justification.trim()) {
+      toast.error('Uraian justifikasi atau pertimbangan wajib diisi.')
+      return
+    }
+
+    setSubmittingDecision(true)
+    const ok = await submitDecision(activeDoc._id, {
+      type: decisionType,
+      justification: justification.trim(),
+      considerations,
+    })
+    setSubmittingDecision(false)
+
+    if (ok) {
+      const typeLabel =
+        decisionType === 'renew'
+          ? 'Perpanjangan'
+          : decisionType === 'amendment'
+          ? 'Adendum Klausul'
+          : 'Terminasi'
+      toast.success(`Pertimbangan & Justifikasi ${typeLabel} untuk ${activeDoc.docNumber} berhasil diajukan!`)
+      setIsDecisionOpen(false)
+    } else {
+      toast.error('Gagal menyimpan justifikasi keputusan.')
+    }
+  }
+
+  const handleOpenReminderModal = (doc: DocumentItem) => {
+    setReminderConfig({
+      h60: doc.reminders?.h60 ?? true,
+      h30: doc.reminders?.h30 ?? true,
+      h15: doc.reminders?.h15 ?? true,
+      h7: doc.reminders?.h7 ?? true,
+      h1: doc.reminders?.h1 ?? true,
+      customNotes: doc.reminders?.customNotes || '',
+    })
+    setIsReminderModalOpen(true)
+  }
+
+  const handleReminderSave = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!activeDoc) return
+    setSavingReminder(true)
+    const ok = await updateDocumentReminders(activeDoc._id, reminderConfig)
+    setSavingReminder(false)
+    if (ok) {
+      toast.success(`Pengaturan pengingat untuk ${activeDoc.docNumber} berhasil disimpan!`)
+      setIsReminderModalOpen(false)
+    } else {
+      toast.error('Gagal memperbarui pengaturan pengingat.')
+    }
+  }
+
+  const toggleConsideration = (item: string) => {
+    setConsiderations((prev) =>
+      prev.includes(item) ? prev.filter((i) => i !== item) : [...prev, item]
+    )
+  }
+
   // Permissions check
   const isDocumentController = user?.role === 'Document Controller' || user?.role === 'Administrator'
   const isApprover = user?.role === 'Approver' || user?.role === 'Director / BOD' || user?.role === 'Administrator'
@@ -279,10 +402,10 @@ export function TrackingView() {
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold font-display text-[#0B2147]">
-          Lacak &amp; Ajukan Dokumen (Tracking &amp; History)
+          Lacak &amp; Ajukan Dokumen
         </h1>
         <p className="text-xs text-[#64748B] mt-1">
-          Pemesanan berkas baru, inspeksi riwayat revisi bertahap (V0, Rev.01, Rev.02), dan pengesahan Dokumen Final.
+          Pemesanan berkas baru, inspeksi riwayat revisi bertahap (V0, Rev.01, Rev.02), pemantauan jatuh tempo kontrak, dan pengesahan Dokumen Final.
         </p>
       </div>
 
@@ -313,23 +436,6 @@ export function TrackingView() {
           <span className="rounded-full bg-[#EBF2FF] px-2 py-0.5 text-[10px] font-bold text-[#163A70]">
             {documents.length} Dokumen
           </span>
-        </button>
-
-        <button
-          onClick={() => setTrackSubTab('expiry')}
-          className={`pb-3 text-xs font-bold transition-all cursor-pointer border-b-2 flex items-center gap-2 ${
-            trackSubTab === 'expiry'
-              ? 'border-[#163A70] text-[#163A70]'
-              : 'border-transparent text-[#64748B] hover:text-[#0F172A]'
-          }`}
-        >
-          <Clock className="h-3.5 w-3.5" />
-          <span>Masa Berlaku &amp; Pengingat Kontrak (H-60 s/d H-1)</span>
-          {documents.filter((d) => d.contractEnd && !d.noDuration).length > 0 && (
-            <span className="rounded-full bg-[#FFFBEB] text-[#D97706] border border-[#FDE68A] px-2 py-0.5 text-[10px] font-bold">
-              {documents.filter((d) => d.contractEnd && !d.noDuration).length} Kontrak
-            </span>
-          )}
         </button>
       </div>
 
@@ -777,6 +883,155 @@ export function TrackingView() {
                 </CardContent>
               </Card>
 
+              {/* KONTRAK EXPIRE, PENGINGAT (H-60, H-30, H-15, H-7, H-1) & JUSTIFIKASI */}
+              {activeDoc.contractEnd && !activeDoc.noDuration && (() => {
+                const diffDays = getDiffDays(activeDoc)
+                const tag = getMilestoneTag(diffDays)
+                const start = activeDoc.contractStart ? new Date(activeDoc.contractStart) : null
+                const end = new Date(activeDoc.contractEnd)
+                const reminders = activeDoc.reminders || { h60: true, h30: true, h15: true, h7: true, h1: true }
+
+                return (
+                  <Card className="border-[#CBD5E1] shadow-xs bg-gradient-to-br from-[#F8FAFC] to-[#F1F5F9] overflow-hidden">
+                    <CardContent className="p-5 sm:p-6 space-y-4">
+                      {/* Header with Expiry & Countdown */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#E2E8F0]">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Clock className="h-4 w-4 text-[#163A70]" />
+                            <span className="text-sm font-bold font-display text-[#0B2147]">
+                              Masa Berlaku &amp; Pengingat Jatuh Tempo Kontrak
+                            </span>
+                            <span className={`px-2.5 py-0.5 rounded-full text-[10.5px] font-bold border ${tag.color}`}>
+                              {tag.label}
+                            </span>
+                            {activeDoc.decision && (
+                              <span className="px-2.5 py-0.5 rounded-full text-[10.5px] font-bold bg-[#F0FDF4] text-[#16A34A] border border-[#BBF7D0] flex items-center gap-1">
+                                <CheckCircle2 className="h-3 w-3" />
+                                {activeDoc.decision.type === 'renew'
+                                  ? 'Rekomendasi: Perpanjang'
+                                  : activeDoc.decision.type === 'amendment'
+                                  ? 'Rekomendasi: Adendum'
+                                  : 'Rekomendasi: Terminasi'}
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-[11.5px] text-[#64748B]">
+                            Masa Berlaku:{' '}
+                            {start ? start.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}{' '}
+                            s/d <b className="text-[#0F172A]">{end.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</b>
+                          </div>
+                        </div>
+
+                        {/* Buttons: Set Pengingat & Ajukan Justifikasi */}
+                        <div className="flex flex-wrap items-center gap-2 shrink-0">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleOpenReminderModal(activeDoc)}
+                            className="h-8 text-xs border-[#CBD5E1] text-[#163A70] hover:bg-[#EBF2FF] font-bold rounded-lg gap-1.5 cursor-pointer shadow-2xs"
+                            title="Atur interval pengingat H-60, H-30, H-15, H-7, H-1"
+                          >
+                            <BellRing className="h-3.5 w-3.5 text-[#163A70]" />
+                            <span>Set Pengingat</span>
+                          </Button>
+
+                          <Button
+                            size="sm"
+                            onClick={() => handleOpenDecisionModal(activeDoc, 'renew')}
+                            className="h-8 text-xs bg-[#059669] hover:bg-[#047857] text-white font-bold rounded-lg gap-1 cursor-pointer"
+                          >
+                            <RefreshCw className="h-3 w-3" />
+                            <span>Perpanjang</span>
+                          </Button>
+
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleOpenDecisionModal(activeDoc, 'amendment')}
+                            className="h-8 text-xs border-[#BFDBFE] text-[#2563EB] hover:bg-[#EFF6FF] font-bold rounded-lg gap-1 cursor-pointer"
+                          >
+                            <FileEdit className="h-3 w-3" />
+                            <span>Adendum</span>
+                          </Button>
+
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleOpenDecisionModal(activeDoc, 'terminate')}
+                            className="h-8 text-xs border-[#FCA5A5] text-[#DC2626] hover:bg-[#FEF2F2] font-bold rounded-lg gap-1 cursor-pointer"
+                          >
+                            <Ban className="h-3 w-3" />
+                            <span>Terminasi</span>
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* Reminder Milestone Bar */}
+                      <div className="p-3 rounded-xl bg-white border border-[#E2E8F0] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div className="flex items-center gap-1.5 text-xs text-[#475569]">
+                          <Bell className="h-4 w-4 text-[#163A70]" />
+                          <span className="font-bold text-[#0B2147]">Status Pengingat Otomatis:</span>
+                        </div>
+
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {[
+                            { key: 'h60', label: 'H-60', active: reminders.h60, passed: diffDays <= 60 },
+                            { key: 'h30', label: 'H-30', active: reminders.h30, passed: diffDays <= 30 },
+                            { key: 'h15', label: 'H-15', active: reminders.h15, passed: diffDays <= 15 },
+                            { key: 'h7', label: 'H-7', active: reminders.h7, passed: diffDays <= 7 },
+                            { key: 'h1', label: 'H-1', active: reminders.h1, passed: diffDays <= 1 },
+                          ].map((m) => (
+                            <div
+                              key={m.key}
+                              className={`px-2 py-0.5 rounded-lg text-[10.5px] font-bold flex items-center gap-1 border ${
+                                !m.active
+                                  ? 'bg-white text-[#94A3B8] border-[#E2E8F0] opacity-50'
+                                  : m.passed
+                                  ? 'bg-[#FEF2F2] text-[#DC2626] border-[#FCA5A5]'
+                                  : 'bg-[#ECFDF5] text-[#059669] border-[#A7F3D0]'
+                              }`}
+                            >
+                              <span>{m.label}</span>
+                              <span>{m.active ? (m.passed ? '🔔' : '✓') : '—'}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Existing Decision Summary if already decided */}
+                      {activeDoc.decision && (
+                        <div className="p-3.5 rounded-xl bg-[#F0FDF4] border border-[#BBF7D0] text-xs space-y-1.5">
+                          <div className="flex items-center justify-between text-[#166534] font-bold">
+                            <span className="flex items-center gap-1.5">
+                              <CheckCircle2 className="h-4 w-4" />
+                              Rekomendasi / Justifikasi Kontrak Terdaftar ({activeDoc.decision.decidedBy || 'Pemohon'}):
+                            </span>
+                            <span className="text-[10.5px] text-[#15803D]">
+                              {new Date(activeDoc.decision.decidedAt).toLocaleDateString('id-ID', {
+                                day: 'numeric',
+                                month: 'short',
+                                year: 'numeric',
+                              })}
+                            </span>
+                          </div>
+                          <p className="text-[#166534] italic">&ldquo;{activeDoc.decision.justification}&rdquo;</p>
+                          {activeDoc.decision.considerations?.length > 0 && (
+                            <div className="pt-1 flex flex-wrap gap-1">
+                              {activeDoc.decision.considerations.map((c, i) => (
+                                <span key={i} className="px-2 py-0.5 rounded bg-white text-[#166534] text-[10px] font-semibold border border-[#BBF7D0]">
+                                  • {c}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                )
+              })()}
+
               {/* STRUCTURED DOCUMENT PACKAGE & VERSIONS (Area 5 & 6) */}
               <Card className="border-[#E2E8F0] shadow-sm">
                 <CardContent className="p-6 space-y-4">
@@ -1093,8 +1348,149 @@ export function TrackingView() {
         </DialogContent>
       </Dialog>
 
-      {/* TAB 3: CONTRACT EXPIRY & REMINDERS */}
-      {trackSubTab === 'expiry' && <ContractExpiryManager />}
+      {/* 1. Modal: Ajukan Justifikasi / Pertimbangan Kontrak */}
+      <Dialog open={isDecisionOpen} onOpenChange={setIsDecisionOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="text-[#0B2147] flex items-center gap-2">
+              <FileEdit className="h-5 w-5 text-[#163A70]" />
+              Formulir Justifikasi Kontrak — {activeDoc?.docNumber}
+            </DialogTitle>
+            <DialogDescription>
+              Ajukan evaluasi dan justifikasi resmi terhadap masa berlaku kontrak <b>{activeDoc?.name}</b>.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleDecisionSubmit} className="space-y-4 pt-2">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold block">Rekomendasi Tindakan Kontrak</Label>
+              <div className="grid grid-cols-3 gap-2">
+                <Button
+                  type="button"
+                  variant={decisionType === 'renew' ? 'default' : 'outline'}
+                  onClick={() => setDecisionType('renew')}
+                  className={`text-xs h-10 ${decisionType === 'renew' ? 'bg-[#059669] hover:bg-[#047857] text-white font-bold' : ''}`}
+                >
+                  <RefreshCw className="h-3.5 w-3.5 mr-1" /> Perpanjang
+                </Button>
+                <Button
+                  type="button"
+                  variant={decisionType === 'amendment' ? 'default' : 'outline'}
+                  onClick={() => setDecisionType('amendment')}
+                  className={`text-xs h-10 ${decisionType === 'amendment' ? 'bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-bold' : ''}`}
+                >
+                  <FileEdit className="h-3.5 w-3.5 mr-1" /> Adendum
+                </Button>
+                <Button
+                  type="button"
+                  variant={decisionType === 'terminate' ? 'destructive' : 'outline'}
+                  onClick={() => setDecisionType('terminate')}
+                  className="text-xs h-10"
+                >
+                  <Ban className="h-3.5 w-3.5 mr-1" /> Terminasi
+                </Button>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold block">Faktor Pertimbangan &amp; Evaluasi (Pilih yang relevan)</Label>
+              <div className="grid grid-cols-1 gap-1.5 max-h-40 overflow-y-auto p-2 bg-[#F8FAFC] rounded-xl border border-[#E2E8F0]">
+                {CONSIDERATION_OPTIONS.map((opt) => (
+                  <label key={opt} className="flex items-center gap-2 text-xs text-[#475569] cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={considerations.includes(opt)}
+                      onChange={() => toggleConsideration(opt)}
+                      className="rounded text-[#163A70]"
+                    />
+                    <span>{opt}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold block">Uraian Justifikasi Resmi</Label>
+              <Textarea
+                value={justification}
+                onChange={(e) => setJustification(e.target.value)}
+                placeholder="Tuliskan alasan, latar belakang kebutuhan, evaluasi performa, atau justifikasi perpanjangan/adendum..."
+                rows={3}
+                required
+                className="text-xs rounded-xl"
+              />
+            </div>
+
+            <DialogFooter className="pt-2">
+              <Button type="button" variant="outline" onClick={() => setIsDecisionOpen(false)}>
+                Batal
+              </Button>
+              <Button type="submit" disabled={submittingDecision} className="bg-[#163A70] hover:bg-[#0B2147] text-white font-bold">
+                {submittingDecision ? 'Menyimpan...' : 'Kirim Justifikasi'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* 2. Modal: Atur Pengingat Jatuh Tempo (H-60 s/d H-1) */}
+      <Dialog open={isReminderModalOpen} onOpenChange={setIsReminderModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-[#0B2147] flex items-center gap-2">
+              <BellRing className="h-5 w-5 text-[#163A70]" />
+              Pengaturan Pengingat — {activeDoc?.docNumber}
+            </DialogTitle>
+            <DialogDescription>
+              Aktifkan interval pemberitahuan email &amp; portal menjelang tanggal jatuh tempo kontrak.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleReminderSave} className="space-y-4 pt-2">
+            <div className="space-y-3 p-3 bg-[#F8FAFC] rounded-xl border border-[#E2E8F0]">
+              {[
+                { key: 'h60', label: 'Pengingat H-60 (60 Hari Sebelum Jatuh Tempo)', desc: 'Pra-evaluasi dan review berkas awal' },
+                { key: 'h30', label: 'Pengingat H-30 (30 Hari Sebelum Jatuh Tempo)', desc: 'Penyusunan telaah & justifikasi kebutuhan' },
+                { key: 'h15', label: 'Pengingat H-15 (15 Hari Sebelum Jatuh Tempo)', desc: 'Peringatan proses draf adendum/perpanjangan' },
+                { key: 'h7', label: 'Pengingat H-7 (7 Hari Sebelum Jatuh Tempo)', desc: 'Peringatan kritis persetujuan direksi' },
+                { key: 'h1', label: 'Pengingat H-1 (1 Hari Sebelum Jatuh Tempo)', desc: 'Peringatan final batas akhir kontrak' },
+              ].map((item) => (
+                <div key={item.key} className="flex items-center justify-between py-1">
+                  <div>
+                    <div className="text-xs font-bold text-[#0F172A]">{item.label}</div>
+                    <div className="text-[10.5px] text-[#64748B]">{item.desc}</div>
+                  </div>
+                  <Switch
+                    checked={(reminderConfig as any)[item.key]}
+                    onCheckedChange={(val) =>
+                      setReminderConfig((prev) => ({ ...prev, [item.key]: val }))
+                    }
+                  />
+                </div>
+              ))}
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold block">Catatan Khusus Pengingat (Opsional)</Label>
+              <Input
+                value={reminderConfig.customNotes}
+                onChange={(e) => setReminderConfig((prev) => ({ ...prev, customNotes: e.target.value }))}
+                placeholder="misal: Mohon hubungi legal 2 minggu sebelum jatuh tempo"
+                className="h-10 text-xs rounded-xl"
+              />
+            </div>
+
+            <DialogFooter className="pt-2">
+              <Button type="button" variant="outline" onClick={() => setIsReminderModalOpen(false)}>
+                Batal
+              </Button>
+              <Button type="submit" disabled={savingReminder} className="bg-[#163A70] hover:bg-[#0B2147] text-white font-bold">
+                {savingReminder ? 'Menyimpan...' : 'Simpan Pengaturan'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

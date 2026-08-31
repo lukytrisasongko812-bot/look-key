@@ -133,8 +133,8 @@ interface AppContextType {
   isAuthenticated: boolean
   authLoading: boolean
   currentView: ViewType
-  trackSubTab: 'new' | 'progress' | 'expiry'
-  setTrackSubTab: (subTab: 'new' | 'progress' | 'expiry') => void
+  trackSubTab: 'new' | 'progress'
+  setTrackSubTab: (subTab: 'new' | 'progress') => void
   selectedDocNumber: string | null
   setSelectedDocNumber: (docNo: string | null) => void
   documents: DocumentItem[]
@@ -153,7 +153,7 @@ interface AppContextType {
   verifyOtp: (userId: string, email: string, code: string) => Promise<{ success: boolean; error?: string }>
   ssoLogin: (email: string) => Promise<{ success: boolean; error?: string }>
   logout: () => void
-  setCurrentView: (view: ViewType, subTab?: 'new' | 'progress' | 'expiry') => void
+  setCurrentView: (view: ViewType, subTab?: 'new' | 'progress') => void
   fetchDocuments: (query?: string, status?: string, category?: string) => Promise<void>
   fetchNotifications: () => Promise<void>
   fetchAllUsers: () => Promise<void>
@@ -195,7 +195,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const [authLoading, setAuthLoading] = useState(true)
   const [currentView, setCurrentView] = useState<ViewType>('dashboard')
-  const [trackSubTab, setTrackSubTab] = useState<'new' | 'progress' | 'expiry'>('progress')
+  const [trackSubTab, setTrackSubTab] = useState<'new' | 'progress'>('progress')
   const [selectedDocNumber, setSelectedDocNumber] = useState<string | null>(null)
   const [documents, setDocuments] = useState<DocumentItem[]>([])
   const [notifications, setNotifications] = useState<NotificationItem[]>([])
@@ -663,7 +663,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const navigateTo = (view: ViewType, subTab?: 'new' | 'progress' | 'expiry') => {
+  const navigateTo = (view: ViewType, subTab?: 'new' | 'progress') => {
     setCurrentView(view)
     if (subTab) setTrackSubTab(subTab)
     setIsMobileSidebarOpen(false)
