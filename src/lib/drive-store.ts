@@ -1,5 +1,6 @@
 import bcrypt from 'bcryptjs'
 import { UserRole } from '@/context/AppContext'
+import { syncUserToGoogleDrive, syncDocumentToGoogleDrive } from './gdrive'
 
 export interface StoredFile {
   originalName: string
@@ -823,6 +824,7 @@ export async function saveDriveDocument(doc: StoredDocument) {
   } else {
     store.documents.unshift(doc)
   }
+  syncDocumentToGoogleDrive(doc).catch((e) => console.error('[Background GDrive Sync Doc Error]', e))
   return doc
 }
 
@@ -868,6 +870,7 @@ export async function saveDriveUser(user: StoredUser) {
   } else {
     store.users.push(user)
   }
+  syncUserToGoogleDrive(user).catch((e) => console.error('[Background GDrive Sync User Error]', e))
   return user
 }
 

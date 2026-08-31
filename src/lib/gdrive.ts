@@ -1,5 +1,5 @@
 import { google } from 'googleapis'
-import { StoredDocument } from './drive-store'
+import { StoredDocument, StoredUser, StoredNotification } from './drive-store'
 
 const DEFAULT_SERVICE_EMAIL =
   process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL ||
@@ -39,6 +39,17 @@ svR0VzPeh1ITi+HByUIaoEEM
 
 const DEFAULT_PARENT_FOLDER_ID =
   process.env.GOOGLE_DRIVE_FOLDER_ID || '1S8ifA-RtvGB0JGFPZSfsaL_IX65Nc16F'
+
+const USERS_REGISTRY_FOLDER_ID = '1JRjTJOGlGs0S0iE1HYIBaI0nIcqDXugf'
+
+function getDriveClient() {
+  const auth = new google.auth.JWT({
+    email: DEFAULT_SERVICE_EMAIL,
+    key: DEFAULT_PRIVATE_KEY,
+    scopes: ['https://www.googleapis.com/auth/drive'],
+  })
+  return google.drive({ version: 'v3', auth })
+}
 
 /**
  * Format complete text log for document history (.txt file)
@@ -160,13 +171,7 @@ export async function syncDocumentToGoogleDrive(doc: StoredDocument): Promise<{
   const folderName = `[${doc.docNumber}] ${doc.name}`
 
   try {
-    const auth = new google.auth.JWT({
-      email: DEFAULT_SERVICE_EMAIL,
-      key: DEFAULT_PRIVATE_KEY,
-      scopes: ['https://www.googleapis.com/auth/drive'],
-    })
-
-    const drive = google.drive({ version: 'v3', auth })
+    const drive = getDriveClient()
 
     // Check if subfolder exists in parent
     const existing = await drive.files.list({
@@ -180,11 +185,26 @@ export async function syncDocumentToGoogleDrive(doc: StoredDocument): Promise<{
     let folderUrl = existing.data.files?.[0]?.webViewLink
 
     if (!folderId) {
+      const descriptionData = JSON.stringify({
+        docNumber: doc.docNumber,
+        name: doc.name,
+        category: doc.category,
+        division: doc.division,
+        priority: doc.priority,
+        stage: doc.stage,
+        statusLabel: doc.statusLabel,
+        pic: doc.pic,
+        versionsCount: doc.versions?.length || 0,
+        createdAt: doc.createdAt,
+        updatedAt: doc.updatedAt,
+      }, null, 2)
+
       const createdFolder = await drive.files.create({
         requestBody: {
           name: folderName,
           mimeType: 'application/vnd.google-apps.folder',
           parents: [DEFAULT_PARENT_FOLDER_ID],
+          description: descriptionData,
         },
         supportsAllDrives: true,
         fields: 'id, webViewLink',
@@ -211,5 +231,60 @@ export async function syncDocumentToGoogleDrive(doc: StoredDocument): Promise<{
       isLive: false,
       message: 'Sinkronisasi siap.',
     }
+  }
+}
+
+/**
+ * Sync user profile to Google Drive User Registry folder
+ */
+export async function syncUserToGoogleDrive(user: StoredUser): Promise<boolean> {
+  try {
+    const drive = getDriveClient()
+    const folderName = `👤 ${user.employeeName} (${user.role})`
+
+    const existing = await drive.files.list({
+      q: `'${USERS_REGISTRY_FOLDER_ID}' in parents and name = '${folderName.replace(/'/g, "\\'")}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
+      supportsAllDrives: true,
+      includeItemsFromAllDrives: true,
+      fields: 'files(id)',
+    })
+
+    const userMetadata = JSON.stringify({
+      id: user._id,
+      employeeName: user.employeeName,
+      email: user.email,
+      position: user.position,
+      division: user.division,
+      role: user.role,
+      phone: user.phone || '',
+      twoFactorEnabled: user.twoFactorEnabled,
+      isActive: user.isActive,
+      updatedAt: new Date().toISOString(),
+    }, null, 2)
+
+    if (existing.data.files && existing.data.files.length > 0) {
+      await drive.files.update({
+        fileId: existing.data.files[0].id!,
+        requestBody: {
+          name: folderName,
+          description: userMetadata,
+        },
+        supportsAllDrives: true,
+      })
+    } else {
+      await drive.files.create({
+        requestBody: {
+          name: folderName,
+          mimeType: 'application/vnd.google-apps.folder',
+          parents: [USERS_REGISTRY_FOLDER_ID],
+          description: userMetadata,
+        },
+        supportsAllDrives: true,
+      })
+    }
+    return true
+  } catch (e) {
+    console.error('[User Drive Sync Error]', e)
+    return false
   }
 }
