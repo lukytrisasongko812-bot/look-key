@@ -216,6 +216,14 @@ export async function syncDocumentToGoogleDrive(doc: StoredDocument): Promise<{
     doc.driveFolderId = folderId || undefined
     doc.driveFolderUrl = folderUrl || undefined
 
+    // Upload physical ringkasan_dan_log_dokumen.txt via Google Apps Script Webhook
+    if (folderId) {
+      const txtContent = generateDocumentTxtLog(doc)
+      uploadFileViaGasWebhook(folderId, 'ringkasan_dan_log_dokumen.txt', txtContent).catch((e) =>
+        console.error('[GAS Background Upload Error]', e)
+      )
+    }
+
     return {
       folderId: folderId || DEFAULT_PARENT_FOLDER_ID,
       folderUrl: folderUrl || `https://drive.google.com/drive/folders/${folderId}`,
@@ -231,6 +239,28 @@ export async function syncDocumentToGoogleDrive(doc: StoredDocument): Promise<{
       isLive: false,
       message: 'Sinkronisasi siap.',
     }
+  }
+}
+
+export async function uploadFileViaGasWebhook(
+  folderId: string,
+  fileName: string,
+  content: string
+): Promise<boolean> {
+  const gasUrl =
+    process.env.GOOGLE_APPS_SCRIPT_WEBHOOK_URL ||
+    'https://script.google.com/macros/s/AKfycbxk1c-RS7uMdD1ocpXrYh29VWGDOtQ6F0eJ6GR-uVCojPxtSfd7f7UClFlWiiOts_0KVg/exec'
+
+  try {
+    const res = await fetch(gasUrl, {
+      method: 'POST',
+      body: JSON.stringify({ folderId, fileName, content }),
+      redirect: 'follow',
+    })
+    return res.ok
+  } catch (e) {
+    console.error('[GAS Webhook Error]', e)
+    return false
   }
 }
 
