@@ -51,6 +51,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog'
 import { toast } from 'sonner'
+import { ContractExpiryManager } from '@/components/contracts/ContractExpiryManager'
 
 const STAGES = [
   { key: 'submitted', label: 'Pengajuan Baru', icon: Send },
@@ -312,6 +313,23 @@ export function TrackingView() {
           <span className="rounded-full bg-[#EBF2FF] px-2 py-0.5 text-[10px] font-bold text-[#163A70]">
             {documents.length} Dokumen
           </span>
+        </button>
+
+        <button
+          onClick={() => setTrackSubTab('expiry')}
+          className={`pb-3 text-xs font-bold transition-all cursor-pointer border-b-2 flex items-center gap-2 ${
+            trackSubTab === 'expiry'
+              ? 'border-[#163A70] text-[#163A70]'
+              : 'border-transparent text-[#64748B] hover:text-[#0F172A]'
+          }`}
+        >
+          <Clock className="h-3.5 w-3.5" />
+          <span>Masa Berlaku &amp; Pengingat Kontrak (H-60 s/d H-1)</span>
+          {documents.filter((d) => d.contractEnd && !d.noDuration).length > 0 && (
+            <span className="rounded-full bg-[#FFFBEB] text-[#D97706] border border-[#FDE68A] px-2 py-0.5 text-[10px] font-bold">
+              {documents.filter((d) => d.contractEnd && !d.noDuration).length} Kontrak
+            </span>
+          )}
         </button>
       </div>
 
@@ -1074,6 +1092,9 @@ export function TrackingView() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* TAB 3: CONTRACT EXPIRY & REMINDERS */}
+      {trackSubTab === 'expiry' && <ContractExpiryManager />}
     </div>
   )
 }

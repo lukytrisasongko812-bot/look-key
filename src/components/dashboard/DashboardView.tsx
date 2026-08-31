@@ -33,6 +33,7 @@ import {
   AlertTriangle,
   History,
   Download,
+  FileEdit,
 } from 'lucide-react'
 import {
   Dialog,
@@ -56,14 +57,14 @@ const STAGES = [
 ]
 
 const CONSIDERATION_OPTIONS = [
-  'Performa vendor memuaskan',
-  'Kebutuhan operasional berlanjut',
-  'Efisiensi biaya dan anggaran tercapai',
-  'Tidak ada temuan kepatuhan/risiko hukum',
-  'Kebutuhan proyek telah selesai',
-  'Kendala anggaran divisi',
-  'Terdapat risiko ketidakpatuhan',
-  'Tersedia alternatif vendor/penyedia yang lebih baik',
+  'Performa dan kualitas layanan/barang vendor memuaskan',
+  'Kebutuhan operasional unit kerja masih berlanjut',
+  'Efisiensi biaya dan ketersediaan pagu anggaran',
+  'Tidak ada temuan ketidakpatuhan atau sengketa hukum',
+  'Terdapat perubahan ruang lingkup (Scope of Work)',
+  'Kebutuhan pengadaan telah selesai / tidak dilanjutkan',
+  'Tersedia alternatif vendor atau penyedia yang lebih kompetitif',
+  'Klausul kontrak memerlukan adendum atau penyesuaian harga/jangka waktu',
 ]
 
 export function DashboardView() {
@@ -79,7 +80,7 @@ export function DashboardView() {
 
   // State for Decision Modal
   const [decisionDoc, setDecisionDoc] = useState<DocumentItem | null>(null)
-  const [decisionType, setDecisionType] = useState<'renew' | 'terminate'>('renew')
+  const [decisionType, setDecisionType] = useState<'renew' | 'terminate' | 'amendment'>('renew')
   const [considerations, setConsiderations] = useState<string[]>([])
   const [justification, setJustification] = useState('')
   const [isDecisionOpen, setIsDecisionOpen] = useState(false)
@@ -115,7 +116,7 @@ export function DashboardView() {
       return dateA - dateB
     })
 
-  const handleOpenDecision = (doc: DocumentItem, defaultType: 'renew' | 'terminate') => {
+  const handleOpenDecision = (doc: DocumentItem, defaultType: 'renew' | 'terminate' | 'amendment' = 'renew') => {
     setDecisionDoc(doc)
     setDecisionType(defaultType)
     setConsiderations([])
@@ -295,10 +296,10 @@ export function DashboardView() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setCurrentView('tracking', 'progress')}
-              className="self-start sm:self-auto text-xs h-9 font-semibold text-[#163A70] rounded-xl"
+              onClick={() => setCurrentView('tracking', 'expiry')}
+              className="self-start sm:self-auto text-xs h-9 font-semibold text-[#163A70] rounded-xl cursor-pointer"
             >
-              <span>Lihat Semua</span>
+              <span>Kelola Pengingat &amp; Justifikasi Kontrak</span>
               <ArrowRight className="h-3.5 w-3.5 ml-1" />
             </Button>
           </div>
@@ -306,10 +307,10 @@ export function DashboardView() {
           <div className="space-y-3">
             {expiringDocs.length === 0 ? (
               <div className="text-center py-6 text-xs text-[#64748B]">
-                Tidak ada dokumen yang mendekati jatuh tempo saat ini.
+                Tidak ada dokumen kontrak yang mendekati jatuh tempo saat ini.
               </div>
             ) : (
-              expiringDocs.slice(0, 3).map((doc) => {
+              expiringDocs.slice(0, 4).map((doc) => {
                 const end = new Date(doc.contractEnd!)
                 const diffDays = Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
                 const isCritical = diffDays <= 7
@@ -358,6 +359,14 @@ export function DashboardView() {
                           className="h-8 text-xs bg-[#059669] hover:bg-[#047857] text-white font-bold rounded-lg cursor-pointer"
                         >
                           <RefreshCw className="h-3 w-3 mr-1" /> Perpanjang
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleOpenDecision(doc, 'amendment')}
+                          className="h-8 text-xs text-[#2563EB] hover:bg-[#EFF6FF] border-[#BFDBFE] font-bold rounded-lg cursor-pointer"
+                        >
+                          <FileEdit className="h-3 w-3 mr-1" /> Adendum
                         </Button>
                         <Button
                           size="sm"
@@ -494,22 +503,31 @@ export function DashboardView() {
 
           <form onSubmit={handleDecisionSubmit} className="space-y-4 pt-2">
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold block">Jenis Keputusan</label>
-              <div className="grid grid-cols-2 gap-2">
+              <label className="text-xs font-semibold block">Rekomendasi Tindakan Kontrak</label>
+              <div className="grid grid-cols-3 gap-2">
                 <Button
                   type="button"
                   variant={decisionType === 'renew' ? 'default' : 'outline'}
                   onClick={() => setDecisionType('renew')}
-                  className={decisionType === 'renew' ? 'bg-[#059669] hover:bg-[#047857]' : ''}
+                  className={`text-xs h-10 ${decisionType === 'renew' ? 'bg-[#059669] hover:bg-[#047857] text-white font-bold' : ''}`}
                 >
-                  <RefreshCw className="h-3.5 w-3.5 mr-1" /> Perpanjang Kontrak
+                  <RefreshCw className="h-3.5 w-3.5 mr-1" /> Perpanjang
+                </Button>
+                <Button
+                  type="button"
+                  variant={decisionType === 'amendment' ? 'default' : 'outline'}
+                  onClick={() => setDecisionType('amendment')}
+                  className={`text-xs h-10 ${decisionType === 'amendment' ? 'bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-bold' : ''}`}
+                >
+                  <FileEdit className="h-3.5 w-3.5 mr-1" /> Adendum
                 </Button>
                 <Button
                   type="button"
                   variant={decisionType === 'terminate' ? 'destructive' : 'outline'}
                   onClick={() => setDecisionType('terminate')}
+                  className="text-xs h-10"
                 >
-                  <Ban className="h-3.5 w-3.5 mr-1" /> Terminasi Kontrak
+                  <Ban className="h-3.5 w-3.5 mr-1" /> Terminasi
                 </Button>
               </div>
             </div>

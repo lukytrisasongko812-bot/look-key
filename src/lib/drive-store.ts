@@ -31,11 +31,22 @@ export interface StoredHistory {
 }
 
 export interface StoredDecision {
-  type: 'renew' | 'terminate'
+  type: 'renew' | 'terminate' | 'amendment'
   justification: string
   considerations: string[]
   decidedAt: string
   decidedBy?: string
+  recommendation?: string
+}
+
+export interface StoredReminderConfig {
+  h60: boolean
+  h30: boolean
+  h15: boolean
+  h7: boolean
+  h1: boolean
+  customNotes?: string
+  lastSentMilestone?: string
 }
 
 export interface StoredDocument {
@@ -64,6 +75,7 @@ export interface StoredDocument {
   finalDocument?: StoredFile | null
   versions: StoredVersion[]
   decision?: StoredDecision | null
+  reminders?: StoredReminderConfig | null
   history: StoredHistory[]
   driveFolderId?: string
   driveFolderUrl?: string

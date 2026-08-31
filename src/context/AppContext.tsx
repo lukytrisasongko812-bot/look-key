@@ -56,11 +56,21 @@ export interface DocumentVersionItem {
 }
 
 export interface DocumentDecision {
-  type: 'renew' | 'terminate'
+  type: 'renew' | 'terminate' | 'amendment'
   justification: string
   considerations: string[]
   decidedAt: string
   decidedBy?: string
+}
+
+export interface ContractReminderConfig {
+  h60: boolean
+  h30: boolean
+  h15: boolean
+  h7: boolean
+  h1: boolean
+  customNotes?: string
+  lastSentMilestone?: string
 }
 
 export interface DocumentHistoryItem {
@@ -98,6 +108,7 @@ export interface DocumentItem {
   finalDocument?: DocumentFile | null
   versions: DocumentVersionItem[]
   decision?: DocumentDecision | null
+  reminders?: ContractReminderConfig | null
   history: DocumentHistoryItem[]
   driveFolderId?: string
   driveFolderUrl?: string
@@ -122,27 +133,27 @@ interface AppContextType {
   isAuthenticated: boolean
   authLoading: boolean
   currentView: ViewType
-  trackSubTab: 'new' | 'progress'
+  trackSubTab: 'new' | 'progress' | 'expiry'
+  setTrackSubTab: (subTab: 'new' | 'progress' | 'expiry') => void
   selectedDocNumber: string | null
+  setSelectedDocNumber: (docNo: string | null) => void
   documents: DocumentItem[]
   notifications: NotificationItem[]
   allUsers: UserProfile[]
   unreadNotifCount: number
   isNotifOpen: boolean
+  setIsNotifOpen: (open: boolean) => void
   isMobileSidebarOpen: boolean
+  setIsMobileSidebarOpen: (open: boolean) => void
   isSidebarCollapsed: boolean
+  setIsSidebarCollapsed: (collapsed: boolean) => void
   searchQuery: string
+  setSearchQuery: (query: string) => void
   login: (email: string, pass: string) => Promise<{ success: boolean; requires2FA?: boolean; userId?: string; error?: string }>
   verifyOtp: (userId: string, email: string, code: string) => Promise<{ success: boolean; error?: string }>
   ssoLogin: (email: string) => Promise<{ success: boolean; error?: string }>
   logout: () => void
-  setCurrentView: (view: ViewType, subTab?: 'new' | 'progress') => void
-  setTrackSubTab: (subTab: 'new' | 'progress') => void
-  setSelectedDocNumber: (docNo: string | null) => void
-  setIsNotifOpen: (open: boolean) => void
-  setIsMobileSidebarOpen: (open: boolean) => void
-  setIsSidebarCollapsed: (collapsed: boolean) => void
-  setSearchQuery: (query: string) => void
+  setCurrentView: (view: ViewType, subTab?: 'new' | 'progress' | 'expiry') => void
   fetchDocuments: (query?: string, status?: string, category?: string) => Promise<void>
   fetchNotifications: () => Promise<void>
   fetchAllUsers: () => Promise<void>
@@ -152,7 +163,8 @@ interface AppContextType {
   transitionDocument: (id: string, action: string, notes?: string) => Promise<boolean>
   uploadRevision: (id: string, file: DocumentFile, notes: string, versionTag?: string) => Promise<boolean>
   uploadFinalDocument: (id: string, file: DocumentFile, notes: string) => Promise<boolean>
-  submitDecision: (id: string, decision: { type: 'renew' | 'terminate'; justification: string; considerations: string[] }) => Promise<boolean>
+  submitDecision: (id: string, decision: { type: 'renew' | 'terminate' | 'amendment'; justification: string; considerations: string[] }) => Promise<boolean>
+  updateDocumentReminders: (id: string, reminders: Partial<ContractReminderConfig>) => Promise<boolean>
   markNotificationsRead: () => Promise<void>
   updateProfile: (profileData: Partial<UserProfile>) => Promise<boolean>
   updateUserRole: (userId: string, newRole: UserRole) => Promise<boolean>
@@ -183,7 +195,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const [authLoading, setAuthLoading] = useState(true)
   const [currentView, setCurrentView] = useState<ViewType>('dashboard')
-  const [trackSubTab, setTrackSubTab] = useState<'new' | 'progress'>('progress')
+  const [trackSubTab, setTrackSubTab] = useState<'new' | 'progress' | 'expiry'>('progress')
   const [selectedDocNumber, setSelectedDocNumber] = useState<string | null>(null)
   const [documents, setDocuments] = useState<DocumentItem[]>([])
   const [notifications, setNotifications] = useState<NotificationItem[]>([])
@@ -525,7 +537,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const submitDecision = async (
     id: string,
-    decision: { type: 'renew' | 'terminate'; justification: string; considerations: string[] }
+    decision: { type: 'renew' | 'terminate' | 'amendment'; justification: string; considerations: string[] }
   ): Promise<boolean> => {
     try {
       const headers: Record<string, string> = { 'Content-Type': 'application/json' }
@@ -544,6 +556,30 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return false
     } catch (e) {
       console.error('Failed to submit decision', e)
+      return false
+    }
+  }
+
+  const updateDocumentReminders = async (
+    id: string,
+    reminders: Partial<ContractReminderConfig>
+  ): Promise<boolean> => {
+    try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+      if (token) headers['Authorization'] = `Bearer ${token}`
+
+      const res = await fetch(`/api/documents/${id}/reminders`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(reminders),
+      })
+      if (res.ok) {
+        await fetchDocuments()
+        return true
+      }
+      return false
+    } catch (e) {
+      console.error('Failed to update reminders', e)
       return false
     }
   }
@@ -627,7 +663,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const navigateTo = (view: ViewType, subTab?: 'new' | 'progress') => {
+  const navigateTo = (view: ViewType, subTab?: 'new' | 'progress' | 'expiry') => {
     setCurrentView(view)
     if (subTab) setTrackSubTab(subTab)
     setIsMobileSidebarOpen(false)
@@ -675,6 +711,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         uploadRevision,
         uploadFinalDocument,
         submitDecision,
+        updateDocumentReminders,
         markNotificationsRead,
         updateProfile,
         updateUserRole,

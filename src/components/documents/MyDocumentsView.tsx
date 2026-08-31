@@ -33,6 +33,7 @@ import {
   FolderOpen,
   ShieldCheck,
   CheckCircle2,
+  Clock,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -297,6 +298,18 @@ export function MyDocumentsView() {
                             >
                               <GitPullRequestDraft className="h-4 w-4" />
                             </button>
+                            {doc.contractEnd && !doc.noDuration && (
+                              <button
+                                onClick={() => {
+                                  setSelectedDocNumber(doc.docNumber)
+                                  setCurrentView('tracking', 'expiry')
+                                }}
+                                className="p-1.5 rounded-lg text-[#D97706] hover:bg-[#FFFBEB] cursor-pointer"
+                                title="Pengingat & Justifikasi Jatuh Tempo Kontrak"
+                              >
+                                <Clock className="h-4 w-4" />
+                              </button>
+                            )}
                             <button
                               onClick={() => setViewModalDoc(doc)}
                               className="p-1.5 rounded-lg text-[#475569] hover:bg-[#F1F5F9] cursor-pointer"

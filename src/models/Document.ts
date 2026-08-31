@@ -20,11 +20,21 @@ export interface IDocVersion {
 }
 
 export interface IDocDecision {
-  type: 'renew' | 'terminate'
+  type: 'renew' | 'terminate' | 'amendment'
   justification: string
   considerations: string[]
   decidedAt: Date
   decidedBy?: string
+}
+
+export interface IReminderConfig {
+  h60: boolean
+  h30: boolean
+  h15: boolean
+  h7: boolean
+  h1: boolean
+  customNotes?: string
+  lastSentMilestone?: string
 }
 
 export interface IDocHistory {
@@ -61,6 +71,7 @@ export interface IDocumentRecord extends MongooseDocument {
   finalDocument?: IDocFile | null
   versions: IDocVersion[]
   decision?: IDocDecision | null
+  reminders?: IReminderConfig | null
   history: IDocHistory[]
   driveFolderId?: string
   driveFolderUrl?: string
@@ -100,11 +111,24 @@ const DocVersionSchema = new Schema<IDocVersion>(
 
 const DocDecisionSchema = new Schema<IDocDecision>(
   {
-    type: { type: String, enum: ['renew', 'terminate'], required: true },
+    type: { type: String, enum: ['renew', 'terminate', 'amendment'], required: true },
     justification: { type: String, required: true },
     considerations: [{ type: String }],
     decidedAt: { type: Date, default: Date.now },
     decidedBy: { type: String },
+  },
+  { _id: false }
+)
+
+const ReminderConfigSchema = new Schema<IReminderConfig>(
+  {
+    h60: { type: Boolean, default: true },
+    h30: { type: Boolean, default: true },
+    h15: { type: Boolean, default: true },
+    h7: { type: Boolean, default: true },
+    h1: { type: Boolean, default: true },
+    customNotes: { type: String, default: '' },
+    lastSentMilestone: { type: String, default: '' },
   },
   { _id: false }
 )
@@ -155,6 +179,10 @@ const DocumentSchema = new Schema<IDocumentRecord>(
     finalDocument: { type: DocFileSchema, default: null },
     versions: [DocVersionSchema],
     decision: { type: DocDecisionSchema, default: null },
+    reminders: {
+      type: ReminderConfigSchema,
+      default: () => ({ h60: true, h30: true, h15: true, h7: true, h1: true }),
+    },
     history: [DocHistorySchema],
     driveFolderId: { type: String, default: '' },
     driveFolderUrl: { type: String, default: '' },

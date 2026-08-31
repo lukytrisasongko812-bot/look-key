@@ -41,6 +41,8 @@ export async function POST(
     const actionLabel =
       type === 'renew'
         ? `Keputusan Kontrak: Diajukan Perpanjangan (Renewal) oleh ${actorName}`
+        : type === 'amendment'
+        ? `Keputusan Kontrak: Diajukan Adendum / Perubahan Klausul oleh ${actorName}`
         : `Keputusan Kontrak: Ditetapkan Terminasi / Selesai oleh ${actorName}`
 
     doc.history.push({
