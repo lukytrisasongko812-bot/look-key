@@ -8,12 +8,27 @@ export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   try {
+    const tokenUser = getUserFromRequest(request)
     const { searchParams } = new URL(request.url)
     const query = searchParams.get('q') || ''
     const status = searchParams.get('status') || ''
     const category = searchParams.get('category') || ''
 
-    const docs = await getDriveDocuments(query, status, category)
+    let docs = await getDriveDocuments(query, status, category)
+
+    // Role-based access control: Requester can strictly only view their own documents
+    if (tokenUser && tokenUser.role === 'Requester') {
+      const userEmail = tokenUser.email.toLowerCase()
+      const userId = tokenUser.userId
+      const userName = tokenUser.employeeName?.toLowerCase() || ''
+      docs = docs.filter(
+        (d) =>
+          d.createdBy === userId ||
+          (d.picEmail && d.picEmail.toLowerCase() === userEmail) ||
+          (d.pic && d.pic.toLowerCase() === userName)
+      )
+    }
+
     return NextResponse.json(docs)
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed to fetch documents'

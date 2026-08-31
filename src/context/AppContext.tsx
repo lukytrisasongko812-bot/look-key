@@ -194,22 +194,41 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [searchQuery, setSearchQuery] = useState('')
 
   // Fetch documents
-  const fetchDocuments = useCallback(async (query = '', status = '', category = '') => {
-    try {
-      const params = new URLSearchParams()
-      if (query) params.append('q', query)
-      if (status) params.append('status', status)
-      if (category) params.append('category', category)
+  const fetchDocuments = useCallback(
+    async (query = '', status = '', category = '') => {
+      try {
+        const params = new URLSearchParams()
+        if (query) params.append('q', query)
+        if (status) params.append('status', status)
+        if (category) params.append('category', category)
 
-      const res = await fetch(`/api/documents?${params.toString()}`)
-      if (res.ok) {
-        const data = await res.json()
-        setDocuments(data)
+        const headers: Record<string, string> = {}
+        const currentToken = token || localStorage.getItem('ride_token') || localStorage.getItem('rise_token')
+        if (currentToken) headers['Authorization'] = `Bearer ${currentToken}`
+
+        const res = await fetch(`/api/documents?${params.toString()}`, { headers })
+        if (res.ok) {
+          const data: DocumentItem[] = await res.json()
+          if (user && user.role === 'Requester') {
+            const userEmail = user.email.toLowerCase()
+            const userName = user.employeeName?.toLowerCase() || ''
+            const filtered = data.filter(
+              (d) =>
+                d.createdBy === user.id ||
+                (d.picEmail && d.picEmail.toLowerCase() === userEmail) ||
+                (d.pic && d.pic.toLowerCase() === userName)
+            )
+            setDocuments(filtered)
+          } else {
+            setDocuments(data)
+          }
+        }
+      } catch (e) {
+        console.error('Failed to fetch documents', e)
       }
-    } catch (e) {
-      console.error('Failed to fetch documents', e)
-    }
-  }, [])
+    },
+    [token, user]
+  )
 
   // Fetch notifications
   const fetchNotifications = useCallback(async () => {
@@ -277,13 +296,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     fetchDocuments()
   }, [fetchDocuments])
 
-  // Refetch notifications on token change
+  // Refetch notifications and documents on token change
   useEffect(() => {
     if (token) {
+      fetchDocuments()
       fetchNotifications()
       fetchAllUsers()
     }
-  }, [token, fetchNotifications, fetchAllUsers])
+  }, [token, fetchDocuments, fetchNotifications, fetchAllUsers])
 
   const login = async (email: string, pass: string) => {
     try {
