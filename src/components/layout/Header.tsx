@@ -151,69 +151,77 @@ export function Header() {
                 className="fixed inset-0 z-40"
                 onClick={() => setIsDropdownOpen(false)}
               />
-              <div className="absolute right-0 mt-2 z-50 w-56 rounded-2xl border border-[#E2E8F0] bg-white p-1.5 shadow-xl animate-card-in">
-                <div className="px-3 py-2.5 border-b border-[#F1F5F9] mb-1">
-                  <div className="text-xs font-bold text-[#0F172A]">
+              <div className="absolute right-0 mt-2 z-50 w-64 sm:w-72 rounded-2xl border border-[#E2E8F0] bg-white p-2 shadow-2xl animate-card-in">
+                <div className="px-3.5 py-3 border-b border-[#F1F5F9] mb-1.5 bg-[#F8FAFC]/70 rounded-xl">
+                  <div className="text-xs font-bold text-[#0F172A] truncate">
                     {user?.employeeName || 'Pengguna'}
                   </div>
-                  <div className="text-[10px] text-[#64748B] truncate">
+                  <div className="text-[11px] text-[#64748B] truncate mt-0.5">
                     {user?.email || 'user@resourcesid.co.id'}
                   </div>
-                  <div className="mt-1.5 inline-block rounded-md bg-[#EBF2FF] px-2 py-0.5 text-[10px] font-bold text-[#163A70]">
-                    {user?.role || 'Reviewer'}
+                  <div className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-[#EBF2FF] px-2.5 py-0.5 text-[10.5px] font-bold text-[#163A70] border border-[#BFDBFE]">
+                    <Shield className="h-3 w-3" />
+                    <span>{user?.role || 'Reviewer'}</span>
                   </div>
                 </div>
 
-                <button
-                  onClick={() => {
-                    setIsDropdownOpen(false)
-                    setCurrentView('myAccount')
-                  }}
-                  className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-semibold text-[#0F172A] hover:bg-[#EBF2FF] hover:text-[#163A70] transition-colors cursor-pointer"
-                >
-                  <UserIcon className="h-4 w-4" />
-                  Profil &amp; Keamanan Akun
-                </button>
-                <button
-                  onClick={() => {
-                    setIsDropdownOpen(false)
-                    setCurrentView('matrix')
-                  }}
-                  className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-semibold text-[#0F172A] hover:bg-[#EBF2FF] hover:text-[#163A70] transition-colors cursor-pointer"
-                >
-                  <ShieldCheck className="h-4 w-4" />
-                  Matriks Kewenangan (RBAC)
-                </button>
-                <button
-                  onClick={() => {
-                    setIsDropdownOpen(false)
-                    setCurrentView('users')
-                  }}
-                  className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-semibold text-[#0F172A] hover:bg-[#EBF2FF] hover:text-[#163A70] transition-colors cursor-pointer"
-                >
-                  <Users className="h-4 w-4" />
-                  Kelola Pengguna &amp; Undangan
-                </button>
-                <button
-                  onClick={() => {
-                    setIsDropdownOpen(false)
-                    setCurrentView('settings')
-                  }}
-                  className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-semibold text-[#0F172A] hover:bg-[#EBF2FF] hover:text-[#163A70] transition-colors cursor-pointer"
-                >
-                  <SettingsIcon className="h-4 w-4" />
-                  Pengaturan Sistem
-                </button>
-                <div className="my-1 h-[1px] bg-[#F1F5F9]" />
+                <div className="space-y-0.5">
+                  <button
+                    onClick={() => {
+                      setIsDropdownOpen(false)
+                      setCurrentView('myAccount')
+                    }}
+                    className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold text-[#0F172A] hover:bg-[#EBF2FF] hover:text-[#163A70] transition-colors cursor-pointer"
+                  >
+                    <UserIcon className="h-4 w-4 shrink-0 text-[#64748B]" />
+                    <span className="truncate">Profil &amp; Keamanan Akun</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setIsDropdownOpen(false)
+                      setCurrentView('matrix')
+                    }}
+                    className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold text-[#0F172A] hover:bg-[#EBF2FF] hover:text-[#163A70] transition-colors cursor-pointer"
+                  >
+                    <ShieldCheck className="h-4 w-4 shrink-0 text-[#64748B]" />
+                    <span className="truncate">Matriks Kewenangan (RBAC)</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setIsDropdownOpen(false)
+                      setCurrentView('users')
+                    }}
+                    className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold text-[#0F172A] hover:bg-[#EBF2FF] hover:text-[#163A70] transition-colors cursor-pointer"
+                  >
+                    <Users className="h-4 w-4 shrink-0 text-[#64748B]" />
+                    <span className="truncate">Kelola Pengguna &amp; Undangan</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setIsDropdownOpen(false)
+                      setCurrentView('settings')
+                    }}
+                    className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold text-[#0F172A] hover:bg-[#EBF2FF] hover:text-[#163A70] transition-colors cursor-pointer"
+                  >
+                    <SettingsIcon className="h-4 w-4 shrink-0 text-[#64748B]" />
+                    <span className="truncate">Pengaturan Sistem</span>
+                  </button>
+                </div>
+
+                <div className="my-1.5 h-[1px] bg-[#F1F5F9]" />
+
                 <button
                   onClick={() => {
                     setIsDropdownOpen(false)
                     logout()
                   }}
-                  className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-semibold text-[#EF4444] hover:bg-[#FEF2F2] transition-colors cursor-pointer"
+                  className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-bold text-[#DC2626] hover:bg-[#FEF2F2] transition-colors cursor-pointer"
                 >
-                  <LogOut className="h-4 w-4" />
-                  Keluar / Log Out
+                  <LogOut className="h-4 w-4 shrink-0" />
+                  <span>Keluar / Log Out</span>
                 </button>
               </div>
             </>

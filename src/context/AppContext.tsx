@@ -118,6 +118,7 @@ interface AppContextType {
   user: UserProfile | null
   token: string | null
   isAuthenticated: boolean
+  authLoading: boolean
   currentView: ViewType
   trackSubTab: 'new' | 'progress'
   selectedDocNumber: string | null
@@ -159,8 +160,26 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined)
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<UserProfile | null>(null)
-  const [token, setToken] = useState<string | null>(null)
+  const [user, setUser] = useState<UserProfile | null>(() => {
+    if (typeof window !== 'undefined') {
+      const savedUser = localStorage.getItem('ride_user') || localStorage.getItem('rise_user')
+      if (savedUser) {
+        try {
+          return JSON.parse(savedUser)
+        } catch {}
+      }
+    }
+    return null
+  })
+
+  const [token, setToken] = useState<string | null>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('ride_token') || localStorage.getItem('rise_token') || null
+    }
+    return null
+  })
+
+  const [authLoading, setAuthLoading] = useState(true)
   const [currentView, setCurrentView] = useState<ViewType>('dashboard')
   const [trackSubTab, setTrackSubTab] = useState<'new' | 'progress'>('progress')
   const [selectedDocNumber, setSelectedDocNumber] = useState<string | null>(null)
@@ -220,7 +239,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, [token])
 
-  // Load session on startup
+  // Load and verify session on startup
   useEffect(() => {
     const savedToken = localStorage.getItem('ride_token') || localStorage.getItem('rise_token')
     if (savedToken) {
@@ -232,17 +251,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         .then((data) => {
           if (data.user) {
             setUser(data.user)
+            localStorage.setItem('ride_user', JSON.stringify(data.user))
           } else {
             localStorage.removeItem('ride_token')
             localStorage.removeItem('rise_token')
+            localStorage.removeItem('ride_user')
+            setUser(null)
             setToken(null)
           }
         })
         .catch(() => {
-          localStorage.removeItem('ride_token')
-          localStorage.removeItem('rise_token')
-          setToken(null)
+          // If network error, retain existing offline state
         })
+        .finally(() => {
+          setAuthLoading(false)
+        })
+    } else {
+      setAuthLoading(false)
     }
     fetchDocuments()
   }, [fetchDocuments])
@@ -273,6 +298,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setToken(data.token)
         setUser(data.user)
         localStorage.setItem('ride_token', data.token)
+        localStorage.setItem('ride_user', JSON.stringify(data.user))
         return { success: true }
       }
       return { success: false, error: 'Respon otentikasi tidak valid' }
@@ -297,6 +323,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setToken(data.token)
         setUser(data.user)
         localStorage.setItem('ride_token', data.token)
+        localStorage.setItem('ride_user', JSON.stringify(data.user))
         return { success: true }
       }
       return { success: false, error: 'Otentikasi OTP gagal' }
@@ -321,6 +348,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setToken(data.token)
         setUser(data.user)
         localStorage.setItem('ride_token', data.token)
+        localStorage.setItem('ride_user', JSON.stringify(data.user))
         return { success: true }
       }
       return { success: false, error: 'Respon SSO tidak valid' }
@@ -333,6 +361,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const logout = () => {
     localStorage.removeItem('ride_token')
     localStorage.removeItem('rise_token')
+    localStorage.removeItem('ride_user')
+    localStorage.removeItem('rise_user')
     setUser(null)
     setToken(null)
     setCurrentView('dashboard')
@@ -517,7 +547,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       })
       if (res.ok) {
         const data = await res.json()
-        if (data.user) setUser(data.user)
+        if (data.user) {
+          setUser(data.user)
+          localStorage.setItem('ride_user', JSON.stringify(data.user))
+        }
         return true
       }
       return false
@@ -584,6 +617,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         user,
         token,
         isAuthenticated: !!user,
+        authLoading,
         currentView,
         trackSubTab,
         selectedDocNumber,
