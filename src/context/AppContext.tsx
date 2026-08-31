@@ -99,6 +99,8 @@ export interface DocumentItem {
   versions: DocumentVersionItem[]
   decision?: DocumentDecision | null
   history: DocumentHistoryItem[]
+  driveFolderId?: string
+  driveFolderUrl?: string
   createdBy?: string
   createdAt: string
   updatedAt: string

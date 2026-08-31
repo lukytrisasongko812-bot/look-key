@@ -74,6 +74,7 @@ export function TrackingView() {
     transitionDocument,
     uploadRevision,
     uploadFinalDocument,
+    fetchDocuments,
   } = useApp()
 
   // New Request Form State

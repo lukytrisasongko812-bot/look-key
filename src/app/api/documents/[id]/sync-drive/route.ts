@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { connectDB } from '@/lib/db'
+import { connectToDatabase } from '@/lib/db'
 import { DocumentModel } from '@/models/Document'
 import { syncDocumentToGoogleDrive, generateDocumentTxtLog } from '@/lib/gdrive'
 
@@ -8,7 +8,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await connectDB()
+    await connectToDatabase()
     const { id } = await params
 
     const doc = await DocumentModel.findById(id)
@@ -39,7 +39,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await connectDB()
+    await connectToDatabase()
     const { id } = await params
 
     const doc = await DocumentModel.findById(id)
