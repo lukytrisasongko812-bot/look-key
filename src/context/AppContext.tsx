@@ -289,21 +289,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         })
         .finally(() => {
           setAuthLoading(false)
+          fetchDocuments()
         })
     } else {
       setAuthLoading(false)
+      fetchDocuments()
     }
-    fetchDocuments()
   }, [fetchDocuments])
 
-  // Refetch notifications and documents on token change
+  // Refetch notifications on token change
   useEffect(() => {
     if (token) {
-      fetchDocuments()
       fetchNotifications()
       fetchAllUsers()
     }
-  }, [token, fetchDocuments, fetchNotifications, fetchAllUsers])
+  }, [token, fetchNotifications, fetchAllUsers])
 
   const login = async (email: string, pass: string) => {
     try {
