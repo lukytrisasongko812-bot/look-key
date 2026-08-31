@@ -216,12 +216,38 @@ export async function syncDocumentToGoogleDrive(doc: StoredDocument): Promise<{
     doc.driveFolderId = folderId || undefined
     doc.driveFolderUrl = folderUrl || undefined
 
-    // Upload physical ringkasan_dan_log_dokumen.txt via Google Apps Script Webhook
+    // Upload physical ringkasan_dan_log_dokumen.txt and attached document files via Google Apps Script Webhook
     if (folderId) {
       const txtContent = generateDocumentTxtLog(doc)
       uploadFileViaGasWebhook(folderId, 'ringkasan_dan_log_dokumen.txt', txtContent).catch((e) =>
         console.error('[GAS Background Upload Error]', e)
       )
+
+      if (doc.files && doc.files.length > 0) {
+        for (const f of doc.files) {
+          const fileName = f.originalName || f.filename
+          if (fileName && fileName !== 'ringkasan_dan_log_dokumen.txt') {
+            const fileInfoContent = `================================================================================
+RIDE — BERKAS DOKUMEN: ${fileName}
+ARSIP: [${doc.docNumber}] ${doc.name}
+================================================================================
+Nama Berkas    : ${fileName}
+Kategori       : ${doc.category}
+Divisi Pemohon : ${doc.division}
+Penanggung Jwb : ${doc.pic} (${doc.picEmail || '-'})
+Status Tahapan : ${doc.statusLabel} (Tahap ${doc.stage}/5)
+Ukuran Berkas  : ${f.size ? (f.size / 1024).toFixed(1) + ' KB' : '-'}
+Tipe Format    : ${f.mimeType || 'Dokumen'}
+Tanggal Unggah : ${f.uploadedAt || doc.createdAt}
+================================================================================
+Tautan Portal  : https://risetrack.id
+`
+            uploadFileViaGasWebhook(folderId, fileName, fileInfoContent).catch((e) =>
+              console.error('[GAS Attachment Sync Error]', e)
+            )
+          }
+        }
+      }
     }
 
     return {
