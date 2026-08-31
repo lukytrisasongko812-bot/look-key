@@ -1,12 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { connectToDatabase } from '@/lib/db'
-import { DocumentModel } from '@/models/Document'
-import { NotificationModel } from '@/models/Notification'
-import { User } from '@/models/User'
+import { getDriveDocumentById, saveDriveDocument, addDriveNotification } from '@/lib/drive-store'
 import { sendNotificationEmail } from '@/lib/email'
-import { syncDocumentToGoogleDrive } from '@/lib/gdrive'
 import { getUserFromRequest } from '@/lib/auth'
-import mongoose from 'mongoose'
 
 export const dynamic = 'force-dynamic'
 
@@ -25,7 +20,6 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await connectToDatabase()
     const { id } = await params
     const tokenUser = getUserFromRequest(request)
     const actorName = tokenUser?.employeeName || 'Reviewer'
@@ -43,10 +37,7 @@ export async function POST(
       }
     }
 
-    const doc = mongoose.Types.ObjectId.isValid(id)
-      ? await DocumentModel.findById(id)
-      : await DocumentModel.findOne({ docNumber: id })
-
+    const doc = await getDriveDocumentById(id)
     if (!doc) {
       return NextResponse.json({ error: 'Dokumen tidak ditemukan.' }, { status: 404 })
     }
@@ -122,43 +113,29 @@ export async function POST(
       actor: actorName,
       notes: notes || '',
       versionTag: doc.versions?.length ? doc.versions[doc.versions.length - 1].version : 'V0',
-      timestamp: new Date(),
+      timestamp: new Date().toISOString(),
     })
 
-    await doc.save()
+    await saveDriveDocument(doc)
 
-    // Create real notification
-    await NotificationModel.create({
-      userId: doc.createdBy || undefined,
+    // Notification
+    await addDriveNotification({
+      userId: doc.createdBy,
       type: notifType,
       title: notifTitle,
       description: `${doc.docNumber} (${doc.name}) - ${actionLabel}`,
+      isRead: false,
     })
 
-    // Real corporate email dispatch via Resend
-    let recipientEmail = doc.picEmail
-    if (!recipientEmail && doc.createdBy) {
-      const creator = await User.findById(doc.createdBy)
-      recipientEmail = creator?.email
-    }
-    if (!recipientEmail) {
-      recipientEmail = 'toto.rubianto.17@gmail.com'
-    }
-
-    if (recipientEmail) {
-      await sendNotificationEmail({
-        to: recipientEmail,
-        userName: doc.pic || 'Tim RIDE',
-        title: notifTitle,
-        description: `Dokumen ${doc.docNumber} (${doc.name}) diperbarui dengan status: "${actionLabel}". Catatan: ${notes || '-'}. Dieksekusi oleh: ${actorName}.`,
-        docNumber: doc.docNumber,
-      }).catch((err) => console.error('[Notification Email Failed]', err))
-    }
-
-    // Sync to Google Drive and update .txt history log
-    await syncDocumentToGoogleDrive(doc).catch((err) =>
-      console.error('[Google Drive Transition Sync Failed]', err)
-    )
+    // Email dispatch via Resend
+    const recipientEmail = doc.picEmail || 'toto.rubianto.17@gmail.com'
+    await sendNotificationEmail({
+      to: recipientEmail,
+      userName: doc.pic || 'Tim RIDE',
+      title: notifTitle,
+      description: `Dokumen ${doc.docNumber} (${doc.name}) diperbarui dengan status: "${actionLabel}". Catatan: ${notes || '-'}. Dieksekusi oleh: ${actorName}.`,
+      docNumber: doc.docNumber,
+    }).catch((err) => console.error('[Notification Email Failed]', err))
 
     return NextResponse.json({
       success: true,

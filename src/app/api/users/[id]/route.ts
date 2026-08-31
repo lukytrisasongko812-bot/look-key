@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { connectToDatabase } from '@/lib/db'
-import { User } from '@/models/User'
+import { getDriveUserById, saveDriveUser, deleteDriveUser } from '@/lib/drive-store'
 import { getUserFromRequest } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
@@ -10,30 +9,29 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await connectToDatabase()
-    const tokenUser = getUserFromRequest(request)
-    if (!tokenUser) {
-      return NextResponse.json({ error: 'Akses ditolak. Sesi tidak sah.' }, { status: 401 })
-    }
-
-    if (tokenUser.role !== 'Administrator' && tokenUser.role !== 'Director / BOD') {
-      return NextResponse.json({ error: 'Hanya Administrator yang memiliki izin mengubah data atau peran pengguna.' }, { status: 403 })
-    }
-
     const { id } = await params
-    const body = await request.json()
+    const tokenUser = getUserFromRequest(request)
 
-    const user = await User.findById(id)
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    if (tokenUser?.role !== 'Administrator' && tokenUser?.role !== 'Director / BOD') {
+      return NextResponse.json(
+        { error: 'Hanya Administrator yang berhak mengubah wewenang atau peran pengguna.' },
+        { status: 403 }
+      )
     }
 
-    if (body.role !== undefined) user.role = body.role
-    if (body.position !== undefined) user.position = body.position
-    if (body.division !== undefined) user.division = body.division
-    if (body.employeeName !== undefined) user.employeeName = body.employeeName
+    const { role, isActive, position, division } = await request.json()
+    const user = await getDriveUserById(id)
 
-    await user.save()
+    if (!user) {
+      return NextResponse.json({ error: 'Pengguna tidak ditemukan.' }, { status: 404 })
+    }
+
+    if (role) user.role = role
+    if (isActive !== undefined) user.isActive = Boolean(isActive)
+    if (position) user.position = position
+    if (division) user.division = division
+
+    await saveDriveUser(user)
 
     return NextResponse.json({
       success: true,
@@ -44,10 +42,38 @@ export async function PATCH(
         position: user.position,
         division: user.division,
         role: user.role,
+        isActive: user.isActive,
       },
     })
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Error updating user'
+    const message = error instanceof Error ? error.message : 'Failed to update user'
+    return NextResponse.json({ error: message }, { status: 500 })
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params
+    const tokenUser = getUserFromRequest(request)
+
+    if (tokenUser?.role !== 'Administrator') {
+      return NextResponse.json(
+        { error: 'Hanya Administrator yang berhak menghapus akun pengguna.' },
+        { status: 403 }
+      )
+    }
+
+    const ok = await deleteDriveUser(id)
+    if (!ok) {
+      return NextResponse.json({ error: 'Pengguna tidak ditemukan.' }, { status: 404 })
+    }
+
+    return NextResponse.json({ success: true })
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Failed to delete user'
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }

@@ -1,26 +1,26 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { seedDatabase } from '@/lib/seed'
+import { NextResponse } from 'next/server'
+import { initAndSeedDriveStore, getDriveDocuments, getDriveUsers } from '@/lib/drive-store'
 
-export async function GET(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url)
-    const force = searchParams.get('force') === 'true'
-    const result = await seedDatabase(force)
-    return NextResponse.json({ success: true, ...result })
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Seed failed'
-    return NextResponse.json({ success: false, error: message }, { status: 500 })
-  }
-}
+export const dynamic = 'force-dynamic'
 
-export async function POST(request: NextRequest) {
+export async function GET() {
   try {
-    const body = await request.json().catch(() => ({}))
-    const force = body.force === true
-    const result = await seedDatabase(force)
-    return NextResponse.json({ success: true, ...result })
+    // Reset and seed fresh
+    if (globalThis.__rideDriveStore) {
+      globalThis.__rideDriveStore.isInitialized = false
+    }
+    await initAndSeedDriveStore()
+    const docs = await getDriveDocuments()
+    const users = await getDriveUsers()
+
+    return NextResponse.json({
+      success: true,
+      message: 'Data berhasil di-seed ulang ke Google Drive File Store Engine!',
+      documentsSeeded: docs.length,
+      usersSeeded: users.length,
+    })
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Seed failed'
-    return NextResponse.json({ success: false, error: message }, { status: 500 })
+    const msg = error instanceof Error ? error.message : 'Seed failed'
+    return NextResponse.json({ error: msg }, { status: 500 })
   }
 }

@@ -8,6 +8,7 @@ export interface TokenPayload {
   email: string
   role: string
   employeeName: string
+  division?: string
 }
 
 export function signToken(payload: TokenPayload): string {

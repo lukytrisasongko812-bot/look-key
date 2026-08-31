@@ -1,68 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { connectToDatabase } from '@/lib/db'
-import { DocumentModel } from '@/models/Document'
-import { NotificationModel } from '@/models/Notification'
+import { getDriveDocuments, saveDriveDocument, StoredDocument } from '@/lib/drive-store'
 import { sendNotificationEmail } from '@/lib/email'
-import { syncDocumentToGoogleDrive } from '@/lib/gdrive'
-import { seedDatabase } from '@/lib/seed'
+import { generateDocumentTxtLog } from '@/lib/gdrive'
 import { getUserFromRequest } from '@/lib/auth'
-import mongoose from 'mongoose'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   try {
-    await connectToDatabase()
-
-    // Auto-seed if collection is empty
-    const count = await DocumentModel.countDocuments()
-    if (count === 0) {
-      await seedDatabase()
-    }
-
     const { searchParams } = new URL(request.url)
-    const q = searchParams.get('q')?.trim() || ''
-    const status = searchParams.get('status')?.trim() || ''
-    const category = searchParams.get('category')?.trim() || ''
+    const query = searchParams.get('q') || ''
+    const status = searchParams.get('status') || ''
+    const category = searchParams.get('category') || ''
 
-    const filter: Record<string, unknown> = {}
-
-    if (q) {
-      const regex = new RegExp(q, 'i')
-      filter.$or = [
-        { docNumber: regex },
-        { name: regex },
-        { category: regex },
-        { pic: regex },
-        { division: regex },
-      ]
-    }
-
-    if (category) {
-      filter.category = category
-    }
-
-    // Status filter mapping:
-    if (status) {
-      if (status === 'Rejected') {
-        filter.rejected = true
-      } else if (status === 'Revision Needed' || status === 'Perlu Revisi') {
-        filter.revisionRequested = true
-        filter.rejected = false
-      } else if (status === 'Review' || status === 'Sedang Diproses') {
-        filter.stage = { $in: [0, 1, 2] }
-        filter.rejected = false
-        filter.revisionRequested = false
-      } else if (status === 'Waiting Approval' || status === 'Menunggu Persetujuan') {
-        filter.stage = { $in: [3, 4] }
-        filter.rejected = false
-      } else if (status === 'Completed' || status === 'Archived' || status === 'Selesai') {
-        filter.stage = { $in: [5, 6] }
-        filter.rejected = false
-      }
-    }
-
-    const docs = await DocumentModel.find(filter).sort({ createdAt: -1 })
+    const docs = await getDriveDocuments(query, status, category)
     return NextResponse.json(docs)
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed to fetch documents'
@@ -72,7 +23,6 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    await connectToDatabase()
     const tokenUser = getUserFromRequest(request)
     const body = await request.json()
 
@@ -93,10 +43,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Nama dan kategori dokumen wajib diisi.' }, { status: 400 })
     }
 
-    const totalCount = await DocumentModel.countDocuments()
-    const docNumber = `RIDE-2026-${(145 + totalCount).toString().padStart(4, '0')}`
+    const existingDocs = await getDriveDocuments()
+    const docNumber = `RIDE-2026-${(145 + existingDocs.length).toString().padStart(4, '0')}`
     const actorName = tokenUser?.employeeName || 'Requester'
-    const now = new Date()
+    const now = new Date().toISOString()
 
     const uploadedFilesList = files || []
     const initialDocFile = uploadedFilesList.length > 0 ? uploadedFilesList[0] : null
@@ -126,22 +76,25 @@ export async function POST(request: NextRequest) {
       },
     ]
 
-    const newDoc = await DocumentModel.create({
+    const newDoc: StoredDocument = {
+      _id: 'doc_' + Math.random().toString(36).substring(2, 9),
       docNumber,
       name,
       category,
       division: division || 'Direktorat Umum',
       priority: priority || 'Normal',
       confidentiality: confidentiality || 'Internal',
-      contractStart: noDuration ? null : contractStart ? new Date(contractStart) : null,
-      contractEnd: noDuration ? null : contractEnd ? new Date(contractEnd) : null,
+      contractStart: noDuration ? null : contractStart ? new Date(contractStart).toISOString() : null,
+      contractEnd: noDuration ? null : contractEnd ? new Date(contractEnd).toISOString() : null,
       noDuration: Boolean(noDuration),
       notes: notes || '',
-      stage: 0, // Submitted
+      stage: 0,
       stageStatus: 'active',
       statusLabel: 'Pengajuan Baru (V0)',
       pic: actorName,
       picEmail: tokenUser?.email || '',
+      revisionRequested: false,
+      rejected: false,
       files: uploadedFilesList,
       initialDocument: initialDocFile,
       revisionDocuments: [],
@@ -149,16 +102,14 @@ export async function POST(request: NextRequest) {
       finalDocument: null,
       versions: versionsList,
       history: historyList,
+      driveFolderId: `gdrive-${docNumber.toLowerCase()}`,
+      driveFolderUrl: `https://drive.google.com/drive/search?q=${encodeURIComponent(docNumber)}`,
       createdBy: tokenUser?.userId,
-    })
+      createdAt: now,
+      updatedAt: now,
+    }
 
-    // Create confirmation notification
-    await NotificationModel.create({
-      userId: tokenUser?.userId ? new mongoose.Types.ObjectId(tokenUser.userId) : undefined,
-      type: 'email_sent',
-      title: 'Pengajuan Dokumen Baru',
-      description: `Pengajuan ${docNumber} (${name}) berhasil didaftarkan ke sistem RIDE.`,
-    })
+    await saveDriveDocument(newDoc)
 
     // Send real email notification via Resend
     const creatorEmail = tokenUser?.email || 'toto.rubianto.17@gmail.com'
@@ -169,11 +120,6 @@ export async function POST(request: NextRequest) {
       description: `Dokumen "${name}" (${category}) berhasil didaftarkan ke portal RIDE dan masuk ke antrean Reviewer.`,
       docNumber,
     }).catch((err) => console.error('[Creation Email Failed]', err))
-
-    // Sync to Google Drive and generate .txt history log
-    await syncDocumentToGoogleDrive(newDoc).catch((err) =>
-      console.error('[Google Drive Initial Sync Failed]', err)
-    )
 
     return NextResponse.json(newDoc, { status: 201 })
   } catch (error: unknown) {

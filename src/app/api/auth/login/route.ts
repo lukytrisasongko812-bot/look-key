@@ -1,103 +1,77 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { connectToDatabase } from '@/lib/db'
-import { User } from '@/models/User'
-import { LoginHistoryModel } from '@/models/LoginHistory'
-import { signToken } from '@/lib/auth'
-import { seedDatabase } from '@/lib/seed'
+import bcrypt from 'bcryptjs'
+import { getDriveUserByEmail, saveDriveUser } from '@/lib/drive-store'
 import { sendOtpEmail } from '@/lib/email'
+import { signToken } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
 
 export async function POST(request: NextRequest) {
   try {
-    await connectToDatabase()
-    const userCount = await User.countDocuments()
-    if (userCount === 0) {
-      await seedDatabase()
-    }
-
     const { email, password } = await request.json()
+
     if (!email || !password) {
-      return NextResponse.json({ error: 'Email dan kata sandi wajib diisi.' }, { status: 400 })
+      return NextResponse.json(
+        { error: 'Email dan kata sandi wajib diisi.' },
+        { status: 400 }
+      )
     }
 
-    const cleanEmail = email.toLowerCase().trim()
-    const user = await User.findOne({ email: cleanEmail })
-    const ip = request.headers.get('x-forwarded-for') || '127.0.0.1'
-    const userAgent = request.headers.get('user-agent') || 'Browser / Desktop'
-
+    const user = await getDriveUserByEmail(email)
     if (!user) {
-      await LoginHistoryModel.create({
-        email: cleanEmail,
-        device: userAgent.includes('Mobile') ? 'Mobile Device' : 'Chrome / Windows',
-        ip,
-        status: 'Blocked (unrecognized)',
-      })
-      return NextResponse.json({ error: 'Email atau kata sandi tidak cocok.' }, { status: 401 })
+      return NextResponse.json(
+        { error: 'Email atau kata sandi tidak sesuai.' },
+        { status: 401 }
+      )
     }
 
-    const isMatch = await user.comparePassword(password)
+    const isMatch = await bcrypt.compare(password, user.passwordHash)
     if (!isMatch) {
-      await LoginHistoryModel.create({
-        userId: user._id,
-        email: user.email,
-        device: userAgent.includes('Mobile') ? 'Mobile Device' : 'Chrome / Windows',
-        ip,
-        status: 'Blocked (unrecognized)',
-      })
-      return NextResponse.json({ error: 'Email atau kata sandi tidak cocok.' }, { status: 401 })
+      return NextResponse.json(
+        { error: 'Email atau kata sandi tidak sesuai.' },
+        { status: 401 }
+      )
     }
 
-    // Real Two-Factor Authentication (OTP)
+    if (!user.isActive) {
+      return NextResponse.json(
+        { error: 'Akun Anda sedang dinonaktifkan oleh Administrator.' },
+        { status: 403 }
+      )
+    }
+
+    // 2FA OTP Flow
     if (user.twoFactorEnabled) {
+      const otpCode = Math.floor(100000 + Math.random() * 900000).toString()
       const now = Date.now()
-      const expiresTime = user.twoFactorExpires ? new Date(user.twoFactorExpires).getTime() : 0
-      // If user already has an active, valid OTP requested within the last 2 minutes, reuse it to avoid race conditions
-      let otpCodeToUse = user.twoFactorCode
-      const hasRecentValidCode =
-        Boolean(user.twoFactorCode) &&
-        expiresTime > now &&
-        expiresTime - now > 8 * 60 * 1000 // >8 min left of 10 min means created < 2 min ago
 
-      if (!hasRecentValidCode || !otpCodeToUse) {
-        otpCodeToUse = Math.floor(100000 + Math.random() * 900000).toString()
-        user.twoFactorCode = otpCodeToUse
-        user.twoFactorExpires = new Date(now + 10 * 60 * 1000) // 10 minutes validity
-        await user.save()
-      }
+      user.twoFactorSecret = otpCode
+      user.twoFactorExpires = new Date(now + 10 * 60 * 1000).toISOString()
+      await saveDriveUser(user)
 
-      // Send real email from official@risetrack.id
       const emailResult = await sendOtpEmail({
         to: user.email,
         userName: user.employeeName,
-        otpCode: otpCodeToUse,
+        otpCode,
         expiresInMinutes: 10,
       })
 
       return NextResponse.json({
         requires2FA: true,
         require2FA: true,
-        userId: user._id.toString(),
+        userId: user._id,
         message: 'Kode OTP 6-digit telah dikirimkan ke email terdaftar.',
         emailSent: emailResult.success,
         emailProvider: emailResult.provider,
       })
     }
 
-    // Direct Login if 2FA disabled
-    await LoginHistoryModel.create({
-      userId: user._id,
-      email: user.email,
-      device: userAgent.includes('Mobile') ? 'RIDE Mobile / iOS' : 'Chrome / macOS',
-      ip,
-      status: 'Success',
-    })
-
     const token = signToken({
-      userId: user._id.toString(),
+      userId: user._id,
       email: user.email,
       role: user.role,
       employeeName: user.employeeName,
+      division: user.division,
     })
 
     return NextResponse.json({
@@ -110,13 +84,11 @@ export async function POST(request: NextRequest) {
         position: user.position,
         division: user.division,
         role: user.role,
-        phone: user.phone,
-        avatarUrl: user.avatarUrl,
         twoFactorEnabled: user.twoFactorEnabled,
       },
     })
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Server error'
+    const message = error instanceof Error ? error.message : 'Login failed'
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }

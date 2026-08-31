@@ -1,38 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { connectToDatabase } from '@/lib/db'
-import { User } from '@/models/User'
 import bcrypt from 'bcryptjs'
+import { getDriveUserByEmail, saveDriveUser } from '@/lib/drive-store'
+
+export const dynamic = 'force-dynamic'
 
 export async function POST(request: NextRequest) {
   try {
-    await connectToDatabase()
     const { email, newPassword } = await request.json()
 
-    if (!email) {
-      return NextResponse.json({ error: 'Email is required' }, { status: 400 })
-    }
-
-    const user = await User.findOne({ email: email.toLowerCase().trim() })
-    if (!user) {
-      return NextResponse.json({ error: 'No account found with this email' }, { status: 404 })
-    }
-
-    if (!newPassword || newPassword.length < 8) {
+    if (!email || !newPassword) {
       return NextResponse.json(
-        { error: 'Kata sandi baru wajib diisi (minimal 8 karakter).' },
+        { error: 'Email dan kata sandi baru wajib diisi.' },
         { status: 400 }
       )
     }
 
+    const user = await getDriveUserByEmail(email)
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Email pengguna tidak terdaftar dalam sistem.' },
+        { status: 404 }
+      )
+    }
+
     user.passwordHash = await bcrypt.hash(newPassword, 10)
-    await user.save()
+    await saveDriveUser(user)
 
     return NextResponse.json({
       success: true,
-      message: 'Kata sandi akun Anda berhasil diperbarui di MongoDB!',
+      message: 'Kata sandi akun Anda berhasil diperbarui. Silakan login kembali.',
     })
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Reset failed'
+    const message = error instanceof Error ? error.message : 'Reset password failed'
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }

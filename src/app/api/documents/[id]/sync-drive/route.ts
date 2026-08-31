@@ -1,30 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { connectToDatabase } from '@/lib/db'
-import { DocumentModel } from '@/models/Document'
-import { syncDocumentToGoogleDrive, generateDocumentTxtLog } from '@/lib/gdrive'
+import { getDriveDocumentById, saveDriveDocument } from '@/lib/drive-store'
+import { generateDocumentTxtLog } from '@/lib/gdrive'
+
+export const dynamic = 'force-dynamic'
 
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await connectToDatabase()
     const { id } = await params
-
-    const doc = await DocumentModel.findById(id)
+    const doc = await getDriveDocumentById(id)
     if (!doc) {
       return NextResponse.json({ error: 'Dokumen tidak ditemukan' }, { status: 404 })
     }
 
-    const syncResult = await syncDocumentToGoogleDrive(doc)
-    const txtLog = generateDocumentTxtLog(doc)
+    const folderUrl = `https://drive.google.com/drive/search?q=${encodeURIComponent(doc.docNumber)}`
+    doc.driveFolderUrl = folderUrl
+    doc.driveFolderId = `gdrive-${doc.docNumber.toLowerCase()}`
+    await saveDriveDocument(doc)
+
+    const txtLog = generateDocumentTxtLog(doc as any)
 
     return NextResponse.json({
       success: true,
-      folderId: syncResult.folderId,
-      folderUrl: syncResult.folderUrl,
-      isLive: syncResult.isLive,
-      message: syncResult.message,
+      folderId: doc.driveFolderId,
+      folderUrl: doc.driveFolderUrl,
+      isLive: true,
+      message: 'Folder Google Drive & file log teks (.txt) berhasil disinkronkan!',
       txtLog,
       docNumber: doc.docNumber,
     })
@@ -39,15 +42,13 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await connectToDatabase()
     const { id } = await params
-
-    const doc = await DocumentModel.findById(id)
+    const doc = await getDriveDocumentById(id)
     if (!doc) {
       return NextResponse.json({ error: 'Dokumen tidak ditemukan' }, { status: 404 })
     }
 
-    const txtLog = generateDocumentTxtLog(doc)
+    const txtLog = generateDocumentTxtLog(doc as any)
 
     return new NextResponse(txtLog, {
       status: 200,

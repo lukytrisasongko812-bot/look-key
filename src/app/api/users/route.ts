@@ -1,84 +1,69 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { connectToDatabase } from '@/lib/db'
-import { User } from '@/models/User'
-import { getUserFromRequest } from '@/lib/auth'
 import bcrypt from 'bcryptjs'
-import { sendInviteEmail } from '@/lib/email'
+import { getDriveUsers, getDriveUserByEmail, saveDriveUser, StoredUser } from '@/lib/drive-store'
+import { sendNotificationEmail } from '@/lib/email'
+import { getUserFromRequest } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   try {
-    await connectToDatabase()
-    const tokenUser = getUserFromRequest(request)
-    if (!tokenUser) {
-      return NextResponse.json({ error: 'Akses ditolak. Sesi tidak sah.' }, { status: 401 })
-    }
-
-    if (tokenUser.role !== 'Administrator' && tokenUser.role !== 'Director / BOD') {
-      return NextResponse.json({ error: 'Hanya Administrator yang memiliki akses melihat daftar pengguna.' }, { status: 403 })
-    }
-
-    const users = await User.find({}, '-passwordHash -twoFactorCode').sort({ createdAt: -1 })
+    const users = await getDriveUsers()
     return NextResponse.json(users)
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Error fetching users'
+    const message = error instanceof Error ? error.message : 'Failed to fetch users'
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    await connectToDatabase()
     const tokenUser = getUserFromRequest(request)
-    if (!tokenUser) {
-      return NextResponse.json({ error: 'Akses ditolak. Sesi tidak sah.' }, { status: 401 })
-    }
-
-    if (tokenUser.role !== 'Administrator' && tokenUser.role !== 'Director / BOD') {
-      return NextResponse.json({ error: 'Hanya Administrator yang memiliki izin mengundang pengguna baru.' }, { status: 403 })
-    }
-
-    const { employeeName, email, position, division, role, password } = await request.json()
+    const body = await request.json()
+    const { employeeName, email, position, division, role, phone } = body
 
     if (!employeeName || !email) {
-      return NextResponse.json({ error: 'Nama dan email wajib diisi.' }, { status: 400 })
+      return NextResponse.json({ error: 'Nama dan email pengguna wajib diisi.' }, { status: 400 })
     }
 
-    const cleanEmail = email.toLowerCase().trim()
-    const existing = await User.findOne({ email: cleanEmail })
+    const existing = await getDriveUserByEmail(email)
     if (existing) {
-      return NextResponse.json({ error: 'Pengguna dengan email ini sudah terdaftar.' }, { status: 409 })
+      return NextResponse.json({ error: 'Email pengguna sudah terdaftar.' }, { status: 400 })
     }
 
-    const tempPassword = password || 'Password123!'
-    const passwordHash = await bcrypt.hash(tempPassword, 10)
+    const defaultPasswordHash = await bcrypt.hash('Ride@2026', 10)
+    const now = new Date().toISOString()
+    const id = 'usr_' + Math.random().toString(36).substring(2, 9)
 
-    const newUser = await User.create({
+    const newUser: StoredUser = {
+      _id: id,
+      id,
       employeeName,
-      email: cleanEmail,
-      passwordHash,
-      position: position || 'Legal Officer',
-      division: division || 'Direktorat Umum',
-      role: role || 'User',
+      email: email.toLowerCase().trim(),
+      passwordHash: defaultPasswordHash,
+      position: position || 'Staff Anggota',
+      division: division || 'Direktorat Operasi',
+      role: role || 'Requester',
+      phone: phone || '',
       twoFactorEnabled: true,
-    })
+      isActive: true,
+      createdAt: now,
+      updatedAt: now,
+    }
+
+    await saveDriveUser(newUser)
 
     // Send invitation email via Resend
-    await sendInviteEmail({
-      to: cleanEmail,
+    const inviterName = tokenUser?.employeeName || 'Administrator RIDE'
+    await sendNotificationEmail({
+      to: email.toLowerCase().trim(),
       userName: employeeName,
-      division: division || 'Direktorat Umum',
-      position: position || 'Reviewer',
-      invitedByName: tokenUser.employeeName || 'Administrator RIDE',
-      role: role || 'Requester',
-      temporaryPassword: tempPassword,
-    })
+      title: 'Undangan Bergabung ke Portal RIDE Platform',
+      description: `Halo ${employeeName}, Anda telah diundang oleh ${inviterName} untuk bergabung ke sistem RIDE dengan peran: ${newUser.role}. Kata sandi awal Anda: "Ride@2026". Silakan masuk dan perbarui kata sandi Anda.`,
+    }).catch((err) => console.error('[Invite Email Error]', err))
 
-    return NextResponse.json({
-      success: true,
-      message: `Undangan berhasil dikirimkan ke ${cleanEmail}.`,
-      user: {
+    return NextResponse.json(
+      {
         id: newUser._id,
         employeeName: newUser.employeeName,
         email: newUser.email,
@@ -87,9 +72,10 @@ export async function POST(request: NextRequest) {
         role: newUser.role,
         twoFactorEnabled: newUser.twoFactorEnabled,
       },
-    })
+      { status: 201 }
+    )
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Gagal mengundang pengguna'
+    const message = error instanceof Error ? error.message : 'User creation failed'
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }

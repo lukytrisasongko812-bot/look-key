@@ -1,95 +1,85 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { connectToDatabase } from '@/lib/db'
-import { DocumentModel } from '@/models/Document'
-import { NotificationModel } from '@/models/Notification'
-import { User } from '@/models/User'
+import { getDriveDocumentById, saveDriveDocument, addDriveNotification } from '@/lib/drive-store'
 import { sendNotificationEmail } from '@/lib/email'
 import { getUserFromRequest } from '@/lib/auth'
-import mongoose from 'mongoose'
+
+export const dynamic = 'force-dynamic'
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await connectToDatabase()
     const { id } = await params
     const tokenUser = getUserFromRequest(request)
-    const userRole = tokenUser?.role || 'Reviewer'
+    const actorName = tokenUser?.employeeName || 'BOD / Decision Maker'
 
-    if (userRole === 'Requester' || userRole === 'User') {
+    const body = await request.json()
+    const { type, justification, considerations } = body
+
+    if (!type || !justification) {
       return NextResponse.json(
-        { error: 'Requester tidak memiliki wewenang untuk menetapkan keputusan perpanjangan/terminasi kontrak.' },
-        { status: 403 }
+        { error: 'Tipe keputusan dan justifikasi wajib diisi.' },
+        { status: 400 }
       )
     }
 
-    const { type, justification, considerations } = await request.json()
-
-    if (!type || !['renew', 'terminate'].includes(type)) {
-      return NextResponse.json({ error: 'Valid decision type (renew/terminate) is required' }, { status: 400 })
-    }
-
-    if (!justification) {
-      return NextResponse.json({ error: 'Justification is required' }, { status: 400 })
-    }
-
-    const doc = mongoose.Types.ObjectId.isValid(id)
-      ? await DocumentModel.findById(id)
-      : await DocumentModel.findOne({ docNumber: id })
-
+    const doc = await getDriveDocumentById(id)
     if (!doc) {
-      return NextResponse.json({ error: 'Document not found' }, { status: 404 })
+      return NextResponse.json({ error: 'Dokumen tidak ditemukan.' }, { status: 404 })
     }
 
+    const now = new Date().toISOString()
     doc.decision = {
       type,
       justification,
       considerations: considerations || [],
-      decidedAt: new Date(),
-      decidedBy: tokenUser?.employeeName || 'Luky Pratama',
+      decidedAt: now,
+      decidedBy: actorName,
     }
 
-    await doc.save()
+    const actionLabel =
+      type === 'renew'
+        ? `Keputusan Kontrak: Diajukan Perpanjangan (Renewal) oleh ${actorName}`
+        : `Keputusan Kontrak: Ditetapkan Terminasi / Selesai oleh ${actorName}`
 
-    const decisionTitle = type === 'renew' ? 'Keputusan Perpanjangan Kontrak' : 'Keputusan Terminasi Kontrak'
-    const decisionDesc = `${doc.docNumber} (${doc.name}) ditetapkan: ${type === 'renew' ? 'PERPANJANGAN (RENEW)' : 'TERMINASI (TERMINATE)'}. Catatan: ${justification}`
-
-    // Create notification
-    await NotificationModel.create({
-      userId: doc.createdBy || undefined,
-      type: 'decision',
-      title: decisionTitle,
-      description: decisionDesc,
+    doc.history.push({
+      stage: doc.stage,
+      action: actionLabel,
+      actor: actorName,
+      notes: `Justifikasi: ${justification}`,
+      versionTag: doc.versions?.length ? doc.versions[doc.versions.length - 1].version : 'V0',
+      timestamp: now,
     })
 
-    // Dispatch real email via Resend
-    let targetEmail = doc.picEmail
-    if (!targetEmail && doc.createdBy) {
-      const creator = await User.findById(doc.createdBy)
-      targetEmail = creator?.email
-    }
-    if (!targetEmail) {
-      targetEmail = 'toto.rubianto.17@gmail.com'
-    }
+    await saveDriveDocument(doc)
 
-    if (targetEmail) {
-      await sendNotificationEmail({
-        to: targetEmail,
-        userName: doc.pic || 'Tim Legal & Direksi',
-        title: decisionTitle,
-        description: decisionDesc,
-        docNumber: doc.docNumber,
-      }).catch((err) => console.error('[Decision Email Failed]', err))
-    }
+    // Notification
+    await addDriveNotification({
+      userId: doc.createdBy,
+      type: 'decision',
+      title: `Keputusan Kontrak: ${doc.docNumber}`,
+      description: actionLabel,
+      isRead: false,
+    })
+
+    // Email dispatch via Resend
+    const recipientEmail = doc.picEmail || 'toto.rubianto.17@gmail.com'
+    await sendNotificationEmail({
+      to: recipientEmail,
+      userName: doc.pic || 'Tim Terkait',
+      title: `Keputusan Direksi atas Dokumen ${doc.docNumber}`,
+      description: `Dokumen "${doc.name}" telah diputuskan statusnya: ${actionLabel}. Justifikasi: "${justification}".`,
+      docNumber: doc.docNumber,
+    }).catch((err) => console.error('[Decision Email Failed]', err))
 
     return NextResponse.json({
       success: true,
-      decision: doc.decision,
       document: doc,
+      message: 'Keputusan kontrak berhasil dicatat dan disinkronkan!',
     })
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Error submitting decision'
+    const message = error instanceof Error ? error.message : 'Failed to record decision'
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }

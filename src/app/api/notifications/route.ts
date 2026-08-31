@@ -1,37 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { connectToDatabase } from '@/lib/db'
-import { NotificationModel } from '@/models/Notification'
+import { getDriveNotifications, markDriveNotificationsRead } from '@/lib/drive-store'
 import { getUserFromRequest } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   try {
-    await connectToDatabase()
     const tokenUser = getUserFromRequest(request)
-
-    const filter = tokenUser?.userId
-      ? { $or: [{ userId: tokenUser.userId }, { userId: null }, { userId: { $exists: false } }] }
-      : {}
-
-    const notifications = await NotificationModel.find(filter)
-      .sort({ createdAt: -1 })
-      .limit(30)
-
-    return NextResponse.json(notifications)
+    const notifs = await getDriveNotifications(tokenUser?.userId)
+    return NextResponse.json(notifs)
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Error retrieving notifications'
+    const message = error instanceof Error ? error.message : 'Failed to fetch notifications'
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }
 
-export async function PATCH() {
+export async function PATCH(request: NextRequest) {
   try {
-    await connectToDatabase()
-    await NotificationModel.updateMany({ isRead: false }, { $set: { isRead: true } })
-    return NextResponse.json({ success: true, message: 'All notifications marked as read' })
+    const tokenUser = getUserFromRequest(request)
+    await markDriveNotificationsRead(tokenUser?.userId)
+    return NextResponse.json({ success: true })
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Error updating notifications'
+    const message = error instanceof Error ? error.message : 'Failed to update notifications'
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }
