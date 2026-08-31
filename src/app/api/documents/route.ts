@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getDriveDocuments, saveDriveDocument, StoredDocument } from '@/lib/drive-store'
 import { sendNotificationEmail } from '@/lib/email'
-import { generateDocumentTxtLog } from '@/lib/gdrive'
+import { generateDocumentTxtLog, syncDocumentToGoogleDrive } from '@/lib/gdrive'
 import { getUserFromRequest } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
@@ -102,11 +102,21 @@ export async function POST(request: NextRequest) {
       finalDocument: null,
       versions: versionsList,
       history: historyList,
-      driveFolderId: `gdrive-${docNumber.toLowerCase()}`,
-      driveFolderUrl: `https://drive.google.com/drive/search?q=${encodeURIComponent(docNumber)}`,
+      driveFolderId: undefined,
+      driveFolderUrl: undefined,
       createdBy: tokenUser?.userId,
       createdAt: now,
       updatedAt: now,
+    }
+
+    try {
+      const gdriveResult = await syncDocumentToGoogleDrive(newDoc)
+      if (gdriveResult.folderId) {
+        newDoc.driveFolderId = gdriveResult.folderId
+        newDoc.driveFolderUrl = gdriveResult.folderUrl
+      }
+    } catch (gErr) {
+      console.error('[Google Drive Live Folder Creation Error]', gErr)
     }
 
     await saveDriveDocument(newDoc)
