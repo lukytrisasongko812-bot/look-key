@@ -24,7 +24,7 @@ export default function HomePage() {
   return (
     <div className="min-h-screen flex flex-col bg-[#F5F7FA]">
       <Header />
-      <div className="flex flex-1 relative">
+      <div className="flex flex-1 relative items-start">
         <Sidebar />
         <main className="flex-1 p-4 md:p-6 min-w-0 max-w-7xl mx-auto w-full">
           {currentView === 'dashboard' && <DashboardView />}
