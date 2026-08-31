@@ -92,7 +92,21 @@ export function LoginScreen() {
   }
 
   const handleOtpChange = (index: number, val: string) => {
-    const cleanVal = val.slice(-1).replace(/\D/g, '')
+    const cleanDigits = val.replace(/\D/g, '')
+    if (cleanDigits.length > 1) {
+      // Full OTP pasted or mobile keyboard autofilled
+      const newOtp = ['', '', '', '', '', '']
+      for (let i = 0; i < Math.min(cleanDigits.length, 6); i++) {
+        newOtp[i] = cleanDigits[i]
+      }
+      setOtpValues(newOtp)
+      const nextIndex = Math.min(cleanDigits.length, 5)
+      const targetInput = document.getElementById(`otp-input-${nextIndex}`)
+      targetInput?.focus()
+      return
+    }
+
+    const cleanVal = cleanDigits.slice(-1)
     const newOtp = [...otpValues]
     newOtp[index] = cleanVal
     setOtpValues(newOtp)
@@ -101,6 +115,23 @@ export function LoginScreen() {
       const nextInput = document.getElementById(`otp-input-${index + 1}`)
       nextInput?.focus()
     }
+  }
+
+  const handleOtpPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    e.preventDefault()
+    const pastedData = e.clipboardData.getData('text/plain')
+    const digits = pastedData.replace(/\D/g, '').slice(0, 6)
+    if (!digits) return
+
+    const newOtp = ['', '', '', '', '', '']
+    for (let i = 0; i < digits.length; i++) {
+      newOtp[i] = digits[i]
+    }
+    setOtpValues(newOtp)
+
+    const nextIndex = Math.min(digits.length, 5)
+    const targetInput = document.getElementById(`otp-input-${nextIndex}`)
+    targetInput?.focus()
   }
 
   const handleOtpKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -360,10 +391,10 @@ export function LoginScreen() {
                   id={`otp-input-${idx}`}
                   type="text"
                   inputMode="numeric"
-                  maxLength={1}
                   value={digit}
                   onChange={(e) => handleOtpChange(idx, e.target.value)}
                   onKeyDown={(e) => handleOtpKeyDown(idx, e)}
+                  onPaste={handleOtpPaste}
                   autoFocus={idx === 0}
                   className="h-12 w-11 rounded-xl border border-[#CBD5E1] bg-[#F8FAFC] text-center text-lg font-extrabold text-[#0B2147] shadow-2xs focus:border-[#163A70] focus:bg-white focus:outline-none focus:ring-4 focus:ring-[#163A70]/15"
                 />
