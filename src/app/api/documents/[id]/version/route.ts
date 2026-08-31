@@ -4,6 +4,7 @@ import { DocumentModel } from '@/models/Document'
 import { NotificationModel } from '@/models/Notification'
 import { User } from '@/models/User'
 import { sendNotificationEmail } from '@/lib/email'
+import { syncDocumentToGoogleDrive } from '@/lib/gdrive'
 import { getUserFromRequest } from '@/lib/auth'
 import mongoose from 'mongoose'
 
@@ -32,10 +33,18 @@ export async function POST(
       return NextResponse.json({ error: 'Dokumen tidak ditemukan' }, { status: 404 })
     }
 
+    const userRole = tokenUser?.role || 'Reviewer'
     const actorName = tokenUser?.employeeName || 'Reviewer'
     const now = new Date()
 
     if (isFinal) {
+      if (userRole !== 'Document Controller' && userRole !== 'Administrator' && userRole !== 'Director / BOD') {
+        return NextResponse.json(
+          { error: 'Hanya Document Controller dan Administrator yang berhak mengunggah Dokumen Final sah.' },
+          { status: 403 }
+        )
+      }
+
       // 1. Final Document Upload
       const finalDocFile = {
         originalName: file.originalName,
@@ -99,6 +108,11 @@ export async function POST(
         description: `${notifDesc} Diunggah oleh: ${actorName}. Catatan: ${notes || '-'}`,
         docNumber: doc.docNumber,
       }).catch((e) => console.error('[Final Email Error]', e))
+
+      // Sync to Google Drive and update .txt history log
+      await syncDocumentToGoogleDrive(doc).catch((e) =>
+        console.error('[Google Drive Final Sync Failed]', e)
+      )
 
       return NextResponse.json({
         success: true,
@@ -172,6 +186,11 @@ export async function POST(
         description: `${notifDesc} Catatan perbaikan: "${notes || '-'}"`,
         docNumber: doc.docNumber,
       }).catch((e) => console.error('[Revision Email Error]', e))
+
+      // Sync to Google Drive and update .txt history log
+      await syncDocumentToGoogleDrive(doc).catch((e) =>
+        console.error('[Google Drive Revision Sync Failed]', e)
+      )
 
       return NextResponse.json({
         success: true,

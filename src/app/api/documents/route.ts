@@ -3,6 +3,7 @@ import { connectToDatabase } from '@/lib/db'
 import { DocumentModel } from '@/models/Document'
 import { NotificationModel } from '@/models/Notification'
 import { sendNotificationEmail } from '@/lib/email'
+import { syncDocumentToGoogleDrive } from '@/lib/gdrive'
 import { seedDatabase } from '@/lib/seed'
 import { getUserFromRequest } from '@/lib/auth'
 import mongoose from 'mongoose'
@@ -168,6 +169,11 @@ export async function POST(request: NextRequest) {
       description: `Dokumen "${name}" (${category}) berhasil didaftarkan ke portal RIDE dan masuk ke antrean Reviewer.`,
       docNumber,
     }).catch((err) => console.error('[Creation Email Failed]', err))
+
+    // Sync to Google Drive and generate .txt history log
+    await syncDocumentToGoogleDrive(newDoc).catch((err) =>
+      console.error('[Google Drive Initial Sync Failed]', err)
+    )
 
     return NextResponse.json(newDoc, { status: 201 })
   } catch (error: unknown) {

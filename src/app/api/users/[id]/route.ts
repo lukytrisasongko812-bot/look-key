@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { connectToDatabase } from '@/lib/db'
 import { User } from '@/models/User'
+import { getUserFromRequest } from '@/lib/auth'
+
+export const dynamic = 'force-dynamic'
 
 export async function PATCH(
   request: NextRequest,
@@ -8,6 +11,15 @@ export async function PATCH(
 ) {
   try {
     await connectToDatabase()
+    const tokenUser = getUserFromRequest(request)
+    if (!tokenUser) {
+      return NextResponse.json({ error: 'Akses ditolak. Sesi tidak sah.' }, { status: 401 })
+    }
+
+    if (tokenUser.role !== 'Administrator' && tokenUser.role !== 'Director / BOD') {
+      return NextResponse.json({ error: 'Hanya Administrator yang memiliki izin mengubah data atau peran pengguna.' }, { status: 403 })
+    }
+
     const { id } = await params
     const body = await request.json()
 

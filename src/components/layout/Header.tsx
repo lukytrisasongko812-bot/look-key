@@ -188,27 +188,31 @@ export function Header() {
                     <span className="truncate">Matriks Kewenangan (RBAC)</span>
                   </button>
 
-                  <button
-                    onClick={() => {
-                      setIsDropdownOpen(false)
-                      setCurrentView('users')
-                    }}
-                    className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold text-[#0F172A] hover:bg-[#EBF2FF] hover:text-[#163A70] transition-colors cursor-pointer"
-                  >
-                    <Users className="h-4 w-4 shrink-0 text-[#64748B]" />
-                    <span className="truncate">Kelola Pengguna &amp; Undangan</span>
-                  </button>
+                  {(user?.role === 'Administrator' || user?.role === 'Director / BOD') && (
+                    <>
+                      <button
+                        onClick={() => {
+                          setIsDropdownOpen(false)
+                          setCurrentView('users')
+                        }}
+                        className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold text-[#0F172A] hover:bg-[#EBF2FF] hover:text-[#163A70] transition-colors cursor-pointer"
+                      >
+                        <Users className="h-4 w-4 shrink-0 text-[#64748B]" />
+                        <span className="truncate">Kelola Pengguna &amp; Undangan</span>
+                      </button>
 
-                  <button
-                    onClick={() => {
-                      setIsDropdownOpen(false)
-                      setCurrentView('settings')
-                    }}
-                    className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold text-[#0F172A] hover:bg-[#EBF2FF] hover:text-[#163A70] transition-colors cursor-pointer"
-                  >
-                    <SettingsIcon className="h-4 w-4 shrink-0 text-[#64748B]" />
-                    <span className="truncate">Pengaturan Sistem</span>
-                  </button>
+                      <button
+                        onClick={() => {
+                          setIsDropdownOpen(false)
+                          setCurrentView('settings')
+                        }}
+                        className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold text-[#0F172A] hover:bg-[#EBF2FF] hover:text-[#163A70] transition-colors cursor-pointer"
+                      >
+                        <SettingsIcon className="h-4 w-4 shrink-0 text-[#64748B]" />
+                        <span className="truncate">Pengaturan Sistem</span>
+                      </button>
+                    </>
+                  )}
                 </div>
 
                 <div className="my-1.5 h-[1px] bg-[#F1F5F9]" />

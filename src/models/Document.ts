@@ -62,6 +62,8 @@ export interface IDocumentRecord extends MongooseDocument {
   versions: IDocVersion[]
   decision?: IDocDecision | null
   history: IDocHistory[]
+  driveFolderId?: string
+  driveFolderUrl?: string
   createdBy?: mongoose.Types.ObjectId
   createdAt: Date
   updatedAt: Date
@@ -154,6 +156,8 @@ const DocumentSchema = new Schema<IDocumentRecord>(
     versions: [DocVersionSchema],
     decision: { type: DocDecisionSchema, default: null },
     history: [DocHistorySchema],
+    driveFolderId: { type: String, default: '' },
+    driveFolderUrl: { type: String, default: '' },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User' },
   },
   { timestamps: true }

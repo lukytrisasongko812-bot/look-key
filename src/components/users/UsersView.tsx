@@ -20,6 +20,7 @@ import {
   UserPlus,
   Search,
   ShieldCheck,
+  ShieldAlert,
   CheckCircle2,
   Copy,
   Mail,
@@ -40,6 +41,8 @@ export function UsersView() {
     setCurrentView,
   } = useApp()
 
+  const isAdmin = user?.role === 'Administrator' || user?.role === 'Director / BOD'
+
   const [search, setSearch] = useState('')
   const [roleFilter, setRoleFilter] = useState('ALL')
 
@@ -57,8 +60,36 @@ export function UsersView() {
   const [createdInviteUrl, setCreatedInviteUrl] = useState<string | null>(null)
 
   useEffect(() => {
-    fetchAllUsers()
-  }, [fetchAllUsers])
+    if (isAdmin) {
+      fetchAllUsers()
+    }
+  }, [fetchAllUsers, isAdmin])
+
+  if (!isAdmin) {
+    return (
+      <div className="max-w-xl mx-auto my-12 p-8 bg-white border border-[#E2E8F0] rounded-2xl shadow-sm text-center space-y-4 animate-in fade-in duration-300">
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#FEF2F2] text-[#DC2626]">
+          <ShieldAlert className="h-7 w-7" />
+        </div>
+        <div>
+          <h2 className="text-lg font-bold font-display text-[#0B2147]">
+            Akses Ditolak (403 Unauthorized)
+          </h2>
+          <p className="text-xs text-[#64748B] mt-1.5 max-w-sm mx-auto">
+            Halaman Manajemen Pengguna dan Penetapan Hak Akses (RBAC) hanya dapat diakses oleh akun dengan peran <b>Administrator</b>.
+          </p>
+        </div>
+        <div className="pt-2">
+          <Button
+            onClick={() => setCurrentView('dashboard')}
+            className="bg-[#163A70] hover:bg-[#0B2147] text-white font-bold text-xs rounded-xl cursor-pointer"
+          >
+            Kembali ke Dashboard
+          </Button>
+        </div>
+      </div>
+    )
+  }
 
   const handleRoleChange = async (userId: string, newRole: UserRole) => {
     const ok = await updateUserRole(userId, newRole)

@@ -143,7 +143,7 @@ export function AuthorityMatrixView() {
           <Badge className="bg-[#163A70] text-white py-1 px-3 text-xs">
             Peran Anda: {user?.role || 'Reviewer'}
           </Badge>
-          {(user?.role === 'Administrator' || user?.role === 'Approver') && (
+          {(user?.role === 'Administrator' || user?.role === 'Director / BOD') && (
             <button
               onClick={() => setCurrentView('users')}
               className="text-xs font-bold text-[#163A70] hover:underline flex items-center gap-1 cursor-pointer bg-[#EBF2FF] px-3 py-1.5 rounded-xl"

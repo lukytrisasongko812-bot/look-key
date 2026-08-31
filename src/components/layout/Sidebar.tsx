@@ -15,6 +15,7 @@ import { RideLogo } from '@/components/common/RideLogo'
 
 export function Sidebar() {
   const {
+    user,
     currentView,
     setCurrentView,
     isSidebarCollapsed,
@@ -25,13 +26,15 @@ export function Sidebar() {
   } = useApp()
 
   const reviewCount = documents.filter((d) => d.stage === 0 || d.stage === 1 || d.revisionRequested).length
+  const isAdmin = user?.role === 'Administrator' || user?.role === 'Director / BOD'
 
-  const navItems: {
+  const allNavItems: {
     id: ViewType
     label: string
     icon: React.ReactNode
     badge?: number | string
     badgeColor?: string
+    adminOnly?: boolean
   }[] = [
     {
       id: 'dashboard',
@@ -52,12 +55,6 @@ export function Sidebar() {
       badge: documents.length > 0 ? documents.length : undefined,
     },
     {
-      id: 'users',
-      label: 'Kelola Pengguna',
-      icon: <Users className="h-4 w-4 shrink-0" />,
-      badge: allUsers.length > 0 ? allUsers.length : undefined,
-    },
-    {
       id: 'matrix',
       label: 'Matriks Kewenangan',
       icon: <ShieldCheck className="h-4 w-4 shrink-0" />,
@@ -68,11 +65,21 @@ export function Sidebar() {
       icon: <UserCog className="h-4 w-4 shrink-0" />,
     },
     {
+      id: 'users',
+      label: 'Kelola Pengguna',
+      icon: <Users className="h-4 w-4 shrink-0" />,
+      badge: allUsers.length > 0 ? allUsers.length : undefined,
+      adminOnly: true,
+    },
+    {
       id: 'settings',
       label: 'Pengaturan Sistem',
       icon: <SlidersHorizontal className="h-4 w-4 shrink-0" />,
+      adminOnly: true,
     },
   ]
+
+  const navItems = allNavItems.filter((item) => !item.adminOnly || isAdmin)
 
   return (
     <>

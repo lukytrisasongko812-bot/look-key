@@ -97,7 +97,67 @@ export function SettingsView() {
         </CardContent>
       </Card>
 
-      {/* 2. RBAC & Authority Matrix Quick Access */}
+      {/* 2. Google Drive Cloud Storage & File Archive */}
+      <Card className="border-[#E2E8F0] shadow-sm">
+        <CardContent className="p-6 space-y-4">
+          <div className="flex items-center justify-between pb-3 border-b border-[#F1F5F9]">
+            <div className="flex items-center gap-2">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#E6F4EA] text-[#0F9D58]">
+                <Layers className="h-5 w-5" />
+              </div>
+              <div>
+                <h2 className="text-sm font-bold text-[#0B2147]">
+                  Integrasi Google Drive &amp; Arsip Berkas (.txt / Folder)
+                </h2>
+                <p className="text-[11px] text-[#64748B]">
+                  Penyimpanan berkas otomatis ke folder Google Drive beserta file log teks riwayat (.txt).
+                </p>
+              </div>
+            </div>
+
+            <Badge variant="outline" className="bg-[#E6F4EA] text-[#0F9D58] border-[#A7F3D0] text-xs font-bold px-2.5 py-1">
+              ✓ Aktif
+            </Badge>
+          </div>
+
+          <div className="space-y-3">
+            <div className="p-4 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] space-y-2">
+              <div className="text-xs font-bold text-[#0F172A] flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-[#0F9D58]" />
+                Mekanisme Folder &amp; Log Teks Otomatis:
+              </div>
+              <ul className="text-xs text-[#475569] space-y-1.5 list-disc pl-5">
+                <li>
+                  <b>Satu Folder Per Tiket</b>: Setiap pengajuan otomatis membuat direktori tersendiri dengan format <code className="bg-white px-1.5 py-0.5 rounded border text-[#163A70]">[RIDE-2026-XXXX] Nama Dokumen</code>.
+                </li>
+                <li>
+                  <b>Log Teks Riwayat (.txt)</b>: File <code className="bg-white px-1.5 py-0.5 rounded border text-[#163A70]">ringkasan_dan_log_dokumen.txt</code> diperbarui otomatis di dalam folder setiap kali ada pengajuan awal, revisi, maupun persetujuan.
+                </li>
+                <li>
+                  <b>Paket Berkas Lengkap</b>: Draf awal (V0), draf revisi (Rev.01+), lampiran pendukung, serta Dokumen Final sah tersimpan di Google Drive.
+                </li>
+              </ul>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+              <div className="text-xs text-[#64748B]">
+                Folder ID Utama: <span className="font-mono text-[#0F172A] bg-[#F1F5F9] px-2 py-0.5 rounded">RIDE_ENTERPRISE_ARCHIVE</span>
+              </div>
+
+              <a
+                href="https://drive.google.com"
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-[#0F9D58] hover:bg-[#0B8043] text-white shadow-xs transition-colors"
+              >
+                <span>Buka Google Drive Utama ↗</span>
+              </a>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 3. RBAC & Authority Matrix Quick Access */}
       <Card className="border-[#E2E8F0] shadow-sm">
         <CardContent className="p-6 space-y-4">
           <div className="flex items-center justify-between pb-3 border-b border-[#F1F5F9]">
@@ -122,18 +182,20 @@ export function SettingsView() {
 
           <div className="p-4 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="text-xs text-[#475569]">
-              Saat ini terdapat <b>{allUsers.length} pengguna resmi</b> yang terdaftar pada sistem RIDE.
+              Struktur 5 level wewenang: Requester, Reviewer, Approver, Document Controller, Administrator.
             </div>
 
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setCurrentView('users')}
-              className="text-xs font-bold text-[#163A70] rounded-xl"
-            >
-              <Users className="h-3.5 w-3.5 mr-1.5" />
-              Kelola Pengguna &amp; Undangan
-            </Button>
+            {(user?.role === 'Administrator' || user?.role === 'Director / BOD') && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setCurrentView('users')}
+                className="text-xs font-bold text-[#163A70] rounded-xl"
+              >
+                <Users className="h-3.5 w-3.5 mr-1.5" />
+                Kelola Pengguna &amp; Undangan
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>

@@ -39,6 +39,7 @@ import {
   Download,
   FileUp,
   ShieldCheck,
+  FolderOpen,
   Lock,
 } from 'lucide-react'
 import {
@@ -243,6 +244,26 @@ export function TrackingView() {
       toast.success('Permintaan revisi berhasil dikirim ke pengaju.')
       setIsRequestRevOpen(false)
       setRequestRevReason('')
+    }
+  }
+
+  // Google Drive synchronization handler
+  const [syncingDrive, setSyncingDrive] = useState(false)
+  const handleSyncGoogleDrive = async (id: string) => {
+    setSyncingDrive(true)
+    try {
+      const res = await fetch(`/api/documents/${id}/sync-drive`, { method: 'POST' })
+      const data = await res.json()
+      if (res.ok) {
+        toast.success(data.message || 'Folder Google Drive dan log teks berhasil disinkronkan!')
+        await fetchDocuments()
+      } else {
+        toast.error(data.error || 'Gagal sinkronisasi Google Drive')
+      }
+    } catch {
+      toast.error('Gagal terhubung ke Google Drive')
+    } finally {
+      setSyncingDrive(false)
     }
   }
 
@@ -592,6 +613,45 @@ export function TrackingView() {
 
                     {/* Action Buttons */}
                     <div className="flex flex-wrap items-center gap-2 shrink-0">
+                      {/* Google Drive Folder Button */}
+                      <a
+                        href={
+                          activeDoc.driveFolderUrl ||
+                          `https://drive.google.com/drive/search?q=${encodeURIComponent(activeDoc.docNumber)}`
+                        }
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1.5 h-9 px-3 text-xs bg-[#0F9D58] hover:bg-[#0B8043] text-white font-bold rounded-xl cursor-pointer shadow-xs transition-colors"
+                        title="Buka Folder Dokumen di Google Drive"
+                      >
+                        <FolderOpen className="h-3.5 w-3.5" />
+                        <span>Google Drive</span>
+                      </a>
+
+                      {/* Download .txt Log Button */}
+                      <a
+                        href={`/api/documents/${activeDoc._id}/sync-drive`}
+                        download={`${activeDoc.docNumber}_log_riwayat.txt`}
+                        className="inline-flex items-center gap-1.5 h-9 px-3 text-xs bg-white border border-[#CBD5E1] hover:bg-[#F1F5F9] text-[#163A70] font-bold rounded-xl cursor-pointer shadow-2xs transition-colors"
+                        title="Unduh Berkas Log Teks Riwayat (.txt)"
+                      >
+                        <FileText className="h-3.5 w-3.5" />
+                        <span>Log Teks (.txt)</span>
+                      </a>
+
+                      {/* Sync Drive Button */}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={syncingDrive}
+                        onClick={() => handleSyncGoogleDrive(activeDoc._id)}
+                        className="h-9 text-xs border-[#CBD5E1] text-[#334155] hover:bg-[#F8FAFC] font-bold rounded-xl gap-1.5 cursor-pointer shadow-2xs"
+                        title="Sinkronkan folder & log teks ke Google Drive"
+                      >
+                        <RefreshCw className={`h-3.5 w-3.5 ${syncingDrive ? 'animate-spin' : ''}`} />
+                        <span>{syncingDrive ? 'Sinkron...' : 'Sync Drive'}</span>
+                      </Button>
+
                       {/* Upload Revision Button */}
                       <Button
                         size="sm"

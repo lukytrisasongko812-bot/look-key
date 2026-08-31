@@ -10,6 +10,15 @@ export const dynamic = 'force-dynamic'
 export async function GET(request: NextRequest) {
   try {
     await connectToDatabase()
+    const tokenUser = getUserFromRequest(request)
+    if (!tokenUser) {
+      return NextResponse.json({ error: 'Akses ditolak. Sesi tidak sah.' }, { status: 401 })
+    }
+
+    if (tokenUser.role !== 'Administrator' && tokenUser.role !== 'Director / BOD') {
+      return NextResponse.json({ error: 'Hanya Administrator yang memiliki akses melihat daftar pengguna.' }, { status: 403 })
+    }
+
     const users = await User.find({}, '-passwordHash -twoFactorCode').sort({ createdAt: -1 })
     return NextResponse.json(users)
   } catch (error: unknown) {

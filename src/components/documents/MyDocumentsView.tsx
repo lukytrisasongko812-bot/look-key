@@ -30,6 +30,7 @@ import {
   Trash2,
   Layers,
   FileText,
+  FolderOpen,
   ShieldCheck,
   CheckCircle2,
 } from 'lucide-react'
@@ -266,6 +267,26 @@ export function MyDocumentsView() {
                         </td>
                         <td className="py-3.5 px-4 text-right">
                           <div className="flex items-center justify-end gap-1.5">
+                            <a
+                              href={
+                                doc.driveFolderUrl ||
+                                `https://drive.google.com/drive/search?q=${encodeURIComponent(doc.docNumber)}`
+                              }
+                              target="_blank"
+                              rel="noreferrer"
+                              className="p-1.5 rounded-lg text-[#0F9D58] hover:bg-[#E6F4EA] cursor-pointer"
+                              title="Buka Folder di Google Drive"
+                            >
+                              <FolderOpen className="h-4 w-4" />
+                            </a>
+                            <a
+                              href={`/api/documents/${doc._id}/sync-drive`}
+                              download={`${doc.docNumber}_log_riwayat.txt`}
+                              className="p-1.5 rounded-lg text-[#475569] hover:bg-[#F1F5F9] cursor-pointer"
+                              title="Unduh Log Riwayat Teks (.txt)"
+                            >
+                              <FileText className="h-4 w-4" />
+                            </a>
                             <button
                               onClick={() => {
                                 setSelectedDocNumber(doc.docNumber)

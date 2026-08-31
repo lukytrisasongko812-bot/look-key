@@ -15,6 +15,15 @@ export async function POST(
     await connectToDatabase()
     const { id } = await params
     const tokenUser = getUserFromRequest(request)
+    const userRole = tokenUser?.role || 'Reviewer'
+
+    if (userRole === 'Requester' || userRole === 'User') {
+      return NextResponse.json(
+        { error: 'Requester tidak memiliki wewenang untuk menetapkan keputusan perpanjangan/terminasi kontrak.' },
+        { status: 403 }
+      )
+    }
+
     const { type, justification, considerations } = await request.json()
 
     if (!type || !['renew', 'terminate'].includes(type)) {

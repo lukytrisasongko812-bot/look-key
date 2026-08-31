@@ -233,9 +233,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (res.ok) {
         const data = await res.json()
         setAllUsers(data)
+      } else {
+        setAllUsers([])
       }
     } catch (e) {
       console.error('Failed to fetch users', e)
+      setAllUsers([])
     }
   }, [token])
 

@@ -75,6 +75,8 @@ export function DashboardView() {
     submitDecision,
   } = useApp()
 
+  const canManageExpiry = user?.role !== 'Requester' && user?.role !== 'User'
+
   // State for Decision Modal
   const [decisionDoc, setDecisionDoc] = useState<DocumentItem | null>(null)
   const [decisionType, setDecisionType] = useState<'renew' | 'terminate'>('renew')
@@ -348,23 +350,25 @@ export function DashboardView() {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2 shrink-0">
-                      <Button
-                        size="sm"
-                        onClick={() => handleOpenDecision(doc, 'renew')}
-                        className="h-8 text-xs bg-[#059669] hover:bg-[#047857] text-white font-bold rounded-lg cursor-pointer"
-                      >
-                        <RefreshCw className="h-3 w-3 mr-1" /> Perpanjang
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleOpenDecision(doc, 'terminate')}
-                        className="h-8 text-xs text-[#DC2626] hover:bg-[#FEF2F2] border-[#FCA5A5] font-bold rounded-lg cursor-pointer"
-                      >
-                        <Ban className="h-3 w-3 mr-1" /> Terminasi
-                      </Button>
-                    </div>
+                    {canManageExpiry && (
+                      <div className="flex items-center gap-2 shrink-0">
+                        <Button
+                          size="sm"
+                          onClick={() => handleOpenDecision(doc, 'renew')}
+                          className="h-8 text-xs bg-[#059669] hover:bg-[#047857] text-white font-bold rounded-lg cursor-pointer"
+                        >
+                          <RefreshCw className="h-3 w-3 mr-1" /> Perpanjang
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleOpenDecision(doc, 'terminate')}
+                          className="h-8 text-xs text-[#DC2626] hover:bg-[#FEF2F2] border-[#FCA5A5] font-bold rounded-lg cursor-pointer"
+                        >
+                          <Ban className="h-3 w-3 mr-1" /> Terminasi
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 )
               })
