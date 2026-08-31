@@ -596,7 +596,7 @@ export function TrackingView() {
                               : 'bg-[#F1F5F9] text-[#475569]'
                           }`}
                         >
-                          {activeDoc.priority}
+                          {activeDoc.priority === 'Critical' ? 'Kritis' : activeDoc.priority === 'Urgent' ? 'Mendesak' : 'Normal'}
                         </Badge>
                       </div>
 
@@ -608,7 +608,7 @@ export function TrackingView() {
                         <span>•</span>
                         <span>PIC: <b>{activeDoc.pic}</b></span>
                         <span>•</span>
-                        <span>Kerahasiaan: <b>{activeDoc.confidentiality}</b></span>
+                        <span>Kerahasiaan: <b>{activeDoc.confidentiality === 'Confidential' ? 'Rahasia' : activeDoc.confidentiality === 'Restricted' ? 'Terbatas' : 'Internal'}</b></span>
                       </div>
                     </div>
 
@@ -637,7 +637,7 @@ export function TrackingView() {
                         title="Unduh Berkas Log Teks Riwayat (.txt)"
                       >
                         <FileText className="h-3.5 w-3.5" />
-                        <span>Log Teks (.txt)</span>
+                        <span>Log Riwayat (.txt)</span>
                       </a>
 
                       {/* Sync Drive Button */}
@@ -650,7 +650,7 @@ export function TrackingView() {
                         title="Sinkronkan folder & log teks ke Google Drive"
                       >
                         <RefreshCw className={`h-3.5 w-3.5 ${syncingDrive ? 'animate-spin' : ''}`} />
-                        <span>{syncingDrive ? 'Sinkron...' : 'Sync Drive'}</span>
+                        <span>{syncingDrive ? 'Menyinkronkan...' : 'Sinkronisasi Drive'}</span>
                       </Button>
 
                       {/* Upload Revision Button */}

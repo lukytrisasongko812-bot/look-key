@@ -94,7 +94,7 @@ export function Header() {
         {/* User Role Badge */}
         <div className="hidden lg:flex items-center gap-1.5 rounded-full bg-[#EBF2FF] px-2.5 py-1 text-[11px] font-bold text-[#163A70] border border-[#BFDBFE]">
           <Shield className="h-3 w-3" />
-          <span>Role: {user?.role || 'Reviewer'}</span>
+          <span>Peran: {user?.role || 'Peninjau'}</span>
         </div>
 
         {/* Notification Bell */}
@@ -225,7 +225,7 @@ export function Header() {
                   className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-bold text-[#DC2626] hover:bg-[#FEF2F2] transition-colors cursor-pointer"
                 >
                   <LogOut className="h-4 w-4 shrink-0" />
-                  <span>Keluar / Log Out</span>
+                  <span>Keluar</span>
                 </button>
               </div>
             </>

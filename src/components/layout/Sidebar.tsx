@@ -38,7 +38,7 @@ export function Sidebar() {
   }[] = [
     {
       id: 'dashboard',
-      label: 'Dashboard',
+      label: 'Beranda',
       icon: <LayoutDashboard className="h-4 w-4 shrink-0" />,
     },
     {
@@ -151,10 +151,10 @@ export function Sidebar() {
         {!isSidebarCollapsed && (
           <div className="p-3.5 border-t border-[#F1F5F9] bg-[#F8FAFC]/70 flex flex-col items-center justify-center text-center">
             <div className="text-[11px] font-bold font-display text-[#0B2147] tracking-wider">
-              RIDE PLATFORM
+              PLATFORM RIDE
             </div>
             <div className="text-[9.5px] text-[#64748B] mt-0.5">
-              Request Integrated Document Ecosystem
+              Ekosistem Dokumen Terintegrasi
             </div>
           </div>
         )}

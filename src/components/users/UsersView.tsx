@@ -159,10 +159,10 @@ export function UsersView() {
   }
 
   const rolesList: { id: UserRole; title: string; color: string }[] = [
-    { id: 'Requester', title: 'Requester', color: 'bg-[#EFF6FF] text-[#2563EB] border-[#BFDBFE]' },
-    { id: 'Reviewer', title: 'Reviewer', color: 'bg-[#FFFBEB] text-[#D97706] border-[#FDE68A]' },
-    { id: 'Approver', title: 'Approver', color: 'bg-[#F0FDF4] text-[#16A34A] border-[#BBF7D0]' },
-    { id: 'Document Controller', title: 'Doc Controller', color: 'bg-[#F5F3FF] text-[#7C3AED] border-[#DDD6FE]' },
+    { id: 'Requester', title: 'Pemohon (Requester)', color: 'bg-[#EFF6FF] text-[#2563EB] border-[#BFDBFE]' },
+    { id: 'Reviewer', title: 'Peninjau (Reviewer)', color: 'bg-[#FFFBEB] text-[#D97706] border-[#FDE68A]' },
+    { id: 'Approver', title: 'Penyetuju (Approver)', color: 'bg-[#F0FDF4] text-[#16A34A] border-[#BBF7D0]' },
+    { id: 'Document Controller', title: 'Pengendali Dokumen', color: 'bg-[#F5F3FF] text-[#7C3AED] border-[#DDD6FE]' },
     { id: 'Administrator', title: 'Administrator', color: 'bg-[#FEF2F2] text-[#DC2626] border-[#FCA5A5]' },
   ]
 
@@ -324,11 +324,11 @@ export function UsersView() {
                             onChange={(e) => handleRoleChange(u.id, e.target.value as UserRole)}
                             className="h-8 rounded-lg border border-[#CBD5E1] bg-[#F8FAFC] px-2 text-xs font-bold text-[#0B2147] focus:border-[#163A70] focus:outline-none cursor-pointer"
                           >
-                            <option value="Requester">Requester</option>
-                            <option value="Reviewer">Reviewer</option>
-                            <option value="Approver">Approver</option>
-                            <option value="Document Controller">Document Controller</option>
-                            <option value="Administrator">Administrator</option>
+                            <option value="Requester">Pemohon (Requester)</option>
+                            <option value="Reviewer">Peninjau (Reviewer)</option>
+                            <option value="Approver">Penyetuju (Approver)</option>
+                            <option value="Document Controller">Pengendali Dokumen</option>
+                            <option value="Administrator">Administrator Sistem</option>
                           </select>
                         </td>
                         <td className="py-3.5 px-4 text-right">

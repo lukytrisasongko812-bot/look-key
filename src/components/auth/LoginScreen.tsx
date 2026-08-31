@@ -214,7 +214,7 @@ export function LoginScreen() {
           <div>
             <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-[11px] font-semibold tracking-wide text-white/90 backdrop-blur-md mb-6 border border-white/15">
               <ShieldCheck className="h-3.5 w-3.5 text-[#60A5FA]" />
-              <span>Enterprise Document Portal</span>
+              <span>Portal Dokumen Korporat</span>
             </div>
 
             <RideLogo size="lg" whiteText showSubtitle />
@@ -236,7 +236,7 @@ export function LoginScreen() {
           </div>
 
           <div className="text-[10px] text-white/60 border-t border-white/10 pt-4 flex items-center justify-between relative z-10">
-            <span>RIDE Platform Enterprise</span>
+            <span>Platform RIDE Terintegrasi</span>
             <span>risetrack.id</span>
           </div>
         </div>
@@ -376,7 +376,7 @@ export function LoginScreen() {
               <KeyRound className="h-6 w-6" />
             </div>
             <DialogTitle className="text-center text-lg font-bold text-[#0B2147]">
-              Verifikasi Two-Factor Authentication (2FA)
+              Verifikasi Otentikasi Dua Langkah (2FA)
             </DialogTitle>
             <DialogDescription className="text-center text-xs text-[#64748B]">
               Masukkan 6 digit kode OTP yang telah dikirimkan ke email <span className="font-bold text-[#0F172A]">{email}</span>.

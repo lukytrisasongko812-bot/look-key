@@ -24,7 +24,7 @@ export function AuthorityMatrixView() {
   const roles = [
     {
       id: 'Requester',
-      title: 'Requester',
+      title: 'Pemohon',
       badgeColor: 'bg-[#EFF6FF] text-[#2563EB] border-[#BFDBFE]',
       desc: 'Pengaju pengajuan dokumen dari unit kerja / divisi pemohon.',
       jobdesk: 'Membuat draf pengajuan awal (V0), melampirkan berkas pendukung, dan mengunggah perbaikan jika diminta revisi.',
@@ -42,10 +42,10 @@ export function AuthorityMatrixView() {
     },
     {
       id: 'Reviewer',
-      title: 'Reviewer (Legal / Compliance)',
+      title: 'Peninjau (Legal & Kepatuhan)',
       badgeColor: 'bg-[#FFFBEB] text-[#D97706] border-[#FDE68A]',
       desc: 'Pemeriksa substansi hukum, kepatuhan klausul, dan kelayakan dokumen.',
-      jobdesk: 'Memeriksa draf kontrak/perizinan, memberikan catatan revisi terperinci, mengunggah draf perbaikan (Rev.01, Rev.02), dan menyetujui tahapan review.',
+      jobdesk: 'Memeriksa draf kontrak/perizinan, memberikan catatan revisi terperinci, mengunggah draf perbaikan (Rev.01, Rev.02), dan menyetujui tahapan peninjauan.',
       permissions: {
         createDoc: true,
         viewDocs: true,
@@ -60,10 +60,10 @@ export function AuthorityMatrixView() {
     },
     {
       id: 'Approver',
-      title: 'Approver (Direksi / Dept Head)',
+      title: 'Penyetuju (Direksi / Kepala Unit)',
       badgeColor: 'bg-[#F0FDF4] text-[#16A34A] border-[#BBF7D0]',
       desc: 'Pemberi otorisasi puncak, persetujuan direksi, dan penandatanganan resmi.',
-      jobdesk: 'Memberikan persetujuan akhir (BOD Approval), mengotorisasi perpanjangan atau terminasi kontrak jatuh tempo, dan tanda tangan digital/fisik.',
+      jobdesk: 'Memberikan persetujuan akhir (Persetujuan Direksi), mengotorisasi perpanjangan atau terminasi kontrak jatuh tempo, dan tanda tangan resmi.',
       permissions: {
         createDoc: true,
         viewDocs: true,
@@ -78,7 +78,7 @@ export function AuthorityMatrixView() {
     },
     {
       id: 'Document Controller',
-      title: 'Document Controller',
+      title: 'Pengendali Dokumen',
       badgeColor: 'bg-[#F5F3FF] text-[#7C3AED] border-[#DDD6FE]',
       desc: 'Pengendali tata kelola dokumen, verifikator berkas final, dan pengarsipan.',
       jobdesk: 'Memverifikasi keabsahan dokumen bertandatangan lengkap, mengunggah Dokumen Final (FINAL), mengunci versi arsip sah, dan memantau masa berlaku.',
@@ -96,10 +96,10 @@ export function AuthorityMatrixView() {
     },
     {
       id: 'Administrator',
-      title: 'Administrator',
+      title: 'Administrator Sistem',
       badgeColor: 'bg-[#FEF2F2] text-[#DC2626] border-[#FCA5A5]',
       desc: 'Pengelola sistem, arsitektur data, keamanan akses, dan manajemen pengguna.',
-      jobdesk: 'Mengelola hak akses RBAC, menerbitkan link undangan pengguna ke Gmail, mengontrol master data sistem, dan mengawasi seluruh operasional.',
+      jobdesk: 'Mengelola hak akses peran, menerbitkan link undangan pengguna ke Gmail, mengontrol master data sistem, dan mengawasi seluruh operasional.',
       permissions: {
         createDoc: true,
         viewDocs: true,
@@ -115,15 +115,15 @@ export function AuthorityMatrixView() {
   ]
 
   const operationalActions = [
-    { key: 'createDoc', label: 'Ajukan Dokumen Baru (V0)', desc: 'Membuat nomor tiket dan upload draf awal' },
+    { key: 'createDoc', label: 'Ajukan Dokumen Baru (V0)', desc: 'Membuat nomor tiket dan unggah draf awal' },
     { key: 'viewDocs', label: 'Lihat & Unduh Dokumen', desc: 'Membaca dan mengunduh berkas versi aktif' },
     { key: 'addReviewNotes', label: 'Beri Catatan Revisi', desc: 'Menambahkan poin feedback per pasal/klausul' },
     { key: 'requestRevision', label: 'Minta Revisi Dokumen', desc: 'Mengembalikan status pengajuan untuk diperbaiki' },
     { key: 'uploadRevision', label: 'Unggah Revisi (Rev.01+)', desc: 'Mengunggah draf perbaikan versi baru' },
-    { key: 'approveStage', label: 'Approval / Persetujuan', desc: 'Menyetujui tahapan legal review atau BOD approval' },
+    { key: 'approveStage', label: 'Persetujuan / Pengesahan', desc: 'Menyetujui tahapan peninjauan legal atau persetujuan direksi' },
     { key: 'uploadFinal', label: 'Unggah Dokumen Final (FINAL)', desc: 'Menerbitkan dan mengunci berkas final bertanda tangan' },
     { key: 'manageExpiry', label: 'Keputusan Jatuh Tempo', desc: 'Menetapkan perpanjangan atau terminasi kontrak' },
-    { key: 'manageUsers', label: 'Kelola Pengguna & Hak Akses', desc: 'Undang akun, ubah role, dan konfigurasi sistem' },
+    { key: 'manageUsers', label: 'Kelola Pengguna & Hak Akses', desc: 'Undang akun, ubah peran, dan konfigurasi sistem' },
   ]
 
   return (

@@ -47,7 +47,7 @@ import { toast } from 'sonner'
 
 const STAGES = [
   { key: 'submitted', label: 'Pengajuan Baru', icon: Send },
-  { key: 'review', label: 'Review Kelayakan', icon: Search },
+  { key: 'review', label: 'Peninjauan Kelayakan', icon: Search },
   { key: 'drafting', label: 'Penyusunan Draf', icon: PenTool },
   { key: 'approval', label: 'Persetujuan Legal', icon: FileCheck2 },
   { key: 'bod', label: 'Persetujuan Direksi', icon: FileSignature },
@@ -247,7 +247,7 @@ export function DashboardView() {
             <div className="text-2xl sm:text-3xl font-extrabold text-[#2563EB] mt-0.5">
               {inProgressCount}
             </div>
-            <div className="text-[11px] text-[#94A3B8] mt-1">Review, draf &amp; approval</div>
+            <div className="text-[11px] text-[#94A3B8] mt-1">Peninjauan, draf &amp; persetujuan</div>
           </CardContent>
         </Card>
 
