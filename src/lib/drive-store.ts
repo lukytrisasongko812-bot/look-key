@@ -182,8 +182,82 @@ export async function initAndSeedDriveStore() {
     },
   ]
 
-  // 2. 5 Official Corporate Documents seeded directly with Google Drive Folder IDs & Versions
+  // 2. Official Corporate Documents seeded directly with Google Drive Folder IDs & Versions
   store.documents = [
+    {
+      _id: 'doc_ride_2026_0150',
+      docNumber: 'RIDE-2026-0150',
+      name: 'Perjanjian Kerja Sama Jual Beli RQD',
+      category: 'Perjanjian',
+      division: 'Direktorat Operasi & Logistik',
+      priority: 'Normal',
+      confidentiality: 'Internal',
+      contractStart: '2026-01-09T00:00:00.000Z',
+      contractEnd: '2026-10-09T00:00:00.000Z',
+      noDuration: false,
+      notes: 'Pengajuan draf perjanjian kerja sama jual beli RQD site Pomalaa.',
+      stage: 0,
+      stageStatus: 'active',
+      statusLabel: 'Pengajuan Baru (V0)',
+      pic: 'Robert Pamungkas',
+      picEmail: 'robertpamungkas86@gmail.com',
+      revisionRequested: false,
+      rejected: false,
+      files: [
+        {
+          originalName: 'File 4 Peralatan.docx',
+          filename: 'file_4_peralatan.docx',
+          size: 788464,
+          mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          url: '/files/File 4 Peralatan.docx',
+          uploadedAt: '2026-08-31T14:15:59.000Z',
+        },
+      ],
+      initialDocument: {
+        originalName: 'File 4 Peralatan.docx',
+        filename: 'file_4_peralatan.docx',
+        size: 788464,
+        mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        url: '/files/File 4 Peralatan.docx',
+        uploadedAt: '2026-08-31T14:15:59.000Z',
+      },
+      revisionDocuments: [],
+      supportingDocuments: [],
+      finalDocument: null,
+      versions: [
+        {
+          version: 'V0',
+          file: {
+            originalName: 'File 4 Peralatan.docx',
+            filename: 'file_4_peralatan.docx',
+            size: 788464,
+            mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            url: '/files/File 4 Peralatan.docx',
+            uploadedAt: '2026-08-31T14:15:59.000Z',
+          },
+          notes: 'Pengajuan draf dokumen awal.',
+          uploadedBy: 'Robert Pamungkas',
+          uploadedAt: '2026-08-31T14:15:59.000Z',
+          isFinal: false,
+          fileType: 'initial',
+        },
+      ],
+      history: [
+        {
+          stage: 0,
+          action: 'Pengajuan Dokumen Awal (V0)',
+          actor: 'Robert Pamungkas',
+          notes: 'Dokumen berhasil diajukan ke antrean verifikasi.',
+          versionTag: 'V0',
+          timestamp: '2026-08-31T14:15:59.000Z',
+        },
+      ],
+      driveFolderId: '1G4-ppRr4j0LEAqGc1E7DfJWk_6HID6wd',
+      driveFolderUrl: 'https://drive.google.com/drive/folders/1G4-ppRr4j0LEAqGc1E7DfJWk_6HID6wd',
+      createdBy: 'usr_robert_requester_01',
+      createdAt: '2026-08-31T14:15:59.000Z',
+      updatedAt: '2026-08-31T14:15:59.000Z',
+    },
     {
       _id: 'doc_ride_2026_0141',
       docNumber: 'RIDE-2026-0141',
