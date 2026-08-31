@@ -1,5 +1,4 @@
 import bcrypt from 'bcryptjs'
-import { generateDocumentTxtLog, syncDocumentToGoogleDrive } from './gdrive'
 import { UserRole } from '@/context/AppContext'
 
 export interface StoredFile {
@@ -126,14 +125,14 @@ function getStore(): GlobalDriveStore {
 
 export async function initAndSeedDriveStore() {
   const store = getStore()
-  if (store.isInitialized && store.users.length > 0) {
+  if (store.isInitialized && store.users.length > 0 && store.documents.length >= 5) {
     return
   }
 
-  const defaultPasswordHash = await bcrypt.hash('Admin@2026', 10)
+  const defaultPasswordHash = await bcrypt.hash('Password123!', 10)
   const now = new Date().toISOString()
 
-  // 1. Clean official users - only Administrator Toto Rubianto
+  // 1. Clean official users - Administrator Toto Rubianto
   store.users = [
     {
       _id: 'usr_toto_admin_01',
@@ -152,8 +151,113 @@ export async function initAndSeedDriveStore() {
     },
   ]
 
-  // 2. Seed Official RIDE Documents formatted as Google Drive Folders & Text Logs
+  // 2. 5 Official Corporate Documents seeded directly with Google Drive Folder IDs & Versions
   store.documents = [
+    {
+      _id: 'doc_ride_2026_0141',
+      docNumber: 'RIDE-2026-0141',
+      name: 'Non-Disclosure Agreement (NDA) Studi Kelayakan Smelter Pomalaa',
+      category: 'Kerahasiaan (NDA)',
+      division: 'Direktorat Pengembangan Usaha',
+      priority: 'Urgent',
+      confidentiality: 'Confidential',
+      contractStart: '2026-06-01T00:00:00.000Z',
+      contractEnd: '2027-06-01T00:00:00.000Z',
+      noDuration: false,
+      notes: 'Perjanjian kerahasiaan data geologi, cadangan bijih nikel, dan desain teknik smelter.',
+      stage: 5,
+      stageStatus: 'completed',
+      statusLabel: 'Dokumen Final Sah',
+      pic: 'Toto Rubianto',
+      picEmail: 'toto.rubianto.17@gmail.com',
+      revisionRequested: false,
+      rejected: false,
+      files: [
+        {
+          originalName: 'NDA_Smelter_Pomalaa_Signed_Final.pdf',
+          filename: 'NDA_Smelter_Pomalaa_Signed_Final.pdf',
+          size: 1850000,
+          mimeType: 'application/pdf',
+          url: '/files/NDA_Smelter_Pomalaa_Signed_Final.pdf',
+          uploadedAt: '2026-06-05T10:00:00.000Z',
+        },
+      ],
+      initialDocument: {
+        originalName: 'Draf_Awal_NDA_Pomalaa_V0.pdf',
+        filename: 'Draf_Awal_NDA_Pomalaa_V0.pdf',
+        size: 1500000,
+        mimeType: 'application/pdf',
+        url: '/files/Draf_Awal_NDA_Pomalaa_V0.pdf',
+        uploadedAt: '2026-06-01T08:30:00.000Z',
+      },
+      revisionDocuments: [],
+      supportingDocuments: [],
+      finalDocument: {
+        originalName: 'NDA_Smelter_Pomalaa_Signed_Final.pdf',
+        filename: 'NDA_Smelter_Pomalaa_Signed_Final.pdf',
+        size: 1850000,
+        mimeType: 'application/pdf',
+        url: '/files/NDA_Smelter_Pomalaa_Signed_Final.pdf',
+        uploadedAt: '2026-06-05T10:00:00.000Z',
+      },
+      versions: [
+        {
+          version: 'V0',
+          file: {
+            originalName: 'Draf_Awal_NDA_Pomalaa_V0.pdf',
+            filename: 'Draf_Awal_NDA_Pomalaa_V0.pdf',
+            size: 1500000,
+            mimeType: 'application/pdf',
+            url: '/files/Draf_Awal_NDA_Pomalaa_V0.pdf',
+            uploadedAt: '2026-06-01T08:30:00.000Z',
+          },
+          notes: 'Pengajuan draf NDA standar kerahasiaan studi kelayakan.',
+          uploadedBy: 'Toto Rubianto',
+          uploadedAt: '2026-06-01T08:30:00.000Z',
+          isFinal: false,
+          fileType: 'initial',
+        },
+        {
+          version: 'FINAL',
+          file: {
+            originalName: 'NDA_Smelter_Pomalaa_Signed_Final.pdf',
+            filename: 'NDA_Smelter_Pomalaa_Signed_Final.pdf',
+            size: 1850000,
+            mimeType: 'application/pdf',
+            url: '/files/NDA_Smelter_Pomalaa_Signed_Final.pdf',
+            uploadedAt: '2026-06-05T10:00:00.000Z',
+          },
+          notes: 'Dokumen final telah ditandatangani kedua belah pihak dan diarsipkan ke Google Drive.',
+          uploadedBy: 'Toto Rubianto',
+          uploadedAt: '2026-06-05T10:00:00.000Z',
+          isFinal: true,
+          fileType: 'final',
+        },
+      ],
+      history: [
+        {
+          stage: 0,
+          action: 'Pengajuan Dokumen Awal (V0)',
+          actor: 'Toto Rubianto',
+          notes: 'Draf diajukan.',
+          versionTag: 'V0',
+          timestamp: '2026-06-01T08:30:00.000Z',
+        },
+        {
+          stage: 5,
+          action: 'Unggah Dokumen Final (FINAL)',
+          actor: 'Toto Rubianto',
+          notes: 'Arsip final tersimpan di Google Drive.',
+          versionTag: 'FINAL',
+          timestamp: '2026-06-05T10:00:00.000Z',
+        },
+      ],
+      driveFolderId: '1S8ifA-RtvGB0JGFPZSfsaL_IX65Nc16F',
+      driveFolderUrl: 'https://drive.google.com/drive/folders/1S8ifA-RtvGB0JGFPZSfsaL_IX65Nc16F',
+      createdBy: 'usr_toto_admin_01',
+      createdAt: '2026-06-01T08:30:00.000Z',
+      updatedAt: '2026-06-05T10:00:00.000Z',
+    },
     {
       _id: 'doc_ride_2026_0142',
       docNumber: 'RIDE-2026-0142',
@@ -399,6 +503,243 @@ export async function initAndSeedDriveStore() {
       createdAt: '2026-08-01T09:00:00.000Z',
       updatedAt: '2026-08-25T16:00:00.000Z',
     },
+    {
+      _id: 'doc_ride_2026_0144',
+      docNumber: 'RIDE-2026-0144',
+      name: 'Kontrak Pengadaan Ban Heavy Dump Truck 100 Ton',
+      category: 'Pengadaan / Vendor',
+      division: 'Direktorat Operasi',
+      priority: 'Urgent',
+      confidentiality: 'Internal',
+      contractStart: '2026-08-10T00:00:00.000Z',
+      contractEnd: '2026-11-10T00:00:00.000Z',
+      noDuration: false,
+      notes: 'Pengadaan ban alat berat hauling 40 unit per triwulan.',
+      stage: 1,
+      stageStatus: 'revision',
+      statusLabel: 'Perlu Revisi',
+      pic: 'Toto Rubianto',
+      picEmail: 'toto.rubianto.17@gmail.com',
+      revisionRequested: true,
+      rejected: false,
+      files: [
+        {
+          originalName: 'Draf_Pengadaan_Ban_HDT_V0.pdf',
+          filename: 'Draf_Pengadaan_Ban_HDT_V0.pdf',
+          size: 1950000,
+          mimeType: 'application/pdf',
+          url: '/files/Draf_Pengadaan_Ban_HDT_V0.pdf',
+          uploadedAt: '2026-08-10T11:00:00.000Z',
+        },
+      ],
+      initialDocument: {
+        originalName: 'Draf_Pengadaan_Ban_HDT_V0.pdf',
+        filename: 'Draf_Pengadaan_Ban_HDT_V0.pdf',
+        size: 1950000,
+        mimeType: 'application/pdf',
+        url: '/files/Draf_Pengadaan_Ban_HDT_V0.pdf',
+        uploadedAt: '2026-08-10T11:00:00.000Z',
+      },
+      revisionDocuments: [],
+      supportingDocuments: [],
+      finalDocument: null,
+      versions: [
+        {
+          version: 'V0',
+          file: {
+            originalName: 'Draf_Pengadaan_Ban_HDT_V0.pdf',
+            filename: 'Draf_Pengadaan_Ban_HDT_V0.pdf',
+            size: 1950000,
+            mimeType: 'application/pdf',
+            url: '/files/Draf_Pengadaan_Ban_HDT_V0.pdf',
+            uploadedAt: '2026-08-10T11:00:00.000Z',
+          },
+          notes: 'Pengajuan pengadaan awal.',
+          uploadedBy: 'Toto Rubianto',
+          uploadedAt: '2026-08-10T11:00:00.000Z',
+          isFinal: false,
+          fileType: 'initial',
+        },
+      ],
+      history: [
+        {
+          stage: 0,
+          action: 'Pengajuan Dokumen Awal (V0)',
+          actor: 'Toto Rubianto',
+          notes: 'Pengajuan draf pengadaan ban heavy dump truck.',
+          versionTag: 'V0',
+          timestamp: '2026-08-10T11:00:00.000Z',
+        },
+        {
+          stage: 1,
+          action: 'Permintaan Revisi Diajukan',
+          actor: 'Toto Rubianto',
+          notes: 'Klausul garansi cacat pabrik minimal 12 bulan dan SLA pengiriman 14 hari kerja belum tercantum.',
+          versionTag: 'V0',
+          timestamp: '2026-08-14T09:15:00.000Z',
+        },
+      ],
+      driveFolderId: '1S8ifA-RtvGB0JGFPZSfsaL_IX65Nc16F',
+      driveFolderUrl: 'https://drive.google.com/drive/folders/1S8ifA-RtvGB0JGFPZSfsaL_IX65Nc16F',
+      createdBy: 'usr_toto_admin_01',
+      createdAt: '2026-08-10T11:00:00.000Z',
+      updatedAt: '2026-08-14T09:15:00.000Z',
+    },
+    {
+      _id: 'doc_ride_2026_0145',
+      docNumber: 'RIDE-2026-0145',
+      name: 'Power Purchase Agreement (PPA) Suplai Listrik Pabrik Smelter',
+      category: 'Komersial / Operasi',
+      division: 'Direktorat Operasi',
+      priority: 'Critical',
+      confidentiality: 'Confidential',
+      contractStart: '2026-09-01T00:00:00.000Z',
+      contractEnd: '2036-09-01T00:00:00.000Z',
+      noDuration: false,
+      notes: 'Perjanjian pasokan daya listrik 150 MW untuk fasilitas smelter nikel tahap 2.',
+      stage: 4,
+      stageStatus: 'active',
+      statusLabel: 'Persetujuan Direksi (BOD Signed)',
+      pic: 'Toto Rubianto',
+      picEmail: 'toto.rubianto.17@gmail.com',
+      revisionRequested: false,
+      rejected: false,
+      files: [
+        {
+          originalName: 'Draf_PPA_Smelter_150MW_Rev02.pdf',
+          filename: 'Draf_PPA_Smelter_150MW_Rev02.pdf',
+          size: 3400000,
+          mimeType: 'application/pdf',
+          url: '/files/Draf_PPA_Smelter_150MW_Rev02.pdf',
+          uploadedAt: '2026-08-28T10:00:00.000Z',
+        },
+      ],
+      initialDocument: {
+        originalName: 'Draf_Awal_PPA_150MW_V0.pdf',
+        filename: 'Draf_Awal_PPA_150MW_V0.pdf',
+        size: 3100000,
+        mimeType: 'application/pdf',
+        url: '/files/Draf_Awal_PPA_150MW_V0.pdf',
+        uploadedAt: '2026-08-05T09:00:00.000Z',
+      },
+      revisionDocuments: [
+        {
+          version: 'Rev.01',
+          file: {
+            originalName: 'Draf_PPA_Penyesuaian_Tarif_Rev01.pdf',
+            filename: 'Draf_PPA_Penyesuaian_Tarif_Rev01.pdf',
+            size: 3250000,
+            mimeType: 'application/pdf',
+            url: '/files/Draf_PPA_Penyesuaian_Tarif_Rev01.pdf',
+            uploadedAt: '2026-08-18T14:00:00.000Z',
+          },
+          notes: 'Penyesuaian eskalasi tarif per kWh.',
+          uploadedBy: 'Toto Rubianto',
+          uploadedAt: '2026-08-18T14:00:00.000Z',
+          isFinal: false,
+          fileType: 'revision',
+        },
+        {
+          version: 'Rev.02',
+          file: {
+            originalName: 'Draf_PPA_Smelter_150MW_Rev02.pdf',
+            filename: 'Draf_PPA_Smelter_150MW_Rev02.pdf',
+            size: 3400000,
+            mimeType: 'application/pdf',
+            url: '/files/Draf_PPA_Smelter_150MW_Rev02.pdf',
+            uploadedAt: '2026-08-28T10:00:00.000Z',
+          },
+          notes: 'Finalisasi matriks jaminan ketersediaan daya 99.8%.',
+          uploadedBy: 'Toto Rubianto',
+          uploadedAt: '2026-08-28T10:00:00.000Z',
+          isFinal: false,
+          fileType: 'revision',
+        },
+      ],
+      supportingDocuments: [],
+      finalDocument: null,
+      versions: [
+        {
+          version: 'V0',
+          file: {
+            originalName: 'Draf_Awal_PPA_150MW_V0.pdf',
+            filename: 'Draf_Awal_PPA_150MW_V0.pdf',
+            size: 3100000,
+            mimeType: 'application/pdf',
+            url: '/files/Draf_Awal_PPA_150MW_V0.pdf',
+            uploadedAt: '2026-08-05T09:00:00.000Z',
+          },
+          notes: 'Draf awal perjanjian PPA.',
+          uploadedBy: 'Toto Rubianto',
+          uploadedAt: '2026-08-05T09:00:00.000Z',
+          isFinal: false,
+          fileType: 'initial',
+        },
+        {
+          version: 'Rev.01',
+          file: {
+            originalName: 'Draf_PPA_Penyesuaian_Tarif_Rev01.pdf',
+            filename: 'Draf_PPA_Penyesuaian_Tarif_Rev01.pdf',
+            size: 3250000,
+            mimeType: 'application/pdf',
+            url: '/files/Draf_PPA_Penyesuaian_Tarif_Rev01.pdf',
+            uploadedAt: '2026-08-18T14:00:00.000Z',
+          },
+          notes: 'Penyesuaian eskalasi tarif per kWh.',
+          uploadedBy: 'Toto Rubianto',
+          uploadedAt: '2026-08-18T14:00:00.000Z',
+          isFinal: false,
+          fileType: 'revision',
+        },
+        {
+          version: 'Rev.02',
+          file: {
+            originalName: 'Draf_PPA_Smelter_150MW_Rev02.pdf',
+            filename: 'Draf_PPA_Smelter_150MW_Rev02.pdf',
+            size: 3400000,
+            mimeType: 'application/pdf',
+            url: '/files/Draf_PPA_Smelter_150MW_Rev02.pdf',
+            uploadedAt: '2026-08-28T10:00:00.000Z',
+          },
+          notes: 'Finalisasi matriks jaminan ketersediaan daya 99.8%.',
+          uploadedBy: 'Toto Rubianto',
+          uploadedAt: '2026-08-28T10:00:00.000Z',
+          isFinal: false,
+          fileType: 'revision',
+        },
+      ],
+      history: [
+        {
+          stage: 0,
+          action: 'Pengajuan Dokumen Awal (V0)',
+          actor: 'Toto Rubianto',
+          notes: 'Draf PPA 150MW diajukan.',
+          versionTag: 'V0',
+          timestamp: '2026-08-05T09:00:00.000Z',
+        },
+        {
+          stage: 2,
+          action: 'Unggah Revisi Dokumen (Rev.01)',
+          actor: 'Toto Rubianto',
+          notes: 'Penyesuaian pasal tarif.',
+          versionTag: 'Rev.01',
+          timestamp: '2026-08-18T14:00:00.000Z',
+        },
+        {
+          stage: 3,
+          action: 'Persetujuan Legal (Approval)',
+          actor: 'Toto Rubianto',
+          notes: 'Legal clearance disetujui penuh.',
+          versionTag: 'Rev.02',
+          timestamp: '2026-08-28T15:00:00.000Z',
+        },
+      ],
+      driveFolderId: '1S8ifA-RtvGB0JGFPZSfsaL_IX65Nc16F',
+      driveFolderUrl: 'https://drive.google.com/drive/folders/1S8ifA-RtvGB0JGFPZSfsaL_IX65Nc16F',
+      createdBy: 'usr_toto_admin_01',
+      createdAt: '2026-08-05T09:00:00.000Z',
+      updatedAt: '2026-08-28T15:00:00.000Z',
+    },
   ]
 
   store.notifications = [
@@ -414,9 +755,18 @@ export async function initAndSeedDriveStore() {
     {
       _id: 'notif_02',
       userId: 'usr_toto_admin_01',
+      type: 'revision',
+      title: 'Revisi Diperlukan: RIDE-2026-0144',
+      description: 'Draf Kontrak Pengadaan Ban Heavy Dump Truck perlu penyesuaian klausul garansi.',
+      isRead: false,
+      createdAt: now,
+    },
+    {
+      _id: 'notif_03',
+      userId: 'usr_toto_admin_01',
       type: 'email_sent',
-      title: 'Penyimpanan Google Drive Aktif',
-      description: 'Sistem RIDE telah terintegrasi dengan Google Drive File Engine.',
+      title: 'Google Drive File Store Aktif',
+      description: 'Sistem RIDE telah terintegrasi dengan Google Drive Enterprise Archive.',
       isRead: false,
       createdAt: now,
     },
