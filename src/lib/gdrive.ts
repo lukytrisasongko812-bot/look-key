@@ -249,7 +249,7 @@ export async function uploadFileViaGasWebhook(
 ): Promise<boolean> {
   const gasUrl =
     process.env.GOOGLE_APPS_SCRIPT_WEBHOOK_URL ||
-    'https://script.google.com/macros/s/AKfycbxk1c-RS7uMdD1ocpXrYh29VWGDOtQ6F0eJ6GR-uVCojPxtSfd7f7UClFlWiiOts_0KVg/exec'
+    'https://script.google.com/macros/s/AKfycbz_iRTZF_Hul1zUQCkp-jxlX5dWZzOp6xkdDKmkUXSZV4rRpTHXyCTaWHRET9j6WCuJWw/exec'
 
   try {
     const res = await fetch(gasUrl, {
