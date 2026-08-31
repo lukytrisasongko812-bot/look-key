@@ -16,10 +16,10 @@ export function RideLogo({
   className = '',
 }: RideLogoProps) {
   const iconSizes = {
-    sm: 'w-7 h-7 text-xs',
-    md: 'w-9 h-9 text-sm',
-    lg: 'w-11 h-11 text-base',
-    xl: 'w-14 h-14 text-xl',
+    sm: 'w-8 h-8',
+    md: 'w-10 h-10',
+    lg: 'w-12 h-12',
+    xl: 'w-16 h-16',
   }
 
   const titleSizes = {
@@ -38,36 +38,31 @@ export function RideLogo({
 
   return (
     <div className={`flex items-center gap-2.5 ${className}`}>
-      {/* Modern Dynamic RIDE Monogram Icon */}
+      {/* Official 3-Blade Pinwheel / Triskele Emblem */}
       <div
-        className={`relative flex items-center justify-center rounded-xl bg-gradient-to-br from-[#163A70] via-[#1E4D94] to-[#2563EB] font-display font-extrabold text-white shadow-md select-none shrink-0 ${iconSizes[size]}`}
+        className={`relative flex items-center justify-center rounded-2xl bg-white p-0.5 shadow-sm border border-[#E2E8F0] select-none shrink-0 overflow-hidden ${iconSizes[size]}`}
       >
         <svg
-          viewBox="0 0 32 32"
+          viewBox="0 0 200 200"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
-          className="w-3/5 h-3/5 text-white"
+          className="w-full h-full"
         >
-          {/* Document Fold Base */}
-          <path
-            d="M6 5C6 3.89543 6.89543 3 8 3H19L26 10V27C26 28.1046 25.1046 29 24 29H8C6.89543 29 6 28.1046 6 27V5Z"
-            fill="currentColor"
-            fillOpacity="0.25"
-          />
-          {/* R Flow Accent */}
-          <path
-            d="M10 7H17C19.7614 7 22 9.23858 22 12C22 14.7614 19.7614 17 17 17H13V25H10V7Z"
-            fill="white"
-          />
-          <path
-            d="M17 14L23 25H19.5L14 15H17Z"
-            fill="#60A5FA"
-          />
-          <circle cx="15.5" cy="12" r="2" fill="#163A70" />
+          {/* Top Spoke (Navy Blue) */}
+          <g transform="rotate(0 100 100)">
+            <rect x="83" y="24" width="34" height="66" rx="17" fill="#1C3F5E" />
+          </g>
+          {/* Bottom-Right Spoke (Teal Green) */}
+          <g transform="rotate(120 100 100)">
+            <rect x="83" y="24" width="34" height="66" rx="17" fill="#0E786B" />
+          </g>
+          {/* Bottom-Left Spoke (Crimson Red) */}
+          <g transform="rotate(240 100 100)">
+            <rect x="83" y="24" width="34" height="66" rx="17" fill="#A82325" />
+          </g>
+          {/* Center Yellow Circle with white separation ring */}
+          <circle cx="100" cy="100" r="26" fill="#F2C342" stroke="#FFFFFF" strokeWidth="6" />
         </svg>
-
-        {/* Ambient Ring */}
-        <span className="absolute inset-0 rounded-xl ring-1 ring-white/20" />
       </div>
 
       <div className="flex flex-col leading-tight">
@@ -89,7 +84,7 @@ export function RideLogo({
               whiteText ? 'text-white/80' : 'text-[#64748B]'
             }`}
           >
-            Request Integrated Document Ecosystem
+            Ekosistem Dokumen Terintegrasi
           </span>
         )}
       </div>

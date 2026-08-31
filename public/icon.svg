@@ -1,14 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <defs>
-    <linearGradient id="rideGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#0B2147" />
-      <stop offset="50%" stop-color="#163A70" />
-      <stop offset="100%" stop-color="#2563EB" />
-    </linearGradient>
-  </defs>
-  <rect width="32" height="32" rx="8" fill="url(#rideGrad)" />
-  <path d="M7 6C7 4.89543 7.89543 4 9 4H19L25 10V26C25 27.1046 24.1046 28 23 28H9C7.89543 28 7 27.1046 7 26V6Z" fill="#FFFFFF" fill-opacity="0.2"/>
-  <path d="M10 7H16.5C19.2614 7 21.5 9.23858 21.5 12C21.5 14.7614 19.2614 17 16.5 17H13V25H10V7Z" fill="#FFFFFF"/>
-  <path d="M16.5 14L22.5 25H19L13.5 15H16.5Z" fill="#60A5FA"/>
-  <circle cx="15" cy="12" r="2" fill="#163A70"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+  <rect width="200" height="200" rx="44" fill="#FFFFFF"/>
+  <g transform="rotate(0 100 100)">
+    <rect x="83" y="24" width="34" height="66" rx="17" fill="#1C3F5E" />
+  </g>
+  <g transform="rotate(120 100 100)">
+    <rect x="83" y="24" width="34" height="66" rx="17" fill="#0E786B" />
+  </g>
+  <g transform="rotate(240 100 100)">
+    <rect x="83" y="24" width="34" height="66" rx="17" fill="#A82325" />
+  </g>
+  <circle cx="100" cy="100" r="26" fill="#F2C342" stroke="#FFFFFF" stroke-width="6" />
 </svg>
