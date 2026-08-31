@@ -383,3 +383,148 @@ export async function sendNotificationEmail(opts: SendNotificationEmailOptions):
 
   return { success: true, provider: 'simulated' }
 }
+
+export interface SendContractReminderEmailOptions {
+  to: string
+  userName: string
+  docNumber: string
+  docName: string
+  milestone: 'h60' | 'h30' | 'h15' | 'h7' | 'h1' | 'expired'
+  diffDays: number
+  contractEnd: string
+  division: string
+  customNotes?: string
+}
+
+function generateContractReminderHtml(opts: SendContractReminderEmailOptions): string {
+  const milestoneTitles: Record<string, { badge: string; color: string; desc: string }> = {
+    h60: { badge: 'H-60 · Pra-Evaluasi', color: '#475569', desc: 'Kontrak akan berakhir dalam 60 hari. Mulai lakukan pra-evaluasi dan telaah kebutuhan operasional.' },
+    h30: { badge: 'H-30 · Evaluasi & Telaah', color: '#2563EB', desc: 'Kontrak akan berakhir dalam 30 hari. Segera susun justifikasi perpanjangan, adendum, atau terminasi.' },
+    h15: { badge: 'H-15 · Peringatan Proses', color: '#D97706', desc: 'Kontrak akan berakhir dalam 15 hari. Pastikan berkas draf dan telaah hukum telah siap diajukan.' },
+    h7: { badge: 'H-7 · Peringatan Kritis', color: '#DC2626', desc: 'Kontrak akan berakhir dalam 7 hari (1 minggu). Dibutuhkan keputusan dan persetujuan segera!' },
+    h1: { badge: 'H-1 · Batas Akhir Final', color: '#DC2626', desc: 'Kontrak berakhir BESOK. Harap segera tuntaskan administrasi atau tandatangani adendum/perpanjangan.' },
+    expired: { badge: 'JATUH TEMPO / KADALUWARSA', color: '#991B1B', desc: 'Masa berlaku kontrak ini telah melewati batas jatuh tempo.' },
+  }
+
+  const ms = milestoneTitles[opts.milestone] || milestoneTitles.h30
+  const endDateFormatted = new Date(opts.contractEnd).toLocaleDateString('id-ID', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  })
+
+  return `
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pengingat Jatuh Tempo Kontrak RIDE</title>
+  <style>
+    body { margin: 0; padding: 0; background-color: #F8FAFC; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+    .container { max-width: 580px; margin: 30px auto; background: #FFFFFF; border-radius: 16px; border: 1px solid #CBD5E1; overflow: hidden; box-shadow: 0 4px 16px rgba(15, 42, 84, 0.08); }
+    .header { background: linear-gradient(135deg, #0B2147 0%, #163A70 100%); padding: 32px 28px; text-align: center; color: #FFFFFF; }
+    .header-logo { font-size: 26px; font-weight: 800; letter-spacing: 1px; margin-bottom: 4px; }
+    .header-sub { font-size: 11px; color: rgba(255, 255, 255, 0.85); text-transform: uppercase; letter-spacing: 0.5px; }
+    .content { padding: 36px 30px; color: #0F172A; }
+    .badge { display: inline-block; background: ${ms.color}15; color: ${ms.color}; border: 1px solid ${ms.color}40; font-weight: 800; font-size: 12px; padding: 5px 14px; border-radius: 9999px; margin-bottom: 16px; text-transform: uppercase; }
+    .title { font-size: 19px; font-weight: 800; color: #0B2147; line-height: 1.35; margin-bottom: 12px; }
+    .desc { font-size: 14px; line-height: 1.6; color: #475569; margin-bottom: 24px; }
+    .info-card { background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 12px; padding: 20px; margin-bottom: 26px; }
+    .info-table { width: 100%; font-size: 13px; border-collapse: collapse; }
+    .info-table td { padding: 6px 0; }
+    .btn { display: inline-block; background: #163A70; color: #FFFFFF !important; font-weight: 700; font-size: 14px; padding: 13px 30px; border-radius: 10px; text-decoration: none; box-shadow: 0 4px 12px rgba(22, 58, 112, 0.25); }
+    .footer { background: #F8FAFC; border-top: 1px solid #E2E8F0; padding: 20px 28px; text-align: center; font-size: 11px; color: #94A3B8; line-height: 1.6; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="header-logo">RIDE</div>
+      <div class="header-sub">Request Integrated Document Ecosystem · Pengingat Jatuh Tempo Kontrak</div>
+    </div>
+    <div class="content">
+      <div class="badge">${ms.badge}</div>
+      <div class="title">Pengingat Masa Berlaku: ${opts.docName}</div>
+      <div class="desc">${ms.desc}</div>
+
+      <div class="info-card">
+        <table class="info-table">
+          <tr>
+            <td style="width: 140px; font-weight: 600; color: #64748B;">Nomor Dokumen:</td>
+            <td style="font-family: monospace; font-weight: 700; color: #163A70;">${opts.docNumber}</td>
+          </tr>
+          <tr>
+            <td style="font-weight: 600; color: #64748B;">Divisi Pengaju:</td>
+            <td style="font-weight: 600; color: #334155;">${opts.division}</td>
+          </tr>
+          <tr>
+            <td style="font-weight: 600; color: #64748B;">Tanggal Berakhir:</td>
+            <td style="font-weight: 700; color: #DC2626;">${endDateFormatted}</td>
+          </tr>
+          <tr>
+            <td style="font-weight: 600; color: #64748B;">Sisa Waktu:</td>
+            <td style="font-weight: 700; color: #0F172A;">${opts.diffDays > 0 ? `${opts.diffDays} Hari Kalender` : 'Sudah Lewat Jatuh Tempo'}</td>
+          </tr>
+          ${opts.customNotes ? `
+          <tr>
+            <td style="font-weight: 600; color: #64748B;">Catatan Khusus:</td>
+            <td style="color: #475569; font-style: italic;">${opts.customNotes}</td>
+          </tr>
+          ` : ''}
+        </table>
+      </div>
+
+      <div style="text-align: center; margin: 26px 0;">
+        <a href="https://risetrack.id" class="btn">Buka Dokumen &amp; Ajukan Justifikasi &rarr;</a>
+      </div>
+
+      <div style="background: #FFFBEB; border-left: 4px solid #F59E0B; padding: 12px 16px; border-radius: 4px; font-size: 12px; color: #92400E; line-height: 1.5;">
+        <strong>Tindakan yang Disarankan:</strong> Masuk ke portal RIDE untuk memilih rekomendasi tindakan (Perpanjangan, Adendum Klausul, atau Terminasi) serta mengisi telaah pertimbangan resmi.
+      </div>
+    </div>
+    <div class="footer">
+      <div>RIDE — Request Integrated Document Ecosystem</div>
+      <div style="margin-top: 4px;">Pemberitahuan otomatis dari sistem <a href="https://risetrack.id" style="color: #163A70; text-decoration: none;">risetrack.id</a>.</div>
+    </div>
+  </div>
+</body>
+</html>
+  `.trim()
+}
+
+export async function sendContractReminderEmail(opts: SendContractReminderEmailOptions): Promise<{ success: boolean; provider: string; error?: string }> {
+  const fromAddress = process.env.EMAIL_FROM || 'RIDE Contract Alerts <official@risetrack.id>'
+  const milestoneLabel = opts.milestone.toUpperCase()
+  const subject = `[RIDE ${milestoneLabel}] Pengingat Masa Berlaku Kontrak: ${opts.docNumber} - ${opts.docName}`
+  const html = generateContractReminderHtml(opts)
+
+  const resendKey = process.env.RESEND_API_KEY || 'REDACTED_RESEND_KEY'
+  if (resendKey) {
+    try {
+      const res = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${resendKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          from: fromAddress.includes('<') ? fromAddress : `RIDE Alert <${fromAddress}>`,
+          to: [opts.to],
+          subject,
+          html,
+        }),
+      })
+
+      const data = await res.json()
+      if (res.ok && data.id) {
+        return { success: true, provider: 'resend' }
+      }
+    } catch (err: unknown) {
+      console.error('[Resend Contract Reminder Exception]', err)
+    }
+  }
+
+  return { success: true, provider: 'simulated' }
+}
