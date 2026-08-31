@@ -291,7 +291,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (!res.ok) {
         return { success: false, error: data.error || 'Login gagal' }
       }
-      if (data.requires2FA) {
+      if (data.requires2FA || data.require2FA) {
         return { success: true, requires2FA: true, userId: data.userId }
       }
       if (data.token && data.user) {
