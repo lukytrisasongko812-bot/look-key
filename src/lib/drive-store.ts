@@ -133,7 +133,7 @@ export async function initAndSeedDriveStore() {
   const defaultPasswordHash = await bcrypt.hash('Password123!', 10)
   const now = new Date().toISOString()
 
-  // 1. Clean official users - Administrator Toto Rubianto
+  // 1. Clean official users - Administrator Toto Rubianto & Reviewer Luky Tri Sasongko
   store.users = [
     {
       _id: 'usr_toto_admin_01',
@@ -145,6 +145,21 @@ export async function initAndSeedDriveStore() {
       division: 'Direktorat Legal & Governance',
       role: 'Administrator',
       phone: '+62 812-3456-7890',
+      twoFactorEnabled: true,
+      isActive: true,
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      _id: 'usr_luky_reviewer_01',
+      id: 'usr_luky_reviewer_01',
+      employeeName: 'Luky Tri Sasongko',
+      email: 'lukytrissasongko812@gmail.com',
+      passwordHash: defaultPasswordHash,
+      position: 'Senior Legal Counsel & Compliance Reviewer',
+      division: 'Direktorat Legal & Compliance',
+      role: 'Reviewer',
+      phone: '+62 812-9876-5432',
       twoFactorEnabled: true,
       isActive: true,
       createdAt: now,
@@ -852,7 +867,15 @@ export async function getDriveUsers() {
 export async function getDriveUserByEmail(email: string) {
   await initAndSeedDriveStore()
   const store = getStore()
-  return store.users.find((u) => u.email.toLowerCase() === email.toLowerCase()) || null
+  const clean = email.toLowerCase().trim()
+  return (
+    store.users.find(
+      (u) =>
+        u.email.toLowerCase() === clean ||
+        (clean === 'lukytrisasongko812@gmail.com' && u.email === 'lukytrissasongko812@gmail.com') ||
+        (clean === 'lukytrissasongko812@gmail.com' && u.email === 'lukytrisasongko812@gmail.com')
+    ) || null
+  )
 }
 
 export async function getDriveUserById(id: string) {
