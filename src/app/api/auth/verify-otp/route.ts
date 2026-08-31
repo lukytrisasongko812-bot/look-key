@@ -20,10 +20,10 @@ export async function POST(request: NextRequest) {
     const cleanInputCode = code.trim().replace(/\D/g, '')
     const secretCode = user.twoFactorSecret ? user.twoFactorSecret.trim() : ''
 
-    const isMatch = cleanInputCode === secretCode || cleanInputCode === '123456'
+    const isMatch = Boolean(secretCode) && cleanInputCode === secretCode
     const isExpired = user.twoFactorExpires ? new Date(user.twoFactorExpires) < new Date() : false
 
-    if (!isMatch || (cleanInputCode !== '123456' && isExpired)) {
+    if (!isMatch || isExpired) {
       return NextResponse.json({ error: 'Kode OTP tidak valid atau telah kadaluarsa.' }, { status: 400 })
     }
 

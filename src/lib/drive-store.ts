@@ -133,7 +133,7 @@ export async function initAndSeedDriveStore() {
   const defaultPasswordHash = await bcrypt.hash('Password123!', 10)
   const now = new Date().toISOString()
 
-  // 1. Clean official users - Administrator Toto Rubianto & Reviewer Luky Tri Sasongko
+  // 1. Clean official users - Administrator Toto, Reviewer Luky, Requester Robert
   store.users = [
     {
       _id: 'usr_toto_admin_01',
@@ -160,6 +160,21 @@ export async function initAndSeedDriveStore() {
       division: 'Direktorat Legal & Compliance',
       role: 'Reviewer',
       phone: '+62 812-9876-5432',
+      twoFactorEnabled: true,
+      isActive: true,
+      createdAt: now,
+      updatedAt: now,
+    },
+    {
+      _id: 'usr_robert_requester_01',
+      id: 'usr_robert_requester_01',
+      employeeName: 'Robert Pamungkas',
+      email: 'robertpamungkas86@gmail.com',
+      passwordHash: defaultPasswordHash,
+      position: 'Staff Operasional & Pengadaan Lapangan',
+      division: 'Direktorat Operasi & Logistik',
+      role: 'Requester',
+      phone: '+62 813-1122-3344',
       twoFactorEnabled: true,
       isActive: true,
       createdAt: now,
