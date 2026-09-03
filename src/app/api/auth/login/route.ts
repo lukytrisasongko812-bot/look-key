@@ -50,6 +50,22 @@ export async function POST(request: NextRequest) {
       user.twoFactorExpires = new Date(now + 10 * 60 * 1000).toISOString()
       await saveDriveUser(user)
 
+      const jwtSecret = process.env.JWT_SECRET || 'rise_corporate_secure_secret_key_2026'
+      const crypto = await import('crypto')
+      const jwt = await import('jsonwebtoken')
+      const otpHash = crypto.createHmac('sha256', jwtSecret).update(otpCode).digest('hex')
+
+      const twoFactorTicket = jwt.default.sign(
+        {
+          userId: user._id,
+          email: user.email,
+          otpHash,
+          purpose: '2fa_otp',
+        },
+        jwtSecret,
+        { expiresIn: '10m' }
+      )
+
       const emailResult = await sendOtpEmail({
         to: user.email,
         userName: user.employeeName,
@@ -61,6 +77,8 @@ export async function POST(request: NextRequest) {
         requires2FA: true,
         require2FA: true,
         userId: user._id,
+        email: user.email,
+        twoFactorTicket,
         message: 'Kode OTP 6-digit telah dikirimkan ke email terdaftar.',
         emailSent: emailResult.success,
         emailProvider: emailResult.provider,

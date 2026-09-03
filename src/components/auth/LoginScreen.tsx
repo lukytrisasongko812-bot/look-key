@@ -39,6 +39,7 @@ export function LoginScreen() {
   // 2FA / OTP State
   const [isOtpOpen, setIsOtpOpen] = useState(false)
   const [pendingUserId, setPendingUserId] = useState('')
+  const [twoFactorTicket, setTwoFactorTicket] = useState<string | null>(null)
   const [otpValues, setOtpValues] = useState(['', '', '', '', '', ''])
   const [resendingOtp, setResendingOtp] = useState(false)
 
@@ -85,6 +86,9 @@ export function LoginScreen() {
 
     if (res.requires2FA && res.userId) {
       setPendingUserId(res.userId)
+      if (res.twoFactorTicket) {
+        setTwoFactorTicket(res.twoFactorTicket)
+      }
       setIsOtpOpen(true)
       setOtpValues(['', '', '', '', '', ''])
       toast.info('Kode verifikasi 2FA telah dikirim ke email Anda.')
@@ -150,7 +154,7 @@ export function LoginScreen() {
     }
 
     setLoading(true)
-    const res = await verifyOtp(pendingUserId, email, code)
+    const res = await verifyOtp(pendingUserId, email, code, twoFactorTicket || undefined)
     setLoading(false)
 
     if (res.success) {
@@ -166,6 +170,9 @@ export function LoginScreen() {
     const res = await login(email.trim(), password)
     setResendingOtp(false)
     if (res.success && res.requires2FA) {
+      if (res.twoFactorTicket) {
+        setTwoFactorTicket(res.twoFactorTicket)
+      }
       toast.success('Kode OTP baru berhasil dikirimkan ke email Anda.')
     } else {
       toast.error('Gagal mengirim ulang OTP.')
@@ -231,7 +238,7 @@ export function LoginScreen() {
             Masuk ke Akun
           </h2>
           <p className="text-xs text-[#64748B] mt-0.5">
-            Gunakan email korporat dan kata sandi terdaftar Anda.
+            Gunakan email dan kata sandi terdaftar Anda.
           </p>
         </div>
 
@@ -257,14 +264,14 @@ export function LoginScreen() {
         <form onSubmit={handleLoginSubmit} className="space-y-3.5">
           <div className="space-y-1">
             <Label htmlFor="email" className="text-xs font-semibold text-[#0F172A]">
-              Email Korporat / Gmail
+              Email
             </Label>
             <div className="relative">
               <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#94A3B8]" />
               <Input
                 id="email"
                 type="email"
-                placeholder="nama@resourcesid.co.id"
+                placeholder="nama@email.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required

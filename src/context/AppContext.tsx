@@ -149,8 +149,8 @@ interface AppContextType {
   setIsSidebarCollapsed: (collapsed: boolean) => void
   searchQuery: string
   setSearchQuery: (query: string) => void
-  login: (email: string, pass: string) => Promise<{ success: boolean; requires2FA?: boolean; userId?: string; error?: string }>
-  verifyOtp: (userId: string, email: string, code: string) => Promise<{ success: boolean; error?: string }>
+  login: (email: string, pass: string) => Promise<{ success: boolean; requires2FA?: boolean; userId?: string; email?: string; twoFactorTicket?: string; error?: string }>
+  verifyOtp: (userId: string, email: string, code: string, ticket?: string) => Promise<{ success: boolean; error?: string }>
   ssoLogin: (email: string) => Promise<{ success: boolean; error?: string }>
   logout: () => void
   setCurrentView: (view: ViewType, subTab?: 'new' | 'progress') => void
@@ -329,7 +329,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         return { success: false, error: data.error || 'Login gagal' }
       }
       if (data.requires2FA || data.require2FA) {
-        return { success: true, requires2FA: true, userId: data.userId }
+        return {
+          success: true,
+          requires2FA: true,
+          userId: data.userId,
+          email: data.email || email,
+          twoFactorTicket: data.twoFactorTicket,
+        }
       }
       if (data.token && data.user) {
         setToken(data.token)
@@ -345,12 +351,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const verifyOtp = async (userId: string, email: string, code: string) => {
+  const verifyOtp = async (userId: string, email: string, code: string, ticket?: string) => {
     try {
       const res = await fetch('/api/auth/verify-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, email, code }),
+        body: JSON.stringify({ userId, email, code, ticket, twoFactorTicket: ticket }),
       })
       const data = await res.json()
       if (!res.ok) {
