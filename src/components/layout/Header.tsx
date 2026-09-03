@@ -59,7 +59,7 @@ export function Header() {
               setIsSidebarCollapsed(!isSidebarCollapsed)
             }
           }}
-          className="flex h-9 w-9 items-center justify-center rounded-xl text-[#163A70] hover:bg-[#EBF2FF] transition-colors cursor-pointer"
+          className="hidden md:flex h-9 w-9 items-center justify-center rounded-xl text-[#163A70] hover:bg-[#EBF2FF] transition-colors cursor-pointer"
           title="Buka / Tutup Navigasi"
         >
           <Menu className="h-5 w-5" />

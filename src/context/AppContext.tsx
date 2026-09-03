@@ -10,6 +10,7 @@ export type ViewType =
   | 'matrix'
   | 'myAccount'
   | 'settings'
+  | 'menu'
 
 export type UserRole =
   | 'Requester'

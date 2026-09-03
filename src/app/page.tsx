@@ -13,6 +13,7 @@ import { MyAccountView } from '@/components/account/MyAccountView'
 import { SettingsView } from '@/components/settings/SettingsView'
 import { UsersView } from '@/components/users/UsersView'
 import { AuthorityMatrixView } from '@/components/matrix/AuthorityMatrixView'
+import { AppMenuView } from '@/components/menu/AppMenuView'
 import { MobileBottomNav } from '@/components/layout/MobileBottomNav'
 
 export default function HomePage() {
@@ -48,6 +49,7 @@ export default function HomePage() {
           {currentView === 'matrix' && <AuthorityMatrixView />}
           {currentView === 'myAccount' && <MyAccountView />}
           {currentView === 'settings' && <SettingsView />}
+          {currentView === 'menu' && <AppMenuView />}
         </main>
       </div>
       <NotificationDrawer />
