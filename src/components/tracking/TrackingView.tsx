@@ -701,18 +701,19 @@ export function TrackingView() {
               {/* Document Header & Quick Actions */}
               <Card className="border-[#E2E8F0] shadow-sm">
                 <CardContent className="p-6 space-y-4">
-                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-                    <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="font-mono text-sm font-bold text-[#163A70]">
+                  <div className="space-y-3.5">
+                    {/* Top Section: Full Width Document Metadata */}
+                    <div className="flex flex-col gap-1.5">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-mono text-sm sm:text-base font-extrabold text-[#163A70] tracking-wide whitespace-nowrap bg-[#EBF2FF] px-2.5 py-0.5 rounded-lg border border-[#BFDBFE]">
                           {activeDoc.docNumber}
                         </span>
-                        <Badge variant="outline" className="text-[10px] font-bold bg-[#EBF2FF] text-[#163A70]">
+                        <Badge variant="outline" className="text-[10.5px] font-bold bg-[#F8FAFC] text-[#334155] border-[#CBD5E1]">
                           {activeDoc.category}
                         </Badge>
                         <Badge
                           variant="outline"
-                          className={`text-[10px] font-bold ${
+                          className={`text-[10.5px] font-bold ${
                             activeDoc.priority === 'Critical'
                               ? 'bg-[#FEF2F2] text-[#DC2626] border-[#FCA5A5]'
                               : activeDoc.priority === 'Urgent'
@@ -724,20 +725,21 @@ export function TrackingView() {
                         </Badge>
                       </div>
 
-                      <h2 className="text-lg font-bold font-display text-[#0B2147]">
+                      <h2 className="text-lg sm:text-xl font-bold font-display text-[#0B2147] leading-snug">
                         {activeDoc.name}
                       </h2>
-                      <div className="text-xs text-[#64748B] mt-0.5 flex flex-wrap items-center gap-2">
-                        <span>Divisi: <b>{activeDoc.division}</b></span>
+                      
+                      <div className="text-xs text-[#64748B] flex flex-wrap items-center gap-2 pt-0.5">
+                        <span>Divisi: <b className="text-[#334155]">{activeDoc.division}</b></span>
                         <span>•</span>
-                        <span>PIC: <b>{activeDoc.pic}</b></span>
+                        <span>PIC: <b className="text-[#334155]">{activeDoc.pic}</b></span>
                         <span>•</span>
-                        <span>Kerahasiaan: <b>{activeDoc.confidentiality === 'Confidential' ? 'Rahasia' : activeDoc.confidentiality === 'Restricted' ? 'Terbatas' : 'Internal'}</b></span>
+                        <span>Kerahasiaan: <b className="text-[#334155]">{activeDoc.confidentiality === 'Confidential' ? 'Rahasia' : activeDoc.confidentiality === 'Restricted' ? 'Terbatas' : 'Internal'}</b></span>
                       </div>
                     </div>
 
-                    {/* Action Buttons */}
-                    <div className="flex flex-wrap items-center gap-2 shrink-0">
+                    {/* Action Buttons Toolbar */}
+                    <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-[#F1F5F9]">
                       {/* Google Drive Folder Button */}
                       <a
                         href={
@@ -746,7 +748,7 @@ export function TrackingView() {
                         }
                         target="_blank"
                         rel="noreferrer"
-                        className="inline-flex items-center gap-1.5 h-9 px-3 text-xs bg-[#0F9D58] hover:bg-[#0B8043] text-white font-bold rounded-xl cursor-pointer shadow-xs transition-colors"
+                        className="inline-flex items-center gap-1.5 h-8 px-3 text-xs bg-[#0F9D58] hover:bg-[#0B8043] text-white font-bold rounded-xl cursor-pointer shadow-xs transition-colors"
                         title="Buka Folder Dokumen di Google Drive"
                       >
                         <FolderOpen className="h-3.5 w-3.5" />
@@ -757,7 +759,7 @@ export function TrackingView() {
                       <a
                         href={`/api/documents/${activeDoc._id}/sync-drive`}
                         download={`${activeDoc.docNumber}_log_riwayat.txt`}
-                        className="inline-flex items-center gap-1.5 h-9 px-3 text-xs bg-white border border-[#CBD5E1] hover:bg-[#F1F5F9] text-[#163A70] font-bold rounded-xl cursor-pointer shadow-2xs transition-colors"
+                        className="inline-flex items-center gap-1.5 h-8 px-3 text-xs bg-white border border-[#CBD5E1] hover:bg-[#F1F5F9] text-[#163A70] font-bold rounded-xl cursor-pointer shadow-2xs transition-colors"
                         title="Unduh Berkas Log Teks Riwayat (.txt)"
                       >
                         <FileText className="h-3.5 w-3.5" />
@@ -770,7 +772,7 @@ export function TrackingView() {
                         variant="outline"
                         disabled={syncingDrive}
                         onClick={() => handleSyncGoogleDrive(activeDoc._id)}
-                        className="h-9 text-xs border-[#CBD5E1] text-[#334155] hover:bg-[#F8FAFC] font-bold rounded-xl gap-1.5 cursor-pointer shadow-2xs"
+                        className="h-8 text-xs border-[#CBD5E1] text-[#334155] hover:bg-[#F8FAFC] font-bold rounded-xl gap-1.5 cursor-pointer shadow-2xs"
                         title="Sinkronkan folder & log teks ke Google Drive"
                       >
                         <RefreshCw className={`h-3.5 w-3.5 ${syncingDrive ? 'animate-spin' : ''}`} />
@@ -781,10 +783,10 @@ export function TrackingView() {
                       <Button
                         size="sm"
                         onClick={() => setIsRevModalOpen(true)}
-                        className="h-9 text-xs bg-[#D97706] hover:bg-[#B45309] text-white font-bold rounded-xl gap-1.5 cursor-pointer shadow-xs"
+                        className="h-8 text-xs bg-[#D97706] hover:bg-[#B45309] text-white font-bold rounded-xl gap-1.5 cursor-pointer shadow-xs"
                       >
                         <FileUp className="h-3.5 w-3.5" />
-                        Unggah Revisi
+                        <span>Unggah Revisi</span>
                       </Button>
 
                       {/* Upload Final Document Button (Doc Controller / Approver / Admin) */}
@@ -792,10 +794,10 @@ export function TrackingView() {
                         <Button
                           size="sm"
                           onClick={() => setIsFinalModalOpen(true)}
-                          className="h-9 text-xs bg-[#059669] hover:bg-[#047857] text-white font-bold rounded-xl gap-1.5 cursor-pointer shadow-xs"
+                          className="h-8 text-xs bg-[#059669] hover:bg-[#047857] text-white font-bold rounded-xl gap-1.5 cursor-pointer shadow-xs"
                         >
                           <ShieldCheck className="h-3.5 w-3.5" />
-                          Unggah Dokumen Final
+                          <span>Unggah Dokumen Final</span>
                         </Button>
                       )}
                     </div>
@@ -813,7 +815,7 @@ export function TrackingView() {
                         return (
                           <div
                             key={st.key}
-                            className={`p-2.5 rounded-xl border text-center transition-all ${
+                            className={`p-2.5 rounded-xl border text-center transition-all flex flex-col justify-between ${
                               isRevision
                                 ? 'bg-[#FFFBEB] border-[#FDE68A] text-[#D97706]'
                                 : isCurrent
@@ -829,7 +831,7 @@ export function TrackingView() {
                             <div className="text-[9.5px] font-bold uppercase tracking-wider">
                               T{idx + 1}
                             </div>
-                            <div className="text-[10.5px] font-semibold mt-0.5 leading-tight truncate">
+                            <div className="text-[10px] font-semibold mt-0.5 leading-tight line-clamp-2">
                               {st.label}
                             </div>
                           </div>
