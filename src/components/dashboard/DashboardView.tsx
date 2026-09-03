@@ -268,8 +268,8 @@ export function DashboardView() {
         </div>
       </div>
 
-      {/* Menu Layanan & Fitur (Clean Mobile Native App Launcher) */}
-      <div className="bg-white rounded-3xl p-4 sm:p-5 border border-[#E2E8F0] shadow-xs space-y-3.5">
+      {/* Menu Layanan & Fitur (Khusus Tampilan Mobile — Di Desktop Navigasi Menggunakan Sidebar) */}
+      <div className="md:hidden bg-white rounded-3xl p-4 sm:p-5 border border-[#E2E8F0] shadow-xs space-y-3.5">
         <div className="flex items-center justify-between px-1">
           <div className="flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-[#163A70]" />
