@@ -95,6 +95,7 @@ export interface StoredUser {
   role: UserRole
   phone?: string
   avatarUrl?: string
+  coverUrl?: string
   twoFactorEnabled: boolean
   twoFactorSecret?: string
   twoFactorExpires?: string | null

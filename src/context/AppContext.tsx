@@ -33,6 +33,7 @@ export interface UserProfile {
   role: UserRole
   phone?: string
   avatarUrl?: string
+  coverUrl?: string
   twoFactorEnabled?: boolean
 }
 

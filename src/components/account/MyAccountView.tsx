@@ -76,8 +76,28 @@ export function MyAccountView() {
     const reader = new FileReader()
     reader.onload = async (event) => {
       const dataUrl = event.target?.result as string
-      await updateProfile({ avatarUrl: dataUrl })
-      toast.success('Foto profil berhasil diperbarui!')
+      const ok = await updateProfile({ avatarUrl: dataUrl })
+      if (ok) {
+        toast.success('Foto profil berhasil diperbarui & disinkronkan ke Google Drive!')
+      } else {
+        toast.error('Gagal memperbarui foto profil.')
+      }
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const handleCoverUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = async (event) => {
+      const dataUrl = event.target?.result as string
+      const ok = await updateProfile({ coverUrl: dataUrl })
+      if (ok) {
+        toast.success('Foto sampul profil berhasil diperbarui & disinkronkan ke Google Drive!')
+      } else {
+        toast.error('Gagal memperbarui foto sampul.')
+      }
     }
     reader.readAsDataURL(file)
   }
@@ -137,7 +157,28 @@ export function MyAccountView() {
 
       {/* Profile Overview Card */}
       <Card className="border-[#E2E8F0] shadow-sm overflow-hidden">
-        <div className="h-28 bg-gradient-to-r from-[#0B2147] via-[#163A70] to-[#1E4D94] relative" />
+        <div className="h-32 sm:h-36 bg-gradient-to-r from-[#0B2147] via-[#163A70] to-[#1E4D94] relative overflow-hidden group">
+          {user?.coverUrl && (
+            <img
+              src={user.coverUrl}
+              alt="Sampul Profil"
+              className="absolute inset-0 h-full w-full object-cover"
+            />
+          )}
+          <div className="absolute inset-0 bg-black/25 opacity-0 group-hover:opacity-100 transition-opacity" />
+
+          {/* Change Cover Button */}
+          <label className="absolute top-3 right-3 flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-black/45 hover:bg-black/70 backdrop-blur-md text-white text-[11px] font-bold cursor-pointer transition-all shadow-sm border border-white/20">
+            <Camera className="h-3.5 w-3.5" />
+            <span>Ubah Sampul</span>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleCoverUpload}
+              className="hidden"
+            />
+          </label>
+        </div>
 
         <CardContent className="px-6 pb-6 pt-0 relative">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 -mt-12 mb-4">
@@ -148,7 +189,7 @@ export function MyAccountView() {
                   <img
                     src={user.avatarUrl}
                     alt={user.employeeName}
-                    className="h-24 w-24 rounded-2xl object-cover border-4 border-white shadow-md"
+                    className="h-24 w-24 rounded-2xl object-cover border-4 border-white shadow-md bg-white"
                   />
                 ) : (
                   <div className="h-24 w-24 rounded-2xl bg-gradient-to-tr from-[#0B2147] to-[#163A70] text-2xl font-extrabold text-white flex items-center justify-center border-4 border-white shadow-md">

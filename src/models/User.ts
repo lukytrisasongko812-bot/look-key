@@ -23,6 +23,7 @@ export interface IUser extends MongooseDocument {
   role: UserRole
   phone?: string
   avatarUrl?: string
+  coverUrl?: string
   twoFactorEnabled: boolean
   twoFactorCode?: string | null
   twoFactorExpires?: Date | null
@@ -57,6 +58,7 @@ const UserSchema = new Schema<IUser>(
     },
     phone: { type: String, default: '+62 812-9876-5432' },
     avatarUrl: { type: String, default: '' },
+    coverUrl: { type: String, default: '' },
     twoFactorEnabled: { type: Boolean, default: true },
     twoFactorCode: { type: String, default: null },
     twoFactorExpires: { type: Date, default: null },

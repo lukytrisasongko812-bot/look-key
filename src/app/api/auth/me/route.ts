@@ -26,6 +26,7 @@ export async function GET(request: NextRequest) {
         role: user.role,
         phone: user.phone,
         avatarUrl: user.avatarUrl,
+        coverUrl: user.coverUrl,
         twoFactorEnabled: user.twoFactorEnabled,
       },
     })
@@ -43,7 +44,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { employeeName, position, division, phone, twoFactorEnabled } = body
+    const { employeeName, position, division, phone, twoFactorEnabled, avatarUrl, coverUrl } = body
 
     const user = await getDriveUserById(tokenUser.userId)
     if (!user) {
@@ -55,6 +56,8 @@ export async function PATCH(request: NextRequest) {
     if (division) user.division = division
     if (phone !== undefined) user.phone = phone
     if (twoFactorEnabled !== undefined) user.twoFactorEnabled = Boolean(twoFactorEnabled)
+    if (avatarUrl !== undefined) user.avatarUrl = avatarUrl
+    if (coverUrl !== undefined) user.coverUrl = coverUrl
 
     await saveDriveUser(user)
 
@@ -69,6 +72,7 @@ export async function PATCH(request: NextRequest) {
         role: user.role,
         phone: user.phone,
         avatarUrl: user.avatarUrl,
+        coverUrl: user.coverUrl,
         twoFactorEnabled: user.twoFactorEnabled,
       },
     })

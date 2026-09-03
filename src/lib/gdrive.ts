@@ -290,6 +290,67 @@ export async function uploadFileViaGasWebhook(
   }
 }
 
+import { Readable } from 'stream'
+
+export async function uploadOrUpdateFileInFolder(
+  folderId: string,
+  fileName: string,
+  mimeType: string,
+  buffer: Buffer
+): Promise<string | null> {
+  try {
+    const drive = getDriveClient()
+    const existing = await drive.files.list({
+      q: `'${folderId}' in parents and name = '${fileName.replace(/'/g, "\\'")}' and trashed = false`,
+      supportsAllDrives: true,
+      includeItemsFromAllDrives: true,
+      fields: 'files(id, webViewLink)',
+    })
+
+    const stream = new Readable()
+    stream.push(buffer)
+    stream.push(null)
+
+    if (existing.data.files && existing.data.files.length > 0) {
+      const fileId = existing.data.files[0].id!
+      const updated = await drive.files.update({
+        fileId,
+        media: {
+          mimeType,
+          body: stream,
+        },
+        supportsAllDrives: true,
+        fields: 'id, webViewLink',
+      })
+      return updated.data.webViewLink || `https://drive.google.com/file/d/${fileId}/view`
+    } else {
+      const created = await drive.files.create({
+        requestBody: {
+          name: fileName,
+          parents: [folderId],
+          mimeType,
+        },
+        media: {
+          mimeType,
+          body: stream,
+        },
+        supportsAllDrives: true,
+        fields: 'id, webViewLink',
+      })
+      return created.data.webViewLink || `https://drive.google.com/file/d/${created.data.id}/view`
+    }
+  } catch (err) {
+    console.error(`[GDrive Direct Upload Error for ${fileName}]`, err)
+    // Fallback to GAS Webhook for text or small base64
+    if (buffer.length < 5 * 1024 * 1024) {
+      uploadFileViaGasWebhook(folderId, fileName, buffer.toString('utf-8')).catch((e) =>
+        console.error('[GAS Upload Fallback Error]', e)
+      )
+    }
+    return null
+  }
+}
+
 /**
  * Sync user profile to Google Drive User Registry folder
  */
@@ -302,7 +363,7 @@ export async function syncUserToGoogleDrive(user: StoredUser): Promise<boolean> 
       q: `'${USERS_REGISTRY_FOLDER_ID}' in parents and name = '${folderName.replace(/'/g, "\\'")}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
       supportsAllDrives: true,
       includeItemsFromAllDrives: true,
-      fields: 'files(id)',
+      fields: 'files(id, webViewLink)',
     })
 
     const userMetadata = JSON.stringify({
@@ -318,9 +379,12 @@ export async function syncUserToGoogleDrive(user: StoredUser): Promise<boolean> 
       updatedAt: new Date().toISOString(),
     }, null, 2)
 
+    let folderId: string | undefined
+
     if (existing.data.files && existing.data.files.length > 0) {
+      folderId = existing.data.files[0].id!
       await drive.files.update({
-        fileId: existing.data.files[0].id!,
+        fileId: folderId,
         requestBody: {
           name: folderName,
           description: userMetadata,
@@ -328,7 +392,7 @@ export async function syncUserToGoogleDrive(user: StoredUser): Promise<boolean> 
         supportsAllDrives: true,
       })
     } else {
-      await drive.files.create({
+      const created = await drive.files.create({
         requestBody: {
           name: folderName,
           mimeType: 'application/vnd.google-apps.folder',
@@ -336,8 +400,58 @@ export async function syncUserToGoogleDrive(user: StoredUser): Promise<boolean> 
           description: userMetadata,
         },
         supportsAllDrives: true,
+        fields: 'id',
       })
+      folderId = created.data.id!
     }
+
+    if (folderId) {
+      // 1. Upload User Summary Text Log
+      const profileTxt = `================================================================================
+RIDE — PROFIL PENGGUNA TERDAFTAR
+================================================================================
+Nama Lengkap      : ${user.employeeName}
+Email             : ${user.email}
+Peran (Role)      : ${user.role}
+Jabatan/Posisi    : ${user.position || '-'}
+Divisi/Direktorat : ${user.division || '-'}
+No. Handphone     : ${user.phone || '-'}
+Status Akun       : ${user.isActive ? 'Aktif' : 'Nonaktif'}
+Keamanan 2FA      : ${user.twoFactorEnabled ? 'Aktif (Wajib OTP)' : 'Nonaktif'}
+Terakhir Diupdate : ${new Date().toLocaleString('id-ID')}
+================================================================================
+Tautan Portal     : https://risetrack.id
+`
+      await uploadOrUpdateFileInFolder(
+        folderId,
+        'ringkasan_profil_pengguna.txt',
+        'text/plain',
+        Buffer.from(profileTxt, 'utf-8')
+      )
+
+      // 2. Upload Profile Picture (avatarUrl)
+      if (user.avatarUrl && user.avatarUrl.startsWith('data:image/')) {
+        const matches = user.avatarUrl.match(/^data:image\/([a-zA-Z0-9+]+);base64,(.+)$/)
+        if (matches) {
+          const ext = matches[1] === 'jpeg' ? 'jpg' : matches[1]
+          const mime = `image/${matches[1]}`
+          const buf = Buffer.from(matches[2], 'base64')
+          await uploadOrUpdateFileInFolder(folderId, `foto_profil.${ext}`, mime, buf)
+        }
+      }
+
+      // 3. Upload Cover Photo (coverUrl)
+      if (user.coverUrl && user.coverUrl.startsWith('data:image/')) {
+        const matches = user.coverUrl.match(/^data:image\/([a-zA-Z0-9+]+);base64,(.+)$/)
+        if (matches) {
+          const ext = matches[1] === 'jpeg' ? 'jpg' : matches[1]
+          const mime = `image/${matches[1]}`
+          const buf = Buffer.from(matches[2], 'base64')
+          await uploadOrUpdateFileInFolder(folderId, `foto_sampul.${ext}`, mime, buf)
+        }
+      }
+    }
+
     return true
   } catch (e) {
     console.error('[User Drive Sync Error]', e)
