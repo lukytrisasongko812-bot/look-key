@@ -220,12 +220,12 @@ export function AppMenuView() {
                 <Icon className="h-6 w-6 stroke-[2.2]" />
               </div>
 
-              <div className="text-xs font-bold text-[#0F172A] leading-tight line-clamp-1">
+              <span className="text-[11px] sm:text-xs font-bold text-[#0F172A] leading-snug text-center break-words hyphens-auto w-full px-0.5 whitespace-normal">
                 {item.title}
-              </div>
-              <div className="text-[10px] text-[#64748B] mt-0.5 leading-tight line-clamp-1">
+              </span>
+              <span className="text-[9.5px] sm:text-[10px] text-[#64748B] leading-tight text-center break-words w-full px-0.5 mt-0.5 whitespace-normal line-clamp-2">
                 {item.subtitle}
-              </div>
+              </span>
             </button>
           )
         })}
