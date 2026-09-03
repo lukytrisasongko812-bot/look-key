@@ -7,7 +7,7 @@ import {
   GitPullRequestDraft,
   Plus,
   Files,
-  LayoutGrid,
+  User,
 } from 'lucide-react'
 
 export function MobileBottomNav() {
@@ -54,11 +54,11 @@ export function MobileBottomNav() {
       isActive: currentView === 'myDocuments',
     },
     {
-      id: 'menu' as ViewType,
-      label: 'Menu',
-      icon: LayoutGrid,
-      action: () => setCurrentView('menu'),
-      isActive: currentView === 'menu' || currentView === 'myAccount' || currentView === 'settings' || currentView === 'matrix' || currentView === 'users',
+      id: 'myAccount' as ViewType,
+      label: 'Akun',
+      icon: User,
+      action: () => setCurrentView('myAccount'),
+      isActive: currentView === 'myAccount',
     },
   ]
 
