@@ -80,8 +80,8 @@ export function RideLogo({
         </div>
         {showSubtitle && (
           <span
-            className={`font-medium tracking-tight whitespace-nowrap ${subtitleSizes[size]} ${
-              whiteText ? 'text-white/80' : 'text-[#64748B]'
+            className={`font-semibold tracking-tight whitespace-nowrap mt-0.5 ${subtitleSizes[size]} ${
+              whiteText ? 'text-white/90' : 'text-[#163A70]'
             }`}
           >
             Request Integrated Document Ecosystem

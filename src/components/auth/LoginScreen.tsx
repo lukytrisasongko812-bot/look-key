@@ -214,20 +214,19 @@ export function LoginScreen() {
       <div className="relative z-10 w-full max-w-[420px] rounded-2xl border border-white/50 bg-white/95 p-6 sm:p-7 shadow-[0_25px_60px_-10px_rgba(0,0,0,0.45)] backdrop-blur-xl animate-card-in">
         
         {/* Dual Brand Logos Header: RIDE & RESOURCES ID */}
-        <div className="flex items-center justify-between gap-3 pb-4 mb-4 border-b border-[#F1F5F9]">
-          <RideLogo size="sm" showSubtitle={false} />
-          <div className="h-7 w-[1px] bg-[#E2E8F0]" />
-          <img
-            src="/resources-id-logo.png"
-            alt="RESOURCES ID - Shared Service Center of MIND ID"
-            className="h-8 w-auto max-w-[160px] object-contain shrink-0"
-          />
+        <div className="pb-4 mb-4 border-b border-[#F1F5F9]">
+          <div className="flex items-center justify-between gap-3">
+            <RideLogo size="sm" showSubtitle={true} />
+            <div className="h-8 w-[1px] bg-[#E2E8F0] shrink-0" />
+            <img
+              src="/resources-id-logo.png"
+              alt="RESOURCES ID - Shared Service Center of MIND ID"
+              className="h-8 w-auto max-w-[145px] object-contain shrink-0"
+            />
+          </div>
         </div>
 
         <div className="mb-4">
-          <div className="text-[11px] font-bold tracking-wide text-[#163A70] uppercase mb-0.5">
-            Request Integrated Document Ecosystem
-          </div>
           <h2 className="text-lg font-bold font-display text-[#0B2147]">
             Masuk ke Akun
           </h2>
