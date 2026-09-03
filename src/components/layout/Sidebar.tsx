@@ -10,6 +10,7 @@ import {
   SlidersHorizontal,
   Users,
   ShieldCheck,
+  LogOut,
 } from 'lucide-react'
 import { RideLogo } from '@/components/common/RideLogo'
 
@@ -23,6 +24,7 @@ export function Sidebar() {
     setIsMobileSidebarOpen,
     documents,
     allUsers,
+    logout,
   } = useApp()
 
   const reviewCount = documents.filter((d) => d.stage === 0 || d.stage === 1 || d.revisionRequested).length
@@ -145,6 +147,22 @@ export function Sidebar() {
               </button>
             )
           })}
+
+          <div className="pt-2 border-t border-[#F1F5F9]">
+            <button
+              onClick={() => {
+                setIsMobileSidebarOpen(false)
+                logout()
+              }}
+              className={`flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-xs font-bold text-[#DC2626] hover:bg-[#FEF2F2] transition-colors cursor-pointer ${
+                isSidebarCollapsed ? 'justify-center px-2' : ''
+              }`}
+              title="Keluar dari Akun"
+            >
+              <LogOut className="h-4 w-4 shrink-0" />
+              {!isSidebarCollapsed && <span>Keluar</span>}
+            </button>
+          </div>
         </div>
 
         {/* Brand System Footer */}

@@ -173,7 +173,13 @@ export function Header() {
 
                 <div className="space-y-0.5">
                   <button
-                    onClick={() => {
+                    onMouseDown={(e) => {
+                      e.stopPropagation()
+                      setIsDropdownOpen(false)
+                      setCurrentView('myAccount')
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation()
                       setIsDropdownOpen(false)
                       setCurrentView('myAccount')
                     }}
@@ -184,7 +190,13 @@ export function Header() {
                   </button>
 
                   <button
-                    onClick={() => {
+                    onMouseDown={(e) => {
+                      e.stopPropagation()
+                      setIsDropdownOpen(false)
+                      setCurrentView('matrix')
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation()
                       setIsDropdownOpen(false)
                       setCurrentView('matrix')
                     }}
@@ -197,7 +209,13 @@ export function Header() {
                   {(user?.role === 'Administrator' || user?.role === 'Director / BOD') && (
                     <>
                       <button
-                        onClick={() => {
+                        onMouseDown={(e) => {
+                          e.stopPropagation()
+                          setIsDropdownOpen(false)
+                          setCurrentView('users')
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation()
                           setIsDropdownOpen(false)
                           setCurrentView('users')
                         }}
@@ -208,7 +226,13 @@ export function Header() {
                       </button>
 
                       <button
-                        onClick={() => {
+                        onMouseDown={(e) => {
+                          e.stopPropagation()
+                          setIsDropdownOpen(false)
+                          setCurrentView('settings')
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation()
                           setIsDropdownOpen(false)
                           setCurrentView('settings')
                         }}
@@ -224,7 +248,13 @@ export function Header() {
                 <div className="my-1.5 h-[1px] bg-[#F1F5F9]" />
 
                 <button
-                  onClick={() => {
+                  onMouseDown={(e) => {
+                    e.stopPropagation()
+                    setIsDropdownOpen(false)
+                    logout()
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation()
                     setIsDropdownOpen(false)
                     logout()
                   }}
