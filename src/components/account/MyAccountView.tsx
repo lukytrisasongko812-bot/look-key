@@ -17,9 +17,13 @@ import {
   Smartphone,
   Building,
   Key,
-  CheckCircle2,
   ShieldCheck,
-  ArrowRight,
+  FolderOpen,
+  Mail,
+  Phone,
+  Briefcase,
+  Sparkles,
+  Lock,
 } from 'lucide-react'
 import {
   Dialog,
@@ -203,8 +207,8 @@ export function MyAccountView() {
     }
   }
 
-  const initials = user?.employeeName
-    ? user.employeeName
+  const initials = (name || user?.employeeName)
+    ? (name || user?.employeeName || '')
         .split(' ')
         .filter(Boolean)
         .slice(0, 2)
@@ -213,10 +217,10 @@ export function MyAccountView() {
     : 'RD'
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto pb-12 animate-in fade-in duration-300">
-      {/* Header */}
+    <div className="space-y-6 max-w-4xl mx-auto pb-12 animate-in fade-in duration-300">
+      {/* Page Header */}
       <div>
-        <h1 className="text-2xl font-bold font-display text-[#0B2147]">
+        <h1 className="text-2xl font-bold font-display text-[#0B2147] tracking-tight">
           Profil &amp; Keamanan Akun
         </h1>
         <p className="text-xs text-[#64748B] mt-1">
@@ -224,9 +228,10 @@ export function MyAccountView() {
         </p>
       </div>
 
-      {/* Profile Overview Card */}
-      <Card className="border-[#E2E8F0] shadow-sm overflow-hidden">
-        <div className="h-32 sm:h-36 bg-gradient-to-r from-[#0B2147] via-[#163A70] to-[#1E4D94] relative overflow-hidden group">
+      {/* Hero Profile & Cover Card */}
+      <Card className="border-[#E2E8F0] shadow-sm rounded-3xl overflow-hidden bg-white">
+        {/* Cover Photo Banner */}
+        <div className="h-36 sm:h-48 w-full bg-gradient-to-r from-[#0B2147] via-[#163A70] to-[#1E4D94] relative overflow-hidden group">
           {(previewCover || user?.coverUrl) && (
             <img
               src={previewCover || user?.coverUrl}
@@ -234,12 +239,12 @@ export function MyAccountView() {
               className="absolute inset-0 h-full w-full object-cover transition-opacity duration-300"
             />
           )}
-          <div className="absolute inset-0 bg-black/25 opacity-0 group-hover:opacity-100 transition-opacity" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/20" />
 
           {/* Change Cover Button */}
-          <label className="absolute top-3 right-3 flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-black/45 hover:bg-black/70 backdrop-blur-md text-white text-[11px] font-bold cursor-pointer transition-all shadow-sm border border-white/20">
+          <label className="absolute top-3.5 right-3.5 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/50 hover:bg-black/70 backdrop-blur-md text-white text-[11px] font-bold cursor-pointer transition-all shadow-sm border border-white/25">
             <Camera className="h-3.5 w-3.5" />
-            <span>Ubah Sampul</span>
+            <span>Ganti Sampul</span>
             <input
               type="file"
               accept="image/*"
@@ -249,24 +254,26 @@ export function MyAccountView() {
           </label>
         </div>
 
-        <CardContent className="px-6 pb-6 pt-0 relative">
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 -mt-12 mb-4">
-            <div className="flex items-end gap-4">
-              <div className="relative group">
+        {/* Identity Details Body */}
+        <div className="px-5 sm:px-8 pb-6 pt-0">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+            {/* Avatar overlapping bottom border of cover */}
+            <div className="flex items-end gap-4 -mt-12 sm:-mt-14">
+              <div className="relative group shrink-0">
                 {(previewAvatar || user?.avatarUrl) ? (
-                  // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={previewAvatar || user?.avatarUrl}
                     alt={name || user?.employeeName}
-                    className="h-24 w-24 rounded-2xl object-cover border-4 border-white shadow-md bg-white transition-opacity duration-300"
+                    className="h-24 w-24 sm:h-28 sm:w-28 rounded-2xl sm:rounded-3xl object-cover border-4 border-white shadow-lg bg-white transition-opacity duration-300 ring-1 ring-black/5"
                   />
                 ) : (
-                  <div className="h-24 w-24 rounded-2xl bg-gradient-to-tr from-[#0B2147] to-[#163A70] text-2xl font-extrabold text-white flex items-center justify-center border-4 border-white shadow-md">
+                  <div className="h-24 w-24 sm:h-28 sm:w-28 rounded-2xl sm:rounded-3xl bg-gradient-to-tr from-[#0B2147] to-[#163A70] text-3xl font-black text-white flex items-center justify-center border-4 border-white shadow-lg ring-1 ring-black/5">
                     {initials}
                   </div>
                 )}
-                <label className="absolute inset-0 bg-black/40 rounded-2xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-white">
+                <label className="absolute inset-0 bg-black/50 rounded-2xl sm:rounded-3xl flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-white">
                   <Camera className="h-6 w-6" />
+                  <span className="text-[10px] font-bold mt-1">Ubah Foto</span>
                   <input
                     type="file"
                     accept="image/*"
@@ -275,109 +282,170 @@ export function MyAccountView() {
                   />
                 </label>
               </div>
-
-              <div>
-                <div className="flex items-center gap-2">
-                  <h2 className="text-lg font-bold font-display text-[#0B2147]">
-                    {name || user?.employeeName || 'Pengguna'}
-                  </h2>
-                  <Badge className="bg-[#163A70] text-white text-[10px] py-0.5">
-                    {user?.role || 'Reviewer'}
-                  </Badge>
-                </div>
-                <p className="text-xs text-[#64748B] mt-0.5">
-                  {position || user?.position} • {department || user?.division}
-                </p>
-              </div>
             </div>
 
-            <Button
-              onClick={() => setIsPasswordModalOpen(true)}
-              variant="outline"
-              size="sm"
-              className="text-xs h-9 font-semibold text-[#163A70] rounded-xl cursor-pointer"
-            >
-              <Key className="h-3.5 w-3.5 mr-1.5" />
-              Ubah Kata Sandi
-            </Button>
+            {/* Quick Action Buttons */}
+            <div className="flex items-center gap-2 pt-2 sm:pt-0">
+              <Button
+                type="button"
+                onClick={() => setIsPasswordModalOpen(true)}
+                variant="outline"
+                size="sm"
+                className="text-xs h-9 font-bold text-[#163A70] bg-[#F8FAFC] hover:bg-[#EBF2FF] border-[#CBD5E1] rounded-xl cursor-pointer gap-1.5 flex-1 sm:flex-initial"
+              >
+                <Key className="h-3.5 w-3.5" />
+                <span>Ubah Sandi</span>
+              </Button>
+              <Button
+                type="button"
+                onClick={() => {
+                  if (typeof window !== 'undefined') {
+                    window.open('https://drive.google.com/drive/folders/1JRjTJOGlGs0S0iE1HYIBaI0nIcqDXugf', '_blank')
+                  }
+                }}
+                variant="outline"
+                size="sm"
+                className="text-xs h-9 font-bold text-[#0F172A] bg-[#F8FAFC] hover:bg-[#EBF2FF] border-[#CBD5E1] rounded-xl cursor-pointer gap-1.5 flex-1 sm:flex-initial"
+              >
+                <FolderOpen className="h-3.5 w-3.5 text-[#163A70]" />
+                <span>Folder Drive</span>
+              </Button>
+            </div>
           </div>
-        </CardContent>
+
+          {/* User Name & Metadata */}
+          <div className="mt-4 space-y-1.5">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-xl sm:text-2xl font-black font-display text-[#0B2147] tracking-tight">
+                {name || user?.employeeName || 'Pengguna'}
+              </h2>
+              <Badge className="bg-[#163A70] text-white text-[11px] font-bold px-2.5 py-0.5 rounded-full">
+                {user?.role || 'Reviewer'}
+              </Badge>
+              <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-[#059669] bg-[#ECFDF5] px-2.5 py-0.5 rounded-full border border-[#A7F3D0]">
+                <span className="h-1.5 w-1.5 rounded-full bg-[#10B981]" />
+                Akun Aktif
+              </span>
+            </div>
+
+            <p className="text-xs sm:text-sm text-[#475569] font-medium leading-relaxed">
+              <span className="font-bold text-[#0F172A]">{position || user?.position}</span>
+              <span className="mx-1.5 text-[#CBD5E1]">•</span>
+              <span>{department || user?.division}</span>
+              <span className="mx-1.5 text-[#CBD5E1]">•</span>
+              <span className="text-[#64748B]">{email}</span>
+            </p>
+          </div>
+        </div>
       </Card>
 
-      {/* Tabs */}
+      {/* Tabs Navigation */}
       <Tabs defaultValue="profile" className="space-y-4">
-        <TabsList className="bg-[#F1F5F9] p-1 rounded-xl">
-          <TabsTrigger value="profile" className="text-xs font-bold rounded-lg data-[state=active]:bg-white data-[state=active]:text-[#163A70]">
-            <User className="h-3.5 w-3.5 mr-1.5" /> Informasi Profil
-          </TabsTrigger>
-          <TabsTrigger value="security" className="text-xs font-bold rounded-lg data-[state=active]:bg-white data-[state=active]:text-[#163A70]">
-            <Shield className="h-3.5 w-3.5 mr-1.5" /> Keamanan &amp; 2FA
-          </TabsTrigger>
-          <TabsTrigger value="authority" className="text-xs font-bold rounded-lg data-[state=active]:bg-white data-[state=active]:text-[#163A70]">
-            <ShieldCheck className="h-3.5 w-3.5 mr-1.5" /> Peran &amp; Matriks Kewenangan
-          </TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto no-scrollbar pb-1">
+          <TabsList className="w-full sm:w-auto flex justify-start bg-[#EBF2FF]/70 p-1.5 rounded-2xl border border-[#BFDBFE]/50 gap-1 min-w-max">
+            <TabsTrigger
+              value="profile"
+              className="px-4 py-2 rounded-xl text-xs font-bold text-[#64748B] data-[state=active]:bg-white data-[state=active]:text-[#163A70] data-[state=active]:shadow-xs transition-all flex items-center gap-1.5"
+            >
+              <User className="h-3.5 w-3.5" />
+              <span>Informasi Profil</span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="security"
+              className="px-4 py-2 rounded-xl text-xs font-bold text-[#64748B] data-[state=active]:bg-white data-[state=active]:text-[#163A70] data-[state=active]:shadow-xs transition-all flex items-center gap-1.5"
+            >
+              <Shield className="h-3.5 w-3.5" />
+              <span>Keamanan &amp; 2FA</span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="authority"
+              className="px-4 py-2 rounded-xl text-xs font-bold text-[#64748B] data-[state=active]:bg-white data-[state=active]:text-[#163A70] data-[state=active]:shadow-xs transition-all flex items-center gap-1.5"
+            >
+              <ShieldCheck className="h-3.5 w-3.5" />
+              <span>Peran &amp; Matriks</span>
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
-        {/* Tab 1: Profile */}
-        <TabsContent value="profile">
-          <Card className="border-[#E2E8F0] shadow-sm">
-            <CardContent className="p-6">
-              <form onSubmit={handleProfileSave} className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* Tab 1: Profile Information */}
+        <TabsContent value="profile" className="focus-visible:outline-none">
+          <Card className="border-[#E2E8F0] shadow-sm rounded-3xl bg-white overflow-hidden">
+            <CardContent className="p-6 sm:p-7">
+              <form onSubmit={handleProfileSave} className="space-y-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
                   <div className="space-y-1.5">
-                    <Label className="text-xs font-semibold">Nama Lengkap</Label>
+                    <Label className="text-xs font-bold text-[#0B2147] flex items-center gap-1.5">
+                      <User className="h-3.5 w-3.5 text-[#163A70]" />
+                      <span>Nama Lengkap</span>
+                    </Label>
                     <Input
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       required
-                      className="h-10 text-xs rounded-xl"
+                      placeholder="Nama lengkap karyawan"
+                      className="h-11 text-xs rounded-xl border-[#CBD5E1] focus:border-[#163A70] bg-[#F8FAFC]/50 focus:bg-white"
                     />
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label className="text-xs font-semibold">Email Akun (Login)</Label>
+                    <Label className="text-xs font-bold text-[#0B2147] flex items-center gap-1.5">
+                      <Mail className="h-3.5 w-3.5 text-[#163A70]" />
+                      <span>Email Akun (Login)</span>
+                    </Label>
                     <Input
                       value={email}
                       disabled
-                      className="h-10 text-xs rounded-xl bg-[#F8FAFC] text-[#64748B]"
+                      className="h-11 text-xs rounded-xl bg-[#F1F5F9] text-[#64748B] border-[#E2E8F0] cursor-not-allowed font-medium"
                     />
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label className="text-xs font-semibold">Divisi / Unit Kerja</Label>
+                    <Label className="text-xs font-bold text-[#0B2147] flex items-center gap-1.5">
+                      <Building className="h-3.5 w-3.5 text-[#163A70]" />
+                      <span>Divisi / Direktorat</span>
+                    </Label>
                     <Input
                       value={department}
                       onChange={(e) => setDepartment(e.target.value)}
                       required
-                      className="h-10 text-xs rounded-xl"
+                      placeholder="Direktorat Legal & Governance"
+                      className="h-11 text-xs rounded-xl border-[#CBD5E1] focus:border-[#163A70] bg-[#F8FAFC]/50 focus:bg-white"
                     />
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label className="text-xs font-semibold">Jabatan Resmi</Label>
+                    <Label className="text-xs font-bold text-[#0B2147] flex items-center gap-1.5">
+                      <Briefcase className="h-3.5 w-3.5 text-[#163A70]" />
+                      <span>Jabatan Resmi</span>
+                    </Label>
                     <Input
                       value={position}
                       onChange={(e) => setPosition(e.target.value)}
                       required
-                      className="h-10 text-xs rounded-xl"
+                      placeholder="Head of Enterprise Legal"
+                      className="h-11 text-xs rounded-xl border-[#CBD5E1] focus:border-[#163A70] bg-[#F8FAFC]/50 focus:bg-white"
                     />
                   </div>
 
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-semibold">Nomor WhatsApp / Kontak</Label>
+                  <div className="space-y-1.5 sm:col-span-2">
+                    <Label className="text-xs font-bold text-[#0B2147] flex items-center gap-1.5">
+                      <Phone className="h-3.5 w-3.5 text-[#163A70]" />
+                      <span>Nomor WhatsApp / Kontak</span>
+                    </Label>
                     <Input
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
-                      className="h-10 text-xs rounded-xl"
+                      placeholder="+62 812-xxxx-xxxx"
+                      className="h-11 text-xs rounded-xl border-[#CBD5E1] focus:border-[#163A70] bg-[#F8FAFC]/50 focus:bg-white"
                     />
                   </div>
                 </div>
 
-                <div className="pt-4 flex justify-end">
+                <div className="pt-2 flex justify-end">
                   <Button
                     type="submit"
                     disabled={savingProfile}
-                    className="h-10 px-6 bg-[#163A70] hover:bg-[#0B2147] text-white font-bold text-xs rounded-xl cursor-pointer"
+                    className="h-11 px-7 bg-[#163A70] hover:bg-[#0B2147] text-white font-bold text-xs rounded-xl cursor-pointer shadow-sm active:scale-95 transition-all"
                   >
                     {savingProfile ? (
                       'Menyimpan...'
@@ -395,18 +463,18 @@ export function MyAccountView() {
           </Card>
         </TabsContent>
 
-        {/* Tab 2: Security */}
-        <TabsContent value="security">
-          <Card className="border-[#E2E8F0] shadow-sm">
-            <CardContent className="p-6 space-y-6">
-              <div className="flex items-center justify-between p-4 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0]">
-                <div className="space-y-0.5">
-                  <div className="text-xs font-bold text-[#0F172A] flex items-center gap-2">
+        {/* Tab 2: Security & 2FA */}
+        <TabsContent value="security" className="focus-visible:outline-none">
+          <Card className="border-[#E2E8F0] shadow-sm rounded-3xl bg-white overflow-hidden">
+            <CardContent className="p-6 sm:p-7 space-y-4">
+              <div className="flex items-center justify-between p-4 sm:p-5 rounded-2xl bg-[#F8FAFC] border border-[#E2E8F0]">
+                <div className="space-y-1 pr-4">
+                  <div className="text-xs sm:text-sm font-bold text-[#0B2147] flex items-center gap-2">
                     <Smartphone className="h-4 w-4 text-[#163A70]" />
-                    Otentikasi Dua Langkah (2FA OTP)
+                    <span>Otentikasi Dua Langkah (2FA OTP)</span>
                   </div>
-                  <div className="text-[11px] text-[#64748B]">
-                    Mengirim kode OTP 6-digit ke email setiap kali melakukan proses masuk ke sistem.
+                  <div className="text-[11px] sm:text-xs text-[#64748B] leading-relaxed">
+                    Mengirim kode OTP 6-digit ke email korporat Anda setiap kali melakukan proses masuk ke portal RIDE.
                   </div>
                 </div>
                 <Switch
@@ -419,13 +487,13 @@ export function MyAccountView() {
                 />
               </div>
 
-              <div className="flex items-center justify-between p-4 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0]">
-                <div className="space-y-0.5">
-                  <div className="text-xs font-bold text-[#0F172A] flex items-center gap-2">
+              <div className="flex items-center justify-between p-4 sm:p-5 rounded-2xl bg-[#F8FAFC] border border-[#E2E8F0]">
+                <div className="space-y-1 pr-4">
+                  <div className="text-xs sm:text-sm font-bold text-[#0B2147] flex items-center gap-2">
                     <Shield className="h-4 w-4 text-[#163A70]" />
-                    Pemberitahuan Aktivitas &amp; Dokumen
+                    <span>Pemberitahuan Aktivitas &amp; Dokumen</span>
                   </div>
-                  <div className="text-[11px] text-[#64748B]">
+                  <div className="text-[11px] sm:text-xs text-[#64748B] leading-relaxed">
                     Menerima notifikasi email saat ada pengajuan baru, permintaan revisi, atau dokumen final selesai.
                   </div>
                 </div>
@@ -439,32 +507,35 @@ export function MyAccountView() {
         </TabsContent>
 
         {/* Tab 3: Authority & Roles */}
-        <TabsContent value="authority">
-          <Card className="border-[#E2E8F0] shadow-sm">
-            <CardContent className="p-6 space-y-4">
-              <div className="flex items-center justify-between pb-3 border-b border-[#F1F5F9]">
+        <TabsContent value="authority" className="focus-visible:outline-none">
+          <Card className="border-[#E2E8F0] shadow-sm rounded-3xl bg-white overflow-hidden">
+            <CardContent className="p-6 sm:p-7 space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[#F1F5F9]">
                 <div>
-                  <h3 className="text-sm font-bold text-[#0B2147]">Peran Pengguna Anda: {user?.role}</h3>
+                  <h3 className="text-sm font-bold text-[#0B2147]">
+                    Peran Pengguna Anda: <span className="text-[#163A70] font-black">{user?.role}</span>
+                  </h3>
                   <p className="text-xs text-[#64748B] mt-0.5">
-                    Tingkat kewenangan menentukan tindakan operasional yang dapat Anda lakukan pada tiket pengajuan dokumen.
+                    Tingkat kewenangan menentukan wewenang operasional Anda dalam siklus alur 7 tahap dokumen.
                   </p>
                 </div>
                 <Button
                   size="sm"
+                  type="button"
                   onClick={() => setCurrentView('matrix')}
-                  className="bg-[#163A70] hover:bg-[#0B2147] text-white font-bold text-xs rounded-xl gap-1.5"
+                  className="bg-[#163A70] hover:bg-[#0B2147] text-white font-bold text-xs rounded-xl gap-1.5 shrink-0"
                 >
                   <ShieldCheck className="h-4 w-4" />
-                  Lihat Matriks Kewenangan Lengkap
+                  <span>Matriks Lengkap</span>
                 </Button>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-[#475569]">
-                <div className="p-3 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] space-y-1">
-                  <span className="font-bold text-[#0B2147] block">Hak Buat Dokumen:</span>
-                  <span>Diizinkan membuat draf pengajuan baru (V0).</span>
+                <div className="p-4 rounded-2xl bg-[#F8FAFC] border border-[#E2E8F0] space-y-1">
+                  <span className="font-bold text-[#0B2147] block">Hak Pembuatan Dokumen:</span>
+                  <span>Diizinkan membuat draf pengajuan berkas baru (V0).</span>
                 </div>
-                <div className="p-3 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] space-y-1">
+                <div className="p-4 rounded-2xl bg-[#F8FAFC] border border-[#E2E8F0] space-y-1">
                   <span className="font-bold text-[#0B2147] block">Hak Review &amp; Revisi:</span>
                   <span>
                     {user?.role === 'Requester'
@@ -480,17 +551,17 @@ export function MyAccountView() {
 
       {/* Password Change Dialog */}
       <Dialog open={isPasswordModalOpen} onOpenChange={setIsPasswordModalOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md rounded-3xl">
           <DialogHeader>
-            <DialogTitle className="text-[#0B2147]">Ubah Kata Sandi Akun</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-[#0B2147] font-bold text-base">Ubah Kata Sandi Akun</DialogTitle>
+            <DialogDescription className="text-xs text-[#64748B]">
               Masukkan kata sandi lama Anda untuk memverifikasi penggantian kata sandi baru.
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleChangePasswordSubmit} className="space-y-3 pt-2">
-            <div className="space-y-1">
-              <Label className="text-xs font-semibold">Kata Sandi Saat Ini</Label>
+          <form onSubmit={handleChangePasswordSubmit} className="space-y-3.5 pt-2">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold text-[#0B2147]">Kata Sandi Saat Ini</Label>
               <Input
                 type="password"
                 value={currentPw}
@@ -500,8 +571,8 @@ export function MyAccountView() {
               />
             </div>
 
-            <div className="space-y-1">
-              <Label className="text-xs font-semibold">Kata Sandi Baru (min. 6 karakter)</Label>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold text-[#0B2147]">Kata Sandi Baru (min. 6 karakter)</Label>
               <Input
                 type="password"
                 value={newPw}
@@ -512,8 +583,8 @@ export function MyAccountView() {
               />
             </div>
 
-            <div className="space-y-1">
-              <Label className="text-xs font-semibold">Konfirmasi Kata Sandi Baru</Label>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold text-[#0B2147]">Konfirmasi Kata Sandi Baru</Label>
               <Input
                 type="password"
                 value={confirmPw}
@@ -524,11 +595,11 @@ export function MyAccountView() {
               />
             </div>
 
-            <DialogFooter className="pt-2">
-              <Button type="button" variant="outline" onClick={() => setIsPasswordModalOpen(false)}>
+            <DialogFooter className="pt-3 gap-2">
+              <Button type="button" variant="outline" onClick={() => setIsPasswordModalOpen(false)} className="rounded-xl text-xs font-bold">
                 Batal
               </Button>
-              <Button type="submit" disabled={pwLoading} className="bg-[#163A70] hover:bg-[#0B2147] text-white font-bold">
+              <Button type="submit" disabled={pwLoading} className="bg-[#163A70] hover:bg-[#0B2147] text-white font-bold rounded-xl text-xs">
                 {pwLoading ? 'Menyimpan...' : 'Perbarui Kata Sandi'}
               </Button>
             </DialogFooter>
