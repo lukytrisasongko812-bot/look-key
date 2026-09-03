@@ -166,7 +166,7 @@ export async function initAndSeedDriveStore() {
       _id: 'usr_luky_reviewer_01',
       id: 'usr_luky_reviewer_01',
       employeeName: 'Luky Tri Sasongko',
-      email: 'lukytrissasongko812@gmail.com',
+      email: 'lukytrisasongko812@gmail.com',
       passwordHash: defaultPasswordHash,
       position: 'Senior Legal Counsel & Compliance Reviewer',
       division: 'Direktorat Legal & Compliance',
