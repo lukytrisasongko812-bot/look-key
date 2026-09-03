@@ -47,44 +47,34 @@ export function AppMenuView() {
   const appGridItems = [
     {
       id: 'new_doc',
-      title: 'Ajukan Dokumen',
-      subtitle: 'Pemesanan Berkas',
+      title: 'Ajukan',
       icon: FilePlus,
-      gradient: 'from-[#1D4ED8] to-[#3B82F6]',
       action: () => setCurrentView('tracking', 'new'),
     },
     {
       id: 'tracking',
       title: 'Lacak Alur',
-      subtitle: '7 Tahap & Revisi',
       icon: GitPullRequestDraft,
-      gradient: 'from-[#4338CA] to-[#6366F1]',
       badge: reviewCount > 0 ? `${reviewCount}` : undefined,
       action: () => setCurrentView('tracking', 'progress'),
     },
     {
       id: 'myDocuments',
-      title: 'Dokumen Saya',
-      subtitle: 'Arsip Berkas',
+      title: 'Dokumen',
       icon: Files,
-      gradient: 'from-[#047857] to-[#10B981]',
       badge: myDocsCount > 0 ? `${myDocsCount}` : undefined,
       action: () => setCurrentView('myDocuments'),
     },
     {
       id: 'reminders',
       title: 'Jatuh Tempo',
-      subtitle: 'Reminder H-60',
       icon: Clock,
-      gradient: 'from-[#B45309] to-[#F59E0B]',
       action: () => setCurrentView('tracking', 'progress'),
     },
     {
       id: 'gdrive',
       title: 'Google Drive',
-      subtitle: 'Arsip Cloud',
       icon: FolderOpen,
-      gradient: 'from-[#0E7490] to-[#06B6D4]',
       action: () => {
         if (typeof window !== 'undefined') {
           window.open('https://drive.google.com/drive/folders/1S8ifA-RtvGB0JGFPZSfsaL_IX65Nc16F', '_blank')
@@ -93,10 +83,8 @@ export function AppMenuView() {
     },
     {
       id: 'matrix',
-      title: 'Matriks RBAC',
-      subtitle: 'Wewenang & SOP',
+      title: 'Matriks SOP',
       icon: ShieldCheck,
-      gradient: 'from-[#334155] to-[#64748B]',
       action: () => setCurrentView('matrix'),
     },
     ...(isAdmin
@@ -104,17 +92,13 @@ export function AppMenuView() {
           {
             id: 'users',
             title: 'Pengguna',
-            subtitle: 'Kelola & Undangan',
             icon: Users,
-            gradient: 'from-[#6D28D9] to-[#8B5CF6]',
             action: () => setCurrentView('users'),
           },
           {
             id: 'settings',
             title: 'Pengaturan',
-            subtitle: 'Sistem & Drive',
             icon: Settings,
-            gradient: 'from-[#0F172A] to-[#334155]',
             action: () => setCurrentView('settings'),
           },
         ]
@@ -122,111 +106,93 @@ export function AppMenuView() {
     {
       id: 'profile',
       title: 'Profil Saya',
-      subtitle: 'Identitas Karyawan',
       icon: User,
-      gradient: 'from-[#0284C7] to-[#38BDF8]',
       action: () => setCurrentView('myAccount'),
     },
     {
       id: 'security',
-      title: 'Keamanan',
-      subtitle: 'Sandi & 2FA',
+      title: 'Keamanan 2FA',
       icon: KeyRound,
-      gradient: 'from-[#BE123C] to-[#F43F5E]',
       action: () => setCurrentView('myAccount'),
     },
   ]
 
   return (
-    <div className="space-y-5 max-w-lg mx-auto pb-12 animate-in fade-in duration-300">
-      {/* User App Profile Header Card */}
+    <div className="space-y-4 max-w-lg mx-auto pb-12 animate-in fade-in duration-300">
+      {/* Header Profile Mini Card */}
       <Card
         onClick={() => setCurrentView('myAccount')}
-        className="overflow-hidden border-[#E2E8F0] shadow-sm bg-gradient-to-r from-[#0B2147] to-[#163A70] text-white cursor-pointer hover:shadow-md transition-all active:scale-[0.99]"
+        className="border-[#E2E8F0] shadow-sm overflow-hidden cursor-pointer hover:border-[#BFDBFE] transition-all bg-gradient-to-r from-[#0B2147] via-[#163A70] to-[#1E4D94] text-white rounded-3xl"
       >
         <CardContent className="p-4 sm:p-5 flex items-center justify-between">
           <div className="flex items-center gap-3.5">
-            <div className="relative">
-              {user?.avatarUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={user.avatarUrl}
-                  alt={user.employeeName}
-                  className="h-14 w-14 rounded-2xl object-cover border-2 border-white/40 shadow-md bg-white"
-                />
-              ) : (
-                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/20 text-lg font-black text-white border-2 border-white/30 backdrop-blur-md">
-                  {initials}
-                </div>
-              )}
-              <span className="absolute bottom-0 right-0 h-3.5 w-3.5 rounded-full bg-[#10B981] ring-2 ring-[#0B2147]" />
-            </div>
-
+            {user?.avatarUrl ? (
+              <img
+                src={user.avatarUrl}
+                alt={user.employeeName || 'User'}
+                className="h-12 w-12 rounded-2xl object-cover border-2 border-white/40 shadow-sm"
+              />
+            ) : (
+              <div className="h-12 w-12 rounded-2xl bg-white/10 text-white border border-white/20 flex items-center justify-center font-bold text-base">
+                {initials}
+              </div>
+            )}
             <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-base font-bold font-display text-white truncate max-w-[180px]">
-                  {user?.employeeName || 'Pengguna'}
-                </h2>
-                <Badge className="bg-white/20 text-white text-[9.5px] px-2 py-0.5 border-0">
-                  {user?.role || 'Reviewer'}
-                </Badge>
-              </div>
-              <p className="text-xs text-white/75 truncate mt-0.5 max-w-[210px]">
-                {user?.email || 'user@resourcesid.co.id'}
+              <h2 className="text-sm font-bold text-white leading-tight">
+                {user?.employeeName || 'Pengguna RIDE'}
+              </h2>
+              <p className="text-[11px] text-white/80 mt-0.5">
+                {user?.position || 'Karyawan'} • {user?.division || 'MIND ID'}
               </p>
-              <div className="text-[10.5px] text-[#60A5FA] font-semibold mt-1">
-                {user?.division || 'Direktorat Umum'}
-              </div>
             </div>
           </div>
-
-          <ChevronRight className="h-5 w-5 text-white/50" />
+          <ChevronRight className="h-5 w-5 text-white/60" />
         </CardContent>
       </Card>
 
-      {/* Grid App Launcher Section Header */}
-      <div className="flex items-center justify-between px-1">
-        <div className="flex items-center gap-2">
-          <Sparkles className="h-4 w-4 text-[#163A70]" />
-          <h3 className="text-sm font-bold font-display text-[#0B2147]">
-            Menu Aplikasi &amp; Layanan
-          </h3>
+      {/* App Grid Launcher (Clean Mobile Native App Launcher) */}
+      <div className="bg-white rounded-3xl p-4 sm:p-5 border border-[#E2E8F0] shadow-xs space-y-3.5">
+        <div className="flex items-center justify-between px-1">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-[#163A70]" />
+            <h3 className="text-xs sm:text-sm font-extrabold font-display text-[#0B2147] tracking-tight">
+              Menu Layanan &amp; Fitur
+            </h3>
+          </div>
+          <span className="text-[11px] font-bold text-[#64748B]">
+            {appGridItems.length} Menu
+          </span>
         </div>
-        <span className="text-[11px] font-semibold text-[#64748B]">
-          {appGridItems.length} Fitur
-        </span>
-      </div>
 
-      {/* App Grid Launcher (Kotak-Kotak Aplikasi 4 Kolom) */}
-      <div className="grid grid-cols-4 sm:grid-cols-4 gap-2 sm:gap-3">
-        {appGridItems.map((item) => {
-          const Icon = item.icon
-          return (
-            <button
-              key={item.id}
-              type="button"
-              onClick={item.action}
-              className="relative flex flex-col items-center justify-center p-2 sm:p-3 rounded-2xl bg-white border border-[#E2E8F0] shadow-2xs hover:shadow-md hover:border-[#CBD5E1] transition-all active:scale-95 cursor-pointer text-center group min-h-[102px] sm:min-h-[114px]"
-            >
-              {item.badge && (
-                <span className="absolute top-1.5 right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#DC2626] px-1 text-[9px] font-extrabold text-white shadow-xs">
-                  {item.badge}
+        <div className="grid grid-cols-4 gap-y-4 gap-x-2 sm:gap-x-4">
+          {appGridItems.map((item) => {
+            const Icon = item.icon
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={item.action}
+                className="flex flex-col items-center text-center group cursor-pointer active:scale-90 transition-transform"
+              >
+                <div className="relative mb-1.5">
+                  <div className="flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-2xl bg-[#F0F4FA] text-[#163A70] border border-[#D9E2EC] shadow-2xs group-hover:bg-[#163A70] group-hover:text-white group-hover:border-[#163A70] group-hover:shadow-md transition-all">
+                    <Icon className="h-5 w-5 sm:h-6 sm:w-6 stroke-[2]" />
+                  </div>
+
+                  {item.badge && (
+                    <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#EF4444] px-1 text-[9px] font-black text-white shadow-xs ring-2 ring-white">
+                      {item.badge}
+                    </span>
+                  )}
+                </div>
+
+                <span className="text-[11px] sm:text-xs font-bold text-[#1E293B] leading-tight text-center break-words w-full px-0.5 group-hover:text-[#163A70] transition-colors">
+                  {item.title}
                 </span>
-              )}
-
-              <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-xl sm:rounded-2xl bg-[#EBF2FF] text-[#163A70] border border-[#BFDBFE]/60 mb-1.5 group-hover:bg-[#163A70] group-hover:text-white group-hover:border-[#163A70] transition-all shrink-0 shadow-2xs">
-                <Icon className="h-5 w-5 sm:h-6 sm:w-6 stroke-[2]" />
-              </div>
-
-              <span className="text-[10.5px] sm:text-xs font-bold text-[#0B2147] leading-tight text-center break-words hyphens-auto w-full px-0.5 whitespace-normal">
-                {item.title}
-              </span>
-              <span className="text-[9px] sm:text-[10px] text-[#64748B] leading-tight text-center break-words w-full px-0.5 mt-0.5 whitespace-normal line-clamp-2">
-                {item.subtitle}
-              </span>
-            </button>
-          )
-        })}
+              </button>
+            )
+          })}
+        </div>
       </div>
 
       {/* Notifications Quick Bar */}

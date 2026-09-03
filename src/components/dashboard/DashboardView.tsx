@@ -168,23 +168,20 @@ export function DashboardView() {
   const quickAppItems = [
     {
       id: 'new_doc',
-      title: 'Ajukan Dokumen',
-      subtitle: 'Pemesanan Berkas',
+      title: 'Ajukan',
       icon: FilePlus,
       action: () => setCurrentView('tracking', 'new'),
     },
     {
       id: 'tracking',
       title: 'Lacak Alur',
-      subtitle: '7 Tahap & Revisi',
       icon: GitPullRequestDraft,
       badge: reviewBadgeCount > 0 ? `${reviewBadgeCount}` : undefined,
       action: () => setCurrentView('tracking', 'progress'),
     },
     {
       id: 'myDocuments',
-      title: 'Dokumen Saya',
-      subtitle: 'Arsip Berkas',
+      title: 'Dokumen',
       icon: Files,
       badge: myDocsBadgeCount > 0 ? `${myDocsBadgeCount}` : undefined,
       action: () => setCurrentView('myDocuments'),
@@ -192,14 +189,12 @@ export function DashboardView() {
     {
       id: 'reminders',
       title: 'Jatuh Tempo',
-      subtitle: 'Reminder H-60',
       icon: Clock,
       action: () => setCurrentView('tracking', 'progress'),
     },
     {
       id: 'gdrive',
       title: 'Google Drive',
-      subtitle: 'Arsip Cloud',
       icon: FolderOpen,
       action: () => {
         if (typeof window !== 'undefined') {
@@ -209,8 +204,7 @@ export function DashboardView() {
     },
     {
       id: 'matrix',
-      title: 'Matriks RBAC',
-      subtitle: 'Wewenang & SOP',
+      title: 'Matriks SOP',
       icon: ShieldCheck,
       action: () => setCurrentView('matrix'),
     },
@@ -219,14 +213,12 @@ export function DashboardView() {
           {
             id: 'users',
             title: 'Pengguna',
-            subtitle: 'Kelola & Undangan',
             icon: Users,
             action: () => setCurrentView('users'),
           },
           {
             id: 'settings',
             title: 'Pengaturan',
-            subtitle: 'Sistem & Drive',
             icon: Settings,
             action: () => setCurrentView('settings'),
           },
@@ -235,38 +227,34 @@ export function DashboardView() {
     {
       id: 'profile',
       title: 'Profil Saya',
-      subtitle: 'Identitas Akun',
       icon: UserIcon,
       action: () => setCurrentView('myAccount'),
     },
     {
       id: 'security',
       title: 'Keamanan 2FA',
-      subtitle: 'Sandi & OTP',
       icon: KeyRound,
       action: () => setCurrentView('myAccount'),
     },
   ]
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-12 animate-in fade-in duration-300">
+    <div className="space-y-5 max-w-7xl mx-auto pb-12 animate-in fade-in duration-300">
       {/* Top Hero Banner */}
-      <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-r from-[#0B2147] via-[#163A70] to-[#1E4D94] p-4 sm:p-7 text-white shadow-md">
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#0B2147] via-[#163A70] to-[#1E4D94] p-5 sm:p-7 text-white shadow-md">
         <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-[11px] font-semibold text-white/90 backdrop-blur-md mb-2 border border-white/10">
               <span className="font-bold text-[#60A5FA]">RIDE</span>
               <span className="text-white/40">•</span>
-              <span>Request Integrated Document Ecosystem</span>
-              <span className="text-white/40">•</span>
-              <span>{user?.division || 'Direktorat Umum'}</span>
+              <span>{user?.division || 'Direktorat Legal & Governance'}</span>
             </div>
 
             <h1 className="text-lg sm:text-2xl font-bold font-display tracking-tight text-white">
               Selamat Datang, {user?.employeeName || 'Pengguna'}
             </h1>
             <p className="text-xs text-white/80 mt-1 max-w-xl leading-relaxed">
-              Ringkasan pemesanan, riwayat revisi berkas, tracking persetujuan, dan pemantauan masa berlaku kontrak Anda.
+              Pantau pengajuan berkas, tracking persetujuan, dan jatuh tempo kontrak Anda.
             </p>
           </div>
 
@@ -275,26 +263,26 @@ export function DashboardView() {
             className="self-start sm:self-auto h-10 sm:h-11 bg-white text-[#163A70] hover:bg-[#EBF2FF] font-bold text-xs shadow-md border-0 shrink-0 cursor-pointer rounded-xl gap-2 px-4"
           >
             <Plus className="h-4 w-4 text-[#163A70]" />
-            <span>Ajukan Dokumen Baru</span>
+            <span>Ajukan Dokumen</span>
           </Button>
         </div>
       </div>
 
-      {/* Menu Layanan & Aplikasi (App Grid 4 Kolom di Beranda) */}
-      <div className="space-y-2.5 sm:space-y-3">
+      {/* Menu Layanan & Fitur (Clean Mobile Native App Launcher) */}
+      <div className="bg-white rounded-3xl p-4 sm:p-5 border border-[#E2E8F0] shadow-xs space-y-3.5">
         <div className="flex items-center justify-between px-1">
           <div className="flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-[#163A70]" />
-            <h2 className="text-sm font-bold font-display text-[#0B2147]">
-              Menu Layanan &amp; Aplikasi
+            <h2 className="text-xs sm:text-sm font-extrabold font-display text-[#0B2147] tracking-tight">
+              Menu Layanan &amp; Fitur
             </h2>
           </div>
-          <span className="text-[11px] font-semibold text-[#64748B]">
-            {quickAppItems.length} Fitur
+          <span className="text-[11px] font-bold text-[#64748B]">
+            {quickAppItems.length} Menu
           </span>
         </div>
 
-        <div className="grid grid-cols-4 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-4 gap-2 sm:gap-3.5">
+        <div className="grid grid-cols-4 gap-y-4 gap-x-2 sm:gap-x-4">
           {quickAppItems.map((item) => {
             const Icon = item.icon
             return (
@@ -302,23 +290,22 @@ export function DashboardView() {
                 key={item.id}
                 type="button"
                 onClick={item.action}
-                className="relative flex flex-col items-center justify-center p-2 sm:p-3 rounded-2xl bg-white border border-[#E2E8F0] shadow-2xs hover:shadow-md hover:border-[#CBD5E1] transition-all active:scale-95 cursor-pointer text-center group min-h-[96px] sm:min-h-[114px]"
+                className="flex flex-col items-center text-center group cursor-pointer active:scale-90 transition-transform"
               >
-                {item.badge && (
-                  <span className="absolute top-1.5 right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#DC2626] px-1 text-[9px] font-extrabold text-white shadow-xs">
-                    {item.badge}
-                  </span>
-                )}
+                <div className="relative mb-1.5">
+                  <div className="flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-2xl bg-[#F0F4FA] text-[#163A70] border border-[#D9E2EC] shadow-2xs group-hover:bg-[#163A70] group-hover:text-white group-hover:border-[#163A70] group-hover:shadow-md transition-all">
+                    <Icon className="h-5 w-5 sm:h-6 sm:w-6 stroke-[2]" />
+                  </div>
 
-                <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-xl sm:rounded-2xl bg-[#EBF2FF] text-[#163A70] border border-[#BFDBFE]/60 mb-1.5 group-hover:bg-[#163A70] group-hover:text-white group-hover:border-[#163A70] transition-all shrink-0 shadow-2xs">
-                  <Icon className="h-5 w-5 sm:h-6 sm:w-6 stroke-[2]" />
+                  {item.badge && (
+                    <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#EF4444] px-1 text-[9px] font-black text-white shadow-xs ring-2 ring-white">
+                      {item.badge}
+                    </span>
+                  )}
                 </div>
 
-                <span className="text-[10px] sm:text-xs font-bold text-[#0B2147] leading-tight text-center break-words hyphens-auto w-full px-0.5 whitespace-normal">
+                <span className="text-[11px] sm:text-xs font-bold text-[#1E293B] leading-tight text-center break-words w-full px-0.5 group-hover:text-[#163A70] transition-colors">
                   {item.title}
-                </span>
-                <span className="text-[8.5px] sm:text-[10px] text-[#64748B] leading-tight text-center break-words w-full px-0.5 mt-0.5 whitespace-normal line-clamp-2">
-                  {item.subtitle}
                 </span>
               </button>
             )
