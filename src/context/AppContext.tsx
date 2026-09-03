@@ -1,6 +1,6 @@
 "use client"
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react'
 
 export type ViewType =
   | 'dashboard'
@@ -207,6 +207,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
 
+  const userRef = useRef<UserProfile | null>(user)
+  userRef.current = user
+
+  const tokenRef = useRef<string | null>(token)
+  tokenRef.current = token
+
   // Fetch documents
   const fetchDocuments = useCallback(
     async (query = '', status = '', category = '') => {
@@ -217,18 +223,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (category) params.append('category', category)
 
         const headers: Record<string, string> = {}
-        const currentToken = token || localStorage.getItem('ride_token') || localStorage.getItem('rise_token')
+        const currentToken = tokenRef.current || localStorage.getItem('ride_token') || localStorage.getItem('rise_token')
         if (currentToken) headers['Authorization'] = `Bearer ${currentToken}`
 
         const res = await fetch(`/api/documents?${params.toString()}`, { headers })
         if (res.ok) {
           const data: DocumentItem[] = await res.json()
-          if (user && user.role === 'Requester') {
-            const userEmail = user.email.toLowerCase()
-            const userName = user.employeeName?.toLowerCase() || ''
+          const currentUser = userRef.current
+          if (currentUser && currentUser.role === 'Requester') {
+            const userEmail = currentUser.email.toLowerCase()
+            const userName = currentUser.employeeName?.toLowerCase() || ''
             const filtered = data.filter(
               (d) =>
-                d.createdBy === user.id ||
+                d.createdBy === currentUser.id ||
                 (d.picEmail && d.picEmail.toLowerCase() === userEmail) ||
                 (d.pic && d.pic.toLowerCase() === userName)
             )
@@ -241,14 +248,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         console.error('Failed to fetch documents', e)
       }
     },
-    [token, user]
+    []
   )
 
   // Fetch notifications
   const fetchNotifications = useCallback(async () => {
     try {
       const headers: Record<string, string> = {}
-      if (token) headers['Authorization'] = `Bearer ${token}`
+      const currentToken = tokenRef.current || localStorage.getItem('ride_token')
+      if (currentToken) headers['Authorization'] = `Bearer ${currentToken}`
       const res = await fetch('/api/notifications', { headers })
       if (res.ok) {
         const data = await res.json()
@@ -257,13 +265,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     } catch (e) {
       console.error('Failed to fetch notifications', e)
     }
-  }, [token])
+  }, [])
 
   // Fetch all users
   const fetchAllUsers = useCallback(async () => {
     try {
       const headers: Record<string, string> = {}
-      if (token) headers['Authorization'] = `Bearer ${token}`
+      const currentToken = tokenRef.current || localStorage.getItem('ride_token')
+      if (currentToken) headers['Authorization'] = `Bearer ${currentToken}`
       const res = await fetch('/api/users', { headers })
       if (res.ok) {
         const data = await res.json()
@@ -275,13 +284,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       console.error('Failed to fetch users', e)
       setAllUsers([])
     }
-  }, [token])
+  }, [])
 
-  // Load and verify session on startup
+  // Load and verify session on startup (runs strictly once)
+  const isInitialized = useRef(false)
   useEffect(() => {
+    if (isInitialized.current) return
+    isInitialized.current = true
+
     const savedToken = localStorage.getItem('ride_token') || localStorage.getItem('rise_token')
     if (savedToken) {
       setToken(savedToken)
+      tokenRef.current = savedToken
       fetch('/api/auth/me', {
         headers: { Authorization: `Bearer ${savedToken}` },
       })
@@ -289,6 +303,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         .then((data) => {
           if (data.user) {
             setUser(data.user)
+            userRef.current = data.user
             localStorage.setItem('ride_user', JSON.stringify(data.user))
           } else {
             localStorage.removeItem('ride_token')
@@ -311,7 +326,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, [fetchDocuments])
 
-  // Refetch notifications on token change
+  // Refetch notifications & users on token change
   useEffect(() => {
     if (token) {
       fetchNotifications()
