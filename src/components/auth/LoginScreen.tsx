@@ -200,14 +200,19 @@ export function LoginScreen() {
   }
 
   return (
-    <div className="relative min-h-screen flex items-center justify-center bg-[#F6F8FB] px-4 py-8 overflow-hidden">
-      {/* Ambient background glows */}
-      <div className="pointer-events-none absolute -top-40 -left-40 h-96 w-96 rounded-full bg-[#163A70]/10 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-40 -right-40 h-96 w-96 rounded-full bg-[#2563EB]/10 blur-3xl" />
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(#E2E8F0_1px,transparent_1px)] [background-size:24px_24px] opacity-40" />
+    <div className="relative min-h-screen flex items-center justify-center bg-[#071326] px-4 py-8 overflow-hidden">
+      {/* Background Mining Site Image with Dimmed / Darkened Tone */}
+      <div
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat transition-all duration-700"
+        style={{ backgroundImage: "url('/mining-bg.jpg')" }}
+      />
+      {/* Multi-layered dark tint overlays for a subtle corporate look */}
+      <div className="absolute inset-0 bg-[#071326]/70 backdrop-blur-[1.5px]" />
+      <div className="absolute inset-0 bg-gradient-to-b from-[#0B2147]/80 via-[#071326]/60 to-[#040C1A]/90" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(#FFFFFF_1px,transparent_1px)] [background-size:28px_28px] opacity-10" />
 
       {/* Compact Login Container */}
-      <div className="relative z-10 w-full max-w-[430px] rounded-2xl border border-[#E2E8F0] bg-white/95 p-6 sm:p-7 shadow-[0_16px_50px_-10px_rgba(15,42,84,0.12)] backdrop-blur-xl animate-card-in">
+      <div className="relative z-10 w-full max-w-[420px] rounded-2xl border border-white/40 bg-white/95 p-6 sm:p-7 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.5)] backdrop-blur-xl animate-card-in">
         
         {/* Dual Brand Logos Header: RIDE & RESOURCES ID */}
         <div className="flex items-center justify-between gap-3 pb-4 mb-4 border-b border-[#F1F5F9]">
