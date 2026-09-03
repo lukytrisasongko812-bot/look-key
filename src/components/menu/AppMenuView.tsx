@@ -197,8 +197,8 @@ export function AppMenuView() {
         </span>
       </div>
 
-      {/* App Grid Launcher (Kotak-Kotak Aplikasi) */}
-      <div className="grid grid-cols-3 sm:grid-cols-3 gap-3">
+      {/* App Grid Launcher (Kotak-Kotak Aplikasi 4 Kolom) */}
+      <div className="grid grid-cols-4 sm:grid-cols-4 gap-2 sm:gap-3">
         {appGridItems.map((item) => {
           const Icon = item.icon
           return (
@@ -206,24 +206,22 @@ export function AppMenuView() {
               key={item.id}
               type="button"
               onClick={item.action}
-              className="relative flex flex-col items-center justify-center p-3 sm:p-4 rounded-2xl bg-white border border-[#E2E8F0] shadow-xs hover:shadow-md transition-all active:scale-95 cursor-pointer text-center group"
+              className="relative flex flex-col items-center justify-center p-2 sm:p-3 rounded-2xl bg-white border border-[#E2E8F0] shadow-2xs hover:shadow-md hover:border-[#CBD5E1] transition-all active:scale-95 cursor-pointer text-center group min-h-[102px] sm:min-h-[114px]"
             >
               {item.badge && (
-                <span className="absolute top-2 right-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#EF4444] px-1 text-[9px] font-extrabold text-white shadow-xs">
+                <span className="absolute top-1.5 right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#DC2626] px-1 text-[9px] font-extrabold text-white shadow-xs">
                   {item.badge}
                 </span>
               )}
 
-              <div
-                className={`flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-tr ${item.gradient} text-white shadow-md mb-2 group-hover:scale-105 transition-transform`}
-              >
-                <Icon className="h-6 w-6 stroke-[2.2]" />
+              <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-xl sm:rounded-2xl bg-[#EBF2FF] text-[#163A70] border border-[#BFDBFE]/60 mb-1.5 group-hover:bg-[#163A70] group-hover:text-white group-hover:border-[#163A70] transition-all shrink-0 shadow-2xs">
+                <Icon className="h-5 w-5 sm:h-6 sm:w-6 stroke-[2]" />
               </div>
 
-              <span className="text-[11px] sm:text-xs font-bold text-[#0F172A] leading-snug text-center break-words hyphens-auto w-full px-0.5 whitespace-normal">
+              <span className="text-[10.5px] sm:text-xs font-bold text-[#0B2147] leading-tight text-center break-words hyphens-auto w-full px-0.5 whitespace-normal">
                 {item.title}
               </span>
-              <span className="text-[9.5px] sm:text-[10px] text-[#64748B] leading-tight text-center break-words w-full px-0.5 mt-0.5 whitespace-normal line-clamp-2">
+              <span className="text-[9px] sm:text-[10px] text-[#64748B] leading-tight text-center break-words w-full px-0.5 mt-0.5 whitespace-normal line-clamp-2">
                 {item.subtitle}
               </span>
             </button>
