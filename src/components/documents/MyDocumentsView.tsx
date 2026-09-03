@@ -196,10 +196,11 @@ export function MyDocumentsView() {
         </CardContent>
       </Card>
 
-      {/* Documents Table Card */}
+      {/* Documents Table Card (Desktop) & Mobile Cards (Phone) */}
       <Card className="border-[#E2E8F0] shadow-sm overflow-hidden">
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
+          {/* Desktop Table */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse min-w-[760px]">
               <thead>
                 <tr className="border-b border-[#E2E8F0] bg-[#F8FAFC] text-[11px] font-bold text-[#64748B] uppercase tracking-wider">
@@ -343,6 +344,107 @@ export function MyDocumentsView() {
                 )}
               </tbody>
             </table>
+          </div>
+
+          {/* Mobile Card Feed */}
+          <div className="block md:hidden divide-y divide-[#E2E8F0] bg-white">
+            {filteredDocs.length === 0 ? (
+              <div className="py-8 text-center text-xs text-[#64748B] px-4">
+                Tidak ada dokumen yang sesuai dengan pencarian atau filter.
+              </div>
+            ) : (
+              filteredDocs.map((doc) => {
+                const activeVersion = doc.versions?.length > 0
+                  ? doc.versions[doc.versions.length - 1].version
+                  : 'V0'
+                const statusLabel = getDocStatusLabel(doc)
+
+                return (
+                  <div key={doc._id} className="p-4 space-y-3 hover:bg-[#F8FAFC]/70 transition-colors">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <span className="font-mono text-xs font-bold text-[#163A70]">
+                          {doc.docNumber}
+                        </span>
+                        <h3 className="font-bold text-sm text-[#0F172A] mt-0.5 leading-snug">
+                          {doc.name}
+                        </h3>
+                      </div>
+                      <span
+                        className={`inline-block shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                          statusLabel === 'Dokumen Final'
+                            ? 'bg-[#ECFDF5] text-[#059669]'
+                            : statusLabel === 'Perlu Revisi'
+                            ? 'bg-[#FFFBEB] text-[#D97706]'
+                            : statusLabel === 'Ditolak'
+                            ? 'bg-[#FEF2F2] text-[#DC2626]'
+                            : 'bg-[#EFF6FF] text-[#2563EB]'
+                        }`}
+                      >
+                        {statusLabel}
+                      </span>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2 text-[11px] text-[#64748B]">
+                      <Badge variant="outline" className="text-[10px] bg-[#F1F5F9] text-[#334155]">
+                        {doc.category}
+                      </Badge>
+                      <span>•</span>
+                      <span>PIC: <strong className="text-[#0F172A]">{doc.pic}</strong></span>
+                      <span>•</span>
+                      <span
+                        className={`font-mono text-[10px] font-extrabold px-1.5 py-0.5 rounded ${
+                          activeVersion === 'FINAL'
+                            ? 'bg-[#ECFDF5] text-[#059669] border border-[#A7F3D0]'
+                            : activeVersion === 'V0'
+                            ? 'bg-[#F1F5F9] text-[#163A70] border border-[#CBD5E1]'
+                            : 'bg-[#FFFBEB] text-[#D97706] border border-[#FDE68A]'
+                        }`}
+                      >
+                        {activeVersion}
+                      </span>
+                    </div>
+
+                    {/* Mobile Quick Action Buttons */}
+                    <div className="flex items-center justify-between pt-2 border-t border-[#F1F5F9]">
+                      <div className="flex items-center gap-1.5">
+                        <a
+                          href={
+                            doc.driveFolderUrl ||
+                            `https://drive.google.com/drive/search?q=${encodeURIComponent(doc.docNumber)}`
+                          }
+                          target="_blank"
+                          rel="noreferrer"
+                          className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-xl bg-[#E6F4EA] text-[#0F9D58]"
+                        >
+                          <FolderOpen className="h-3.5 w-3.5" />
+                          <span>Drive</span>
+                        </a>
+                        <button
+                          onClick={() => setViewModalDoc(doc)}
+                          className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-xl bg-[#F1F5F9] text-[#475569]"
+                        >
+                          <Eye className="h-3.5 w-3.5" />
+                          <span>Detail</span>
+                        </button>
+                      </div>
+
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          setSelectedDocNumber(doc.docNumber)
+                          setCurrentView('tracking', 'progress')
+                        }}
+                        className="h-8 text-xs bg-[#163A70] hover:bg-[#0B2147] text-white font-bold rounded-xl gap-1"
+                      >
+                        <GitPullRequestDraft className="h-3.5 w-3.5" />
+                        <span>Lacak Alur</span>
+                      </Button>
+                    </div>
+                  </div>
+                )
+              })
+            )}
           </div>
         </CardContent>
       </Card>

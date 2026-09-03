@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { AppProvider } from "@/context/AppContext";
@@ -16,9 +16,24 @@ const jakarta = Plus_Jakarta_Sans({
   display: "swap",
 });
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: "cover",
+  themeColor: "#0B2147",
+};
+
 export const metadata: Metadata = {
   title: "RIDE — Request Integrated Document Ecosystem",
   description: "Ekosistem terintegrasi untuk pemesanan, pengelolaan, dan tracking dokumen perusahaan.",
+  applicationName: "RIDE Mobile",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "RIDE",
+  },
   icons: {
     icon: [
       { url: "/icon.svg", type: "image/svg+xml" },

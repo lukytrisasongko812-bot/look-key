@@ -13,6 +13,7 @@ import { MyAccountView } from '@/components/account/MyAccountView'
 import { SettingsView } from '@/components/settings/SettingsView'
 import { UsersView } from '@/components/users/UsersView'
 import { AuthorityMatrixView } from '@/components/matrix/AuthorityMatrixView'
+import { MobileBottomNav } from '@/components/layout/MobileBottomNav'
 
 export default function HomePage() {
   const { isAuthenticated, authLoading, currentView } = useApp()
@@ -39,7 +40,7 @@ export default function HomePage() {
       <Header />
       <div className="flex flex-1 relative items-start">
         <Sidebar />
-        <main className="flex-1 p-4 md:p-6 min-w-0 max-w-7xl mx-auto w-full">
+        <main className="flex-1 p-3.5 sm:p-4 md:p-6 pb-24 md:pb-6 min-w-0 max-w-7xl mx-auto w-full">
           {currentView === 'dashboard' && <DashboardView />}
           {currentView === 'tracking' && <TrackingView />}
           {currentView === 'myDocuments' && <MyDocumentsView />}
@@ -50,6 +51,7 @@ export default function HomePage() {
         </main>
       </div>
       <NotificationDrawer />
+      <MobileBottomNav />
     </div>
   )
 }
