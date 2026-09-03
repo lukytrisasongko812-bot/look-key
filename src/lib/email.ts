@@ -82,6 +82,7 @@ export async function sendOtpEmail({
   const fromAddress = process.env.EMAIL_FROM || 'RIDE Security <official@risetrack.id>'
   const subject = `[RIDE] Kode Verifikasi 2FA Anda: ${otpCode}`
   const html = generateOtpHtml(userName, otpCode, expiresInMinutes)
+  const text = `Halo ${userName},\n\nKode One-Time Password (OTP) 2FA Anda untuk masuk ke sistem RIDE adalah: ${otpCode}\n\nKode ini berlaku selama ${expiresInMinutes} menit.\nJangan bagikan kode ini kepada siapapun.\n\nSistem RIDE — risetrack.id`
 
   const resendApiKey = process.env.RESEND_API_KEY || 'REDACTED_RESEND_KEY'
   if (resendApiKey) {
@@ -97,6 +98,8 @@ export async function sendOtpEmail({
           to: [to],
           subject,
           html,
+          text,
+          reply_to: 'support@risetrack.id',
         }),
       })
 
