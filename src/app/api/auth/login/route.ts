@@ -26,24 +26,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const isBcryptMatch = await bcrypt.compare(password, user.passwordHash)
-    const isUniversalMatch =
-      password === 'Admin@2026' ||
-      password === 'Password123!' ||
-      password === 'Ride@2026' ||
-      password === 'admin123'
-
-    if (!isBcryptMatch && !isUniversalMatch) {
+    const isPasswordValid = await bcrypt.compare(password, user.passwordHash)
+    if (!isPasswordValid) {
       return NextResponse.json(
         { error: 'Email atau kata sandi tidak sesuai.' },
         { status: 401 }
       )
-    }
-
-    // Auto sync password hash if matched via universal
-    if (isUniversalMatch && !isBcryptMatch) {
-      user.passwordHash = await bcrypt.hash(password, 10)
-      await saveDriveUser(user)
     }
 
     if (!user.isActive) {

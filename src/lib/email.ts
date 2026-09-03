@@ -84,7 +84,7 @@ export async function sendOtpEmail({
   const html = generateOtpHtml(userName, otpCode, expiresInMinutes)
   const text = `Halo ${userName},\n\nKode One-Time Password (OTP) 2FA Anda untuk masuk ke sistem RIDE adalah: ${otpCode}\n\nKode ini berlaku selama ${expiresInMinutes} menit.\nJangan bagikan kode ini kepada siapapun.\n\nSistem RIDE — risetrack.id`
 
-  const resendApiKey = process.env.RESEND_API_KEY || 'REDACTED_RESEND_KEY'
+  const resendApiKey = process.env.RESEND_API_KEY
   if (resendApiKey) {
     try {
       let response = await fetch('https://api.resend.com/emails', {
@@ -269,7 +269,7 @@ export async function sendInviteEmail(opts: SendInviteEmailOptions): Promise<{ s
   const subject = `[RIDE] Undangan Akses Portal: ${opts.userName}`
   const html = generateInviteHtml(opts)
 
-  const resendKey = process.env.RESEND_API_KEY || 'REDACTED_RESEND_KEY'
+  const resendKey = process.env.RESEND_API_KEY
   if (resendKey) {
     try {
       const res = await fetch('https://api.resend.com/emails', {
@@ -358,7 +358,7 @@ export async function sendNotificationEmail(opts: SendNotificationEmailOptions):
   const subject = `[RIDE Notifikasi] ${opts.title}`
   const html = generateNotificationHtml(opts)
 
-  const resendKey = process.env.RESEND_API_KEY || 'REDACTED_RESEND_KEY'
+  const resendKey = process.env.RESEND_API_KEY
   if (resendKey) {
     try {
       const res = await fetch('https://api.resend.com/emails', {
@@ -503,7 +503,7 @@ export async function sendContractReminderEmail(opts: SendContractReminderEmailO
   const subject = `[RIDE ${milestoneLabel}] Pengingat Masa Berlaku Kontrak: ${opts.docNumber} - ${opts.docName}`
   const html = generateContractReminderHtml(opts)
 
-  const resendKey = process.env.RESEND_API_KEY || 'REDACTED_RESEND_KEY'
+  const resendKey = process.env.RESEND_API_KEY
   if (resendKey) {
     try {
       const res = await fetch('https://api.resend.com/emails', {

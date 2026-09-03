@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
   try {
     const tokenUser = getUserFromRequest(request)
     const body = await request.json()
-    const { employeeName, email, position, division, role, phone } = body
+    const { employeeName, email, position, division, role, phone, password } = body
 
     if (!employeeName || !email) {
       return NextResponse.json({ error: 'Nama dan email pengguna wajib diisi.' }, { status: 400 })
@@ -31,7 +31,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Email pengguna sudah terdaftar.' }, { status: 400 })
     }
 
-    const defaultPasswordHash = await bcrypt.hash('Ride@2026', 10)
+    const tempPassword = password && password.trim() ? password.trim() : `Ride@${Math.random().toString(36).slice(2, 8).toUpperCase()}!`
+    const passwordHash = await bcrypt.hash(tempPassword, 10)
     const now = new Date().toISOString()
     const id = 'usr_' + Math.random().toString(36).substring(2, 9)
 
@@ -40,7 +41,7 @@ export async function POST(request: NextRequest) {
       id,
       employeeName,
       email: email.toLowerCase().trim(),
-      passwordHash: defaultPasswordHash,
+      passwordHash,
       position: position || 'Staff Anggota',
       division: division || 'Direktorat Operasi',
       role: role || 'Requester',
@@ -59,7 +60,7 @@ export async function POST(request: NextRequest) {
       to: email.toLowerCase().trim(),
       userName: employeeName,
       title: 'Undangan Bergabung ke Portal RIDE Platform',
-      description: `Halo ${employeeName}, Anda telah diundang oleh ${inviterName} untuk bergabung ke sistem RIDE dengan peran: ${newUser.role}. Kata sandi awal Anda: "Ride@2026". Silakan masuk dan perbarui kata sandi Anda.`,
+      description: `Halo ${employeeName}, Anda telah diundang oleh ${inviterName} untuk bergabung ke sistem RIDE dengan peran: ${newUser.role}. Kata sandi sementara Anda: "${tempPassword}". Silakan masuk ke https://risetrack.id dan perbarui kata sandi Anda.`,
     }).catch((err) => console.error('[Invite Email Error]', err))
 
     return NextResponse.json(
