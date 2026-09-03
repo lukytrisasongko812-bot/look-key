@@ -239,9 +239,9 @@ export function DashboardView() {
   ]
 
   return (
-    <div className="space-y-5 max-w-7xl mx-auto pb-12 animate-in fade-in duration-300">
+    <div className="space-y-3.5 sm:space-y-5 max-w-7xl mx-auto pb-12 animate-in fade-in duration-300">
       {/* Top Hero Banner */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#0B2147] via-[#163A70] to-[#1E4D94] p-5 sm:p-7 text-white shadow-md">
+      <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-r from-[#0B2147] via-[#163A70] to-[#1E4D94] p-4 sm:p-7 text-white shadow-md">
         <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-[11px] font-semibold text-white/90 backdrop-blur-md mb-2 border border-white/10">

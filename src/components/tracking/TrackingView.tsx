@@ -398,7 +398,7 @@ export function TrackingView() {
   const isReviewer = user?.role === 'Reviewer' || user?.role === 'Legal Manager' || user?.role === 'Legal Officer' || user?.role === 'Administrator'
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-12 animate-in fade-in duration-300">
+    <div className="space-y-3.5 sm:space-y-5 max-w-7xl mx-auto pb-12 animate-in fade-in duration-300">
       {/* Header */}
       <div>
         <h1 className="text-xl sm:text-2xl font-bold font-display text-[#0B2147] tracking-tight">
@@ -413,7 +413,7 @@ export function TrackingView() {
       <div className="flex bg-[#F1F5F9] p-1 rounded-2xl gap-1 max-w-sm sm:max-w-md">
         <button
           onClick={() => setTrackSubTab('new')}
-          className={`flex-1 py-2 px-3 text-xs font-bold transition-all rounded-xl cursor-pointer flex items-center justify-center gap-1.5 ${
+          className={`flex-1 py-1.5 sm:py-2 px-3 text-xs font-bold transition-all rounded-xl cursor-pointer flex items-center justify-center gap-1.5 ${
             trackSubTab === 'new'
               ? 'bg-white text-[#163A70] shadow-xs'
               : 'text-[#64748B] hover:text-[#0F172A]'
@@ -425,7 +425,7 @@ export function TrackingView() {
 
         <button
           onClick={() => setTrackSubTab('progress')}
-          className={`flex-1 py-2 px-3 text-xs font-bold transition-all rounded-xl cursor-pointer flex items-center justify-center gap-1.5 ${
+          className={`flex-1 py-1.5 sm:py-2 px-3 text-xs font-bold transition-all rounded-xl cursor-pointer flex items-center justify-center gap-1.5 ${
             trackSubTab === 'progress'
               ? 'bg-white text-[#163A70] shadow-xs'
               : 'text-[#64748B] hover:text-[#0F172A]'
@@ -441,41 +441,41 @@ export function TrackingView() {
 
       {/* TAB 1: NEW REQUEST FORM */}
       {trackSubTab === 'new' && (
-        <Card className="max-w-3xl border-[#E2E8F0] shadow-sm">
-          <CardContent className="p-6 sm:p-8">
-            <div className="flex items-center gap-2.5 mb-6 pb-4 border-b border-[#F1F5F9]">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#EBF2FF] text-[#163A70]">
-                <FileCheck className="h-5 w-5" />
+        <Card className="max-w-3xl border-[#E2E8F0] shadow-sm rounded-2xl sm:rounded-3xl overflow-hidden">
+          <CardContent className="p-4 sm:p-8">
+            <div className="flex items-center gap-2.5 mb-5 pb-3.5 border-b border-[#F1F5F9]">
+              <div className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-xl bg-[#EBF2FF] text-[#163A70] shrink-0">
+                <FileCheck className="h-4 w-4 sm:h-5 sm:w-5" />
               </div>
               <div>
-                <h2 className="text-base font-bold font-display text-[#0B2147]">
+                <h2 className="text-sm sm:text-base font-bold font-display text-[#0B2147]">
                   Formulir Pengajuan Dokumen
                 </h2>
-                <p className="text-xs text-[#64748B]">
+                <p className="text-[11px] sm:text-xs text-[#64748B]">
                   Lengkapi data pemesanan atau pengajuan draf awal dokumen (V0).
                 </p>
               </div>
             </div>
 
-            <form onSubmit={handleNewRequestSubmit} className="space-y-4">
-              <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">Nama Dokumen / Kontrak / Perizinan</Label>
+            <form onSubmit={handleNewRequestSubmit} className="space-y-3.5 sm:space-y-4">
+              <div className="space-y-1">
+                <Label className="text-xs font-semibold">Judul / Perihal Dokumen <span className="text-[#DC2626]">*</span></Label>
                 <Input
                   value={reqName}
                   onChange={(e) => setReqName(e.target.value)}
-                  placeholder="misal: Perjanjian Kerja Sama Distribusi Mineral Kuartal I"
+                  placeholder="Contoh: Perjanjian Sewa Alat Berat Pertambangan Pomalaa"
+                  className="h-10 text-xs rounded-xl"
                   required
-                  className="h-11 text-xs rounded-xl"
                 />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
                   <Label className="text-xs font-semibold">Kategori Dokumen</Label>
                   <select
                     value={reqCategory}
                     onChange={(e) => setReqCategory(e.target.value)}
-                    className="w-full h-11 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-3 text-xs font-semibold text-[#0F172A] focus:border-[#163A70] focus:outline-none"
+                    className="w-full h-10 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-3 text-xs font-semibold text-[#0F172A] focus:border-[#163A70] focus:outline-none"
                   >
                     <option value="Perjanjian">Perjanjian / Kontrak</option>
                     <option value="Perizinan">Perizinan / Regulasi</option>
@@ -487,37 +487,37 @@ export function TrackingView() {
                   </select>
                 </div>
 
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-semibold">Divisi Pemohon</Label>
-                  <Input
-                    value={reqDivision}
-                    onChange={(e) => setReqDivision(e.target.value)}
-                    required
-                    className="h-11 text-xs rounded-xl"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
+                <div className="space-y-1">
                   <Label className="text-xs font-semibold">Tingkat Prioritas</Label>
                   <select
                     value={reqPriority}
                     onChange={(e) => setReqPriority(e.target.value as 'Normal' | 'Urgent' | 'Critical')}
-                    className="w-full h-11 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-3 text-xs font-semibold text-[#0F172A] focus:border-[#163A70] focus:outline-none"
+                    className="w-full h-10 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-3 text-xs font-semibold text-[#0F172A] focus:border-[#163A70] focus:outline-none"
                   >
-                    <option value="Normal">Normal (SLA Standar 5 Hari)</option>
-                    <option value="Urgent">Urgent (SLA 2 Hari)</option>
-                    <option value="Critical">Critical (SLA 24 Jam)</option>
+                    <option value="Normal">Normal (SLA Standar 3 Hari)</option>
+                    <option value="Urgent">Mendesak / Urgent (SLA 24 Jam)</option>
+                    <option value="Critical">Kritis / Critical (SLA Segera Hari Ini)</option>
                   </select>
                 </div>
+              </div>
 
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-semibold">Klasifikasi Kerahasiaan</Label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs font-semibold">Divisi Pemrakarsa</Label>
+                  <Input
+                    value={reqDivision}
+                    onChange={(e) => setReqDivision(e.target.value)}
+                    className="h-10 text-xs rounded-xl"
+                    placeholder="Contoh: Direktorat Operasi"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-xs font-semibold">Tingkat Kerahasiaan</Label>
                   <select
                     value={reqConfidentiality}
                     onChange={(e) => setReqConfidentiality(e.target.value as 'Internal' | 'Confidential' | 'Restricted')}
-                    className="w-full h-11 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-3 text-xs font-semibold text-[#0F172A] focus:border-[#163A70] focus:outline-none"
+                    className="w-full h-10 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-3 text-xs font-semibold text-[#0F172A] focus:border-[#163A70] focus:outline-none"
                   >
                     <option value="Internal">Internal (Hanya Staf Grup)</option>
                     <option value="Confidential">Confidential (Rahasia Perusahaan)</option>
@@ -527,7 +527,7 @@ export function TrackingView() {
               </div>
 
               {/* Duration Dates */}
-              <div className="p-4 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] space-y-3">
+              <div className="p-3.5 rounded-2xl bg-[#F8FAFC] border border-[#E2E8F0] space-y-2.5">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-[#0F172A]">Masa Berlaku Kontrak</span>
                   <label className="flex items-center gap-2 text-xs text-[#475569] cursor-pointer select-none">
@@ -537,77 +537,73 @@ export function TrackingView() {
                       onChange={(e) => setReqNoDuration(e.target.checked)}
                       className="rounded text-[#163A70]"
                     />
-                    <span>Berlaku Selamanya (Tanpa Batas Waktu)</span>
+                    <span>Tanpa Batas Waktu</span>
                   </label>
                 </div>
 
                 {!reqNoDuration && (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-0.5">
                     <div className="space-y-1">
-                      <Label className="text-[11px] text-[#64748B]">Tanggal Mulai Berlaku</Label>
+                      <Label className="text-[11px] text-[#64748B]">Tanggal Mulai</Label>
                       <Input
                         type="date"
                         value={reqStart}
                         onChange={(e) => setReqStart(e.target.value)}
-                        className="h-10 text-xs rounded-xl bg-white"
+                        className="h-9 text-xs rounded-xl bg-white"
                       />
                     </div>
                     <div className="space-y-1">
-                      <Label className="text-[11px] text-[#64748B]">Tanggal Jatuh Tempo / Berakhir</Label>
+                      <Label className="text-[11px] text-[#64748B]">Tanggal Jatuh Tempo</Label>
                       <Input
                         type="date"
                         value={reqEnd}
                         onChange={(e) => setReqEnd(e.target.value)}
-                        className="h-10 text-xs rounded-xl bg-white"
+                        className="h-9 text-xs rounded-xl bg-white"
                       />
                     </div>
                   </div>
                 )}
               </div>
 
-              <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">Catatan Pengajuan &amp; Latar Belakang</Label>
+              <div className="space-y-1">
+                <Label className="text-xs font-semibold">Catatan Pengajuan</Label>
                 <Textarea
                   value={reqNotes}
                   onChange={(e) => setReqNotes(e.target.value)}
-                  placeholder="Jelaskan kebutuhan pengajuan, tujuan kontrak, atau catatan penting untuk tim reviewer..."
-                  rows={3}
+                  placeholder="Jelaskan kebutuhan pengajuan atau catatan untuk reviewer..."
+                  rows={2}
                   className="text-xs rounded-xl"
                 />
               </div>
 
               {/* Upload Initial Files (V0) */}
-              <div className="space-y-1.5 pt-2">
-                <Label className="text-xs font-semibold">Unggah Draf Awal (V0) &amp; Berkas Pendukung</Label>
-                <div className="rounded-xl border-2 border-dashed border-[#CBD5E1] p-6 text-center hover:border-[#163A70] transition-colors bg-[#F8FAFC]">
-                  <Upload className="mx-auto h-8 w-8 text-[#94A3B8] mb-2" />
+              <div className="space-y-1 pt-1">
+                <Label className="text-xs font-semibold">Unggah Draf Awal (V0)</Label>
+                <div className="rounded-2xl border-2 border-dashed border-[#CBD5E1] p-4 text-center hover:border-[#163A70] transition-colors bg-[#F8FAFC]">
+                  <Upload className="mx-auto h-6 w-6 text-[#94A3B8] mb-1.5" />
                   <div className="text-xs font-semibold text-[#0F172A]">
-                    Klik atau seret file PDF / Word ke area ini
-                  </div>
-                  <div className="text-[11px] text-[#64748B] mt-0.5">
-                    File pertama akan dicatat sebagai Draf Awal (V0)
+                    Klik atau seret file PDF / Word ke sini
                   </div>
                   <input
                     type="file"
                     multiple
                     onChange={handleFileUpload}
-                    className="mt-3 block w-full text-xs text-[#64748B] file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-[#163A70] file:text-white hover:file:bg-[#0B2147] cursor-pointer"
+                    className="mt-2.5 block w-full text-xs text-[#64748B] file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-[#163A70] file:text-white hover:file:bg-[#0B2147] cursor-pointer"
                   />
                 </div>
 
                 {uploadedFiles.length > 0 && (
-                  <div className="mt-3 space-y-1.5">
-                    <span className="text-xs font-bold text-[#0F172A] block">Berkas Terpilih:</span>
+                  <div className="mt-2 space-y-1.5">
                     {uploadedFiles.map((f, i) => (
                       <div
                         key={i}
-                        className="flex items-center justify-between p-2.5 rounded-xl border border-[#E2E8F0] bg-white text-xs"
+                        className="flex items-center justify-between p-2 rounded-xl border border-[#E2E8F0] bg-white text-xs"
                       >
                         <div className="flex items-center gap-2 truncate">
                           <FileText className="h-4 w-4 text-[#163A70] shrink-0" />
                           <span className="font-semibold text-[#0F172A] truncate">{f.originalName}</span>
-                          <Badge variant="outline" className="text-[10px] font-mono">
-                            {i === 0 ? 'Draf Awal (V0)' : 'Lampiran Pendukung'}
+                          <Badge variant="outline" className="text-[9.5px] font-mono">
+                            {i === 0 ? 'Draf Awal (V0)' : 'Lampiran'}
                           </Badge>
                         </div>
                         <button
@@ -623,11 +619,11 @@ export function TrackingView() {
                 )}
               </div>
 
-              <div className="pt-4 flex justify-end gap-3 border-t border-[#F1F5F9]">
+              <div className="pt-3 flex justify-end gap-3 border-t border-[#F1F5F9]">
                 <Button
                   type="submit"
                   disabled={isSubmitting}
-                  className="h-11 px-8 bg-[#163A70] hover:bg-[#0B2147] text-white font-bold text-xs rounded-xl shadow-md cursor-pointer"
+                  className="h-10 px-6 bg-[#163A70] hover:bg-[#0B2147] text-white font-bold text-xs rounded-xl shadow-xs cursor-pointer"
                 >
                   {isSubmitting ? 'Mengirim Pengajuan...' : 'Kirim Pengajuan Dokumen'}
                 </Button>
@@ -639,68 +635,66 @@ export function TrackingView() {
 
       {/* TAB 2: PROGRESS & DOCUMENT HISTORY */}
       {trackSubTab === 'progress' && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5 sm:gap-6">
           {/* Left Column: Document Selector & Overview */}
-          <div className="lg:col-span-4 space-y-4">
-            <Card className="border-[#E2E8F0] shadow-sm">
-              <CardContent className="p-4 space-y-3">
-                <div className="flex items-center justify-between pb-2 border-b border-[#F1F5F9]">
-                  <span className="text-xs font-bold text-[#0B2147]">Daftar Pengajuan</span>
-                  <Badge variant="outline" className="text-[10px] font-mono">
-                    {documents.length} Dokumen
-                  </Badge>
-                </div>
+          <div className="lg:col-span-4 space-y-3">
+            <div className="bg-white rounded-2xl border border-[#E2E8F0] p-3 sm:p-4 shadow-xs space-y-2.5">
+              <div className="flex items-center justify-between pb-2 border-b border-[#F1F5F9]">
+                <span className="text-xs font-bold text-[#0B2147]">Daftar Pengajuan</span>
+                <span className="text-[10px] font-bold font-mono px-2 py-0.5 rounded-full bg-[#EBF2FF] text-[#163A70]">
+                  {documents.length} Dokumen
+                </span>
+              </div>
 
-                <div className="space-y-2 max-h-[580px] overflow-y-auto pr-1">
-                  {documents.map((doc) => {
-                    const isSelected = doc.docNumber === activeDoc?.docNumber
-                    const activeVersion = doc.versions?.length > 0
-                      ? doc.versions[doc.versions.length - 1].version
-                      : 'V0'
+              <div className="space-y-1.5 max-h-[580px] overflow-y-auto pr-0.5">
+                {documents.map((doc) => {
+                  const isSelected = doc.docNumber === activeDoc?.docNumber
+                  const activeVersion = doc.versions?.length > 0
+                    ? doc.versions[doc.versions.length - 1].version
+                    : 'V0'
 
-                    return (
-                      <div
-                        key={doc._id}
-                        onClick={() => setSelectedDocNumber(doc.docNumber)}
-                        className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
-                          isSelected
-                            ? 'bg-[#EBF2FF] border-[#163A70] shadow-xs'
-                            : 'bg-white border-[#E2E8F0] hover:border-[#CBD5E1]'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between gap-1 mb-1">
-                          <span className="font-mono text-xs font-bold text-[#163A70]">
-                            {doc.docNumber}
-                          </span>
-                          <span className="font-mono text-[10px] font-bold px-1.5 py-0.2 rounded bg-white text-[#4F46E5] border border-[#C7D2FE]">
-                            {activeVersion}
-                          </span>
-                        </div>
-
-                        <div className="font-bold text-xs text-[#0F172A] line-clamp-1">
-                          {doc.name}
-                        </div>
-
-                        <div className="flex items-center justify-between text-[11px] text-[#64748B] mt-1.5">
-                          <span>{doc.category}</span>
-                          <span className={doc.revisionRequested ? 'text-[#D97706] font-bold' : ''}>
-                            {doc.revisionRequested ? 'Perlu Revisi' : doc.statusLabel || STAGES[doc.stage]?.label}
-                          </span>
-                        </div>
+                  return (
+                    <div
+                      key={doc._id}
+                      onClick={() => setSelectedDocNumber(doc.docNumber)}
+                      className={`p-2.5 sm:p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                        isSelected
+                          ? 'bg-[#EBF2FF] border-[#163A70] shadow-2xs ring-1 ring-[#163A70]'
+                          : 'bg-[#F8FAFC]/50 border-[#E2E8F0] hover:bg-white hover:border-[#CBD5E1]'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-1 mb-0.5">
+                        <span className="font-mono text-xs font-bold text-[#163A70]">
+                          {doc.docNumber}
+                        </span>
+                        <span className="font-mono text-[9.5px] font-bold px-1.5 py-0.2 rounded bg-white text-[#4F46E5] border border-[#C7D2FE]">
+                          {activeVersion}
+                        </span>
                       </div>
-                    )
-                  })}
-                </div>
-              </CardContent>
-            </Card>
+
+                      <div className="font-bold text-xs text-[#0F172A] line-clamp-1">
+                        {doc.name}
+                      </div>
+
+                      <div className="flex items-center justify-between text-[10.5px] text-[#64748B] mt-1">
+                        <span>{doc.category}</span>
+                        <span className={doc.revisionRequested ? 'text-[#D97706] font-bold' : ''}>
+                          {doc.revisionRequested ? 'Perlu Revisi' : doc.statusLabel || STAGES[doc.stage]?.label}
+                        </span>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
           </div>
 
           {/* Right Column: Detailed Document Package, Versions & History */}
           {activeDoc && (
-            <div className="lg:col-span-8 space-y-6">
+            <div className="lg:col-span-8 space-y-4 sm:space-y-6">
               {/* Document Header & Quick Actions */}
-              <Card className="border-[#E2E8F0] shadow-sm">
-                <CardContent className="p-6 space-y-4">
+              <Card className="border-[#E2E8F0] shadow-sm rounded-2xl sm:rounded-3xl overflow-hidden bg-white">
+                <CardContent className="p-3.5 sm:p-6 space-y-3.5">
                   <div className="space-y-3.5">
                     {/* Top Section: Full Width Document Metadata */}
                     <div className="flex flex-col gap-1.5">

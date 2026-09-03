@@ -104,9 +104,9 @@ export function MyDocumentsView() {
   }
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-12 animate-in fade-in duration-300">
+    <div className="space-y-3.5 sm:space-y-5 max-w-7xl mx-auto pb-12 animate-in fade-in duration-300">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold font-display text-[#0B2147] tracking-tight">
             Dokumen Saya
