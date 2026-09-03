@@ -143,11 +143,16 @@ export async function initAndSeedDriveStore() {
     return
   }
 
+  const existingUsersMap = new Map<string, StoredUser>()
+  for (const u of store.users) {
+    if (u.email) existingUsersMap.set(u.email.toLowerCase(), u)
+  }
+
   const defaultPasswordHash = await bcrypt.hash('Password123!', 10)
   const now = new Date().toISOString()
 
   // 1. Clean official users - Administrator Toto, Reviewer Luky, Requester Robert
-  store.users = [
+  const seedUsers: StoredUser[] = [
     {
       _id: 'usr_toto_admin_01',
       id: 'usr_toto_admin_01',
@@ -194,6 +199,23 @@ export async function initAndSeedDriveStore() {
       updatedAt: now,
     },
   ]
+
+  store.users = seedUsers.map((su) => {
+    const existing = existingUsersMap.get(su.email.toLowerCase())
+    if (existing) {
+      return {
+        ...su,
+        employeeName: existing.employeeName || su.employeeName,
+        position: existing.position || su.position,
+        division: existing.division || su.division,
+        phone: existing.phone || su.phone,
+        avatarUrl: existing.avatarUrl || su.avatarUrl,
+        coverUrl: existing.coverUrl || su.coverUrl,
+        passwordHash: existing.passwordHash || su.passwordHash,
+      }
+    }
+    return su
+  })
 
   // 2. Official Corporate Documents seeded directly with Google Drive Folder IDs & Versions
   store.documents = [

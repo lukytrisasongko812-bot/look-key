@@ -293,6 +293,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     isInitialized.current = true
 
     const savedToken = localStorage.getItem('ride_token') || localStorage.getItem('rise_token')
+    const savedUserStr = localStorage.getItem('ride_user')
+    if (savedUserStr) {
+      try {
+        const parsed = JSON.parse(savedUserStr)
+        setUser(parsed)
+        userRef.current = parsed
+      } catch (e) {
+        console.error('Failed to parse cached user', e)
+      }
+    }
+
     if (savedToken) {
       setToken(savedToken)
       tokenRef.current = savedToken
@@ -302,9 +313,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         .then((res) => res.json())
         .then((data) => {
           if (data.user) {
-            setUser(data.user)
-            userRef.current = data.user
-            localStorage.setItem('ride_user', JSON.stringify(data.user))
+            let cachedUser: UserProfile | null = null
+            try {
+              const cachedUserStr = localStorage.getItem('ride_user')
+              cachedUser = cachedUserStr ? JSON.parse(cachedUserStr) : null
+            } catch {}
+
+            const mergedUser: UserProfile = {
+              ...data.user,
+              avatarUrl: data.user.avatarUrl || cachedUser?.avatarUrl || undefined,
+              coverUrl: data.user.coverUrl || cachedUser?.coverUrl || undefined,
+            }
+            setUser(mergedUser)
+            userRef.current = mergedUser
+            localStorage.setItem('ride_user', JSON.stringify(mergedUser))
           } else {
             localStorage.removeItem('ride_token')
             localStorage.removeItem('rise_token')
@@ -621,6 +643,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const updateProfile = async (profileData: Partial<UserProfile>): Promise<boolean> => {
     try {
+      // Optimistic update
+      setUser((prev) => {
+        if (!prev) return null
+        const updated = { ...prev, ...profileData }
+        userRef.current = updated
+        try {
+          localStorage.setItem('ride_user', JSON.stringify(updated))
+        } catch {}
+        return updated
+      })
+
       const headers: Record<string, string> = { 'Content-Type': 'application/json' }
       if (token) headers['Authorization'] = `Bearer ${token}`
 
@@ -636,8 +669,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           localStorage.setItem('ride_token', data.token)
         }
         if (data.user) {
-          setUser(data.user)
-          localStorage.setItem('ride_user', JSON.stringify(data.user))
+          let cachedUser: UserProfile | null = null
+          try {
+            const cachedUserStr = localStorage.getItem('ride_user')
+            cachedUser = cachedUserStr ? JSON.parse(cachedUserStr) : null
+          } catch {}
+
+          const mergedUser: UserProfile = {
+            ...data.user,
+            avatarUrl: data.user.avatarUrl || profileData.avatarUrl || cachedUser?.avatarUrl || undefined,
+            coverUrl: data.user.coverUrl || profileData.coverUrl || cachedUser?.coverUrl || undefined,
+          }
+          setUser(mergedUser)
+          userRef.current = mergedUser
+          localStorage.setItem('ride_user', JSON.stringify(mergedUser))
         }
         return true
       }
