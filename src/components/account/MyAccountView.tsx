@@ -85,9 +85,38 @@ export function MyAccountView() {
   const [email] = useState(user?.email || 'user@resourcesid.co.id')
   const [phone, setPhone] = useState(user?.phone || '+62 812-9876-5432')
 
-  // Optimistic Image Previews
-  const [previewAvatar, setPreviewAvatar] = useState<string | null>(null)
-  const [previewCover, setPreviewCover] = useState<string | null>(null)
+  // Optimistic Image Previews (Instantly loaded from dedicated localStorage cache)
+  const [previewAvatar, setPreviewAvatar] = useState<string | null>(() => {
+    if (typeof window !== 'undefined') {
+      const email = user?.email?.toLowerCase() || ''
+      if (email) {
+        const cached = localStorage.getItem(`ride_avatar_${email}`)
+        if (cached) return cached
+      }
+      try {
+        const saved = localStorage.getItem('ride_user')
+        const parsed = saved ? JSON.parse(saved) : null
+        return parsed?.avatarUrl || null
+      } catch {}
+    }
+    return user?.avatarUrl || null
+  })
+
+  const [previewCover, setPreviewCover] = useState<string | null>(() => {
+    if (typeof window !== 'undefined') {
+      const email = user?.email?.toLowerCase() || ''
+      if (email) {
+        const cached = localStorage.getItem(`ride_cover_${email}`)
+        if (cached) return cached
+      }
+      try {
+        const saved = localStorage.getItem('ride_user')
+        const parsed = saved ? JSON.parse(saved) : null
+        return parsed?.coverUrl || null
+      } catch {}
+    }
+    return user?.coverUrl || null
+  })
 
   // Security Toggles
   const [twoFactor, setTwoFactor] = useState(user?.twoFactorEnabled ?? true)
@@ -110,8 +139,13 @@ export function MyAccountView() {
       if (user.position) setPosition(user.position)
       if (user.phone) setPhone(user.phone)
       if (user.twoFactorEnabled !== undefined) setTwoFactor(user.twoFactorEnabled)
-      if (user.avatarUrl) setPreviewAvatar(user.avatarUrl)
-      if (user.coverUrl) setPreviewCover(user.coverUrl)
+
+      const email = user.email?.toLowerCase() || ''
+      const storedAvatar = (email ? localStorage.getItem(`ride_avatar_${email}`) : null) || user.avatarUrl
+      const storedCover = (email ? localStorage.getItem(`ride_cover_${email}`) : null) || user.coverUrl
+
+      if (storedAvatar) setPreviewAvatar(storedAvatar)
+      if (storedCover) setPreviewCover(storedCover)
     }
   }, [user])
 
@@ -123,12 +157,18 @@ export function MyAccountView() {
     }
 
     setSavingProfile(true)
+    const email = user?.email?.toLowerCase() || ''
+    const currentAvatar = previewAvatar || (email ? localStorage.getItem(`ride_avatar_${email}`) : null) || user?.avatarUrl
+    const currentCover = previewCover || (email ? localStorage.getItem(`ride_cover_${email}`) : null) || user?.coverUrl
+
     const ok = await updateProfile({
       employeeName: name.trim(),
       division: department.trim(),
       position: position.trim(),
       phone: phone.trim(),
       twoFactorEnabled: twoFactor,
+      avatarUrl: currentAvatar || undefined,
+      coverUrl: currentCover || undefined,
     })
     setSavingProfile(false)
 

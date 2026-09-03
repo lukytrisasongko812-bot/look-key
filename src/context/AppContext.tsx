@@ -297,8 +297,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (savedUserStr) {
       try {
         const parsed = JSON.parse(savedUserStr)
-        setUser(parsed)
-        userRef.current = parsed
+        const email = parsed?.email?.toLowerCase() || ''
+        const storedAvatar = (email ? localStorage.getItem(`ride_avatar_${email}`) : null) || parsed.avatarUrl
+        const storedCover = (email ? localStorage.getItem(`ride_cover_${email}`) : null) || parsed.coverUrl
+        const hydrated = {
+          ...parsed,
+          avatarUrl: storedAvatar || undefined,
+          coverUrl: storedCover || undefined,
+        }
+        setUser(hydrated)
+        userRef.current = hydrated
       } catch (e) {
         console.error('Failed to parse cached user', e)
       }
@@ -319,10 +327,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               cachedUser = cachedUserStr ? JSON.parse(cachedUserStr) : null
             } catch {}
 
+            const userEmail = (data.user.email || cachedUser?.email || '').toLowerCase()
+            const storedAvatar = (userEmail ? localStorage.getItem(`ride_avatar_${userEmail}`) : null) || data.user.avatarUrl || cachedUser?.avatarUrl || undefined
+            const storedCover = (userEmail ? localStorage.getItem(`ride_cover_${userEmail}`) : null) || data.user.coverUrl || cachedUser?.coverUrl || undefined
+
             const mergedUser: UserProfile = {
               ...data.user,
-              avatarUrl: data.user.avatarUrl || cachedUser?.avatarUrl || undefined,
-              coverUrl: data.user.coverUrl || cachedUser?.coverUrl || undefined,
+              avatarUrl: storedAvatar,
+              coverUrl: storedCover,
             }
             setUser(mergedUser)
             userRef.current = mergedUser
@@ -643,6 +655,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const updateProfile = async (profileData: Partial<UserProfile>): Promise<boolean> => {
     try {
+      const activeEmail = (userRef.current?.email || user?.email || '').toLowerCase()
+      if (activeEmail) {
+        if (profileData.avatarUrl) {
+          try {
+            localStorage.setItem(`ride_avatar_${activeEmail}`, profileData.avatarUrl)
+          } catch {}
+        }
+        if (profileData.coverUrl) {
+          try {
+            localStorage.setItem(`ride_cover_${activeEmail}`, profileData.coverUrl)
+          } catch {}
+        }
+      }
+
       // Optimistic update
       setUser((prev) => {
         if (!prev) return null
@@ -669,16 +695,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           localStorage.setItem('ride_token', data.token)
         }
         if (data.user) {
-          let cachedUser: UserProfile | null = null
-          try {
-            const cachedUserStr = localStorage.getItem('ride_user')
-            cachedUser = cachedUserStr ? JSON.parse(cachedUserStr) : null
-          } catch {}
+          const userEmail = (data.user.email || activeEmail).toLowerCase()
+          const storedAvatar = (userEmail ? localStorage.getItem(`ride_avatar_${userEmail}`) : null) || data.user.avatarUrl || profileData.avatarUrl
+          const storedCover = (userEmail ? localStorage.getItem(`ride_cover_${userEmail}`) : null) || data.user.coverUrl || profileData.coverUrl
 
           const mergedUser: UserProfile = {
             ...data.user,
-            avatarUrl: data.user.avatarUrl || profileData.avatarUrl || cachedUser?.avatarUrl || undefined,
-            coverUrl: data.user.coverUrl || profileData.coverUrl || cachedUser?.coverUrl || undefined,
+            avatarUrl: storedAvatar,
+            coverUrl: storedCover,
           }
           setUser(mergedUser)
           userRef.current = mergedUser
