@@ -18,8 +18,13 @@ import { MobileBottomNav } from '@/components/layout/MobileBottomNav'
 
 export default function HomePage() {
   const { isAuthenticated, authLoading, currentView } = useApp()
+  const [mounted, setMounted] = React.useState(false)
 
-  if (authLoading && !isAuthenticated) {
+  React.useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  if (!mounted || (authLoading && !isAuthenticated)) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-[#F6F8FB]">
         <div className="flex flex-col items-center gap-3">

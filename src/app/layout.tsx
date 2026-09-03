@@ -50,8 +50,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="id" className={`${inter.variable} ${jakarta.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col bg-[#F6F8FB] text-[#16233F] font-sans">
+    <html
+      lang="id"
+      suppressHydrationWarning
+      className={`${inter.variable} ${jakarta.variable} h-full antialiased`}
+    >
+      <body
+        suppressHydrationWarning
+        className="min-h-full flex flex-col bg-[#F6F8FB] text-[#16233F] font-sans"
+      >
         <AppProvider>
           {children}
           <Toaster richColors position="top-right" closeButton />
