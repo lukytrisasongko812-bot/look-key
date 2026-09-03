@@ -206,165 +206,137 @@ export function LoginScreen() {
       <div className="pointer-events-none absolute -bottom-40 -right-40 h-96 w-96 rounded-full bg-[#2563EB]/10 blur-3xl" />
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(#E2E8F0_1px,transparent_1px)] [background-size:24px_24px] opacity-40" />
 
-      {/* Login Container */}
-      <div className="relative z-10 w-full max-w-4xl grid grid-cols-1 md:grid-cols-12 rounded-2xl border border-white/60 bg-white/95 shadow-[0_20px_60px_-15px_rgba(15,42,84,0.14)] backdrop-blur-xl overflow-hidden animate-card-in">
+      {/* Compact Login Container */}
+      <div className="relative z-10 w-full max-w-[430px] rounded-2xl border border-[#E2E8F0] bg-white/95 p-6 sm:p-7 shadow-[0_16px_50px_-10px_rgba(15,42,84,0.12)] backdrop-blur-xl animate-card-in">
         
-        {/* Left Side Hero Banner */}
-        <div className="hidden md:flex md:col-span-5 flex-col justify-between bg-gradient-to-br from-[#0B2147] via-[#163A70] to-[#1E4D94] p-8 text-white relative overflow-hidden">
-          <div>
-            <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-[11px] font-semibold tracking-wide text-white/90 backdrop-blur-md mb-6 border border-white/15">
-              <ShieldCheck className="h-3.5 w-3.5 text-[#60A5FA]" />
-              <span>Portal Dokumen Korporat</span>
-            </div>
-
-            <RideLogo size="lg" whiteText showSubtitle />
-
-            <div className="mt-8 space-y-3 text-xs text-white/75 leading-relaxed">
-              <div className="flex items-center gap-2.5">
-                <span className="h-1.5 w-1.5 rounded-full bg-[#60A5FA]" />
-                <span>Pemesanan &amp; Pengajuan Dokumen Terstruktur</span>
-              </div>
-              <div className="flex items-center gap-2.5">
-                <span className="h-1.5 w-1.5 rounded-full bg-[#60A5FA]" />
-                <span>Pelacakan Versi (V0, Rev.01, Rev.02, FINAL)</span>
-              </div>
-              <div className="flex items-center gap-2.5">
-                <span className="h-1.5 w-1.5 rounded-full bg-[#60A5FA]" />
-                <span>Matriks Kewenangan &amp; Otentikasi 2FA Enkripsi</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="text-[10px] text-white/60 border-t border-white/10 pt-4 flex items-center justify-between relative z-10">
-            <span>Platform RIDE Terintegrasi</span>
-            <span>risetrack.id</span>
-          </div>
+        {/* Dual Brand Logos Header: RIDE & RESOURCES ID */}
+        <div className="flex items-center justify-between gap-3 pb-4 mb-4 border-b border-[#F1F5F9]">
+          <RideLogo size="sm" showSubtitle={false} />
+          <div className="h-7 w-[1px] bg-[#E2E8F0]" />
+          <img
+            src="/resources-id-logo.png"
+            alt="RESOURCES ID - Shared Service Center of MIND ID"
+            className="h-8 w-auto max-w-[160px] object-contain shrink-0"
+          />
         </div>
 
-        {/* Right Side: Login Form */}
-        <div className="md:col-span-7 p-6 sm:p-10 flex flex-col justify-center">
-          <div className="md:hidden mb-6 text-center">
-            <RideLogo size="md" className="items-center" showSubtitle />
+        <div className="mb-4">
+          <h2 className="text-lg font-bold font-display text-[#0B2147]">
+            Masuk ke Akun
+          </h2>
+          <p className="text-xs text-[#64748B] mt-0.5">
+            Gunakan email korporat dan kata sandi terdaftar Anda.
+          </p>
+        </div>
+
+        {isInvitedUser && (
+          <div className="mb-4 p-3 rounded-xl bg-[#ECFDF5] border border-[#A7F3D0] flex items-center gap-2.5">
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#059669] text-white">
+              <CheckCircle2 className="h-3.5 w-3.5" />
+            </div>
+            <div className="text-[11.5px] text-[#065F46]">
+              <div className="font-bold">Aktivasi Akun Undangan Resmi</div>
+              <div>Akun telah terdaftar. Masukkan kata sandi untuk masuk.</div>
+            </div>
+          </div>
+        )}
+
+        {errorMessage && (
+          <div className="mb-4 rounded-xl bg-[#FEF2F2] border border-[#FCA5A5]/60 p-2.5 text-xs font-semibold text-[#EF4444] flex items-center gap-2">
+            <span className="h-2 w-2 rounded-full bg-[#EF4444] shrink-0" />
+            <span>{errorMessage}</span>
+          </div>
+        )}
+
+        <form onSubmit={handleLoginSubmit} className="space-y-3.5">
+          <div className="space-y-1">
+            <Label htmlFor="email" className="text-xs font-semibold text-[#0F172A]">
+              Email Korporat / Gmail
+            </Label>
+            <div className="relative">
+              <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#94A3B8]" />
+              <Input
+                id="email"
+                type="email"
+                placeholder="nama@resourcesid.co.id"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className="pl-10 h-10 text-xs rounded-xl bg-white border-[#CBD5E1] focus:border-[#163A70] focus:ring-4 focus:ring-[#163A70]/10"
+              />
+            </div>
           </div>
 
-          <div className="mb-6">
-            <h2 className="text-xl sm:text-2xl font-bold font-display text-[#0B2147]">
-              Masuk ke Akun Anda
-            </h2>
-            <p className="text-xs text-[#64748B] mt-1">
-              Gunakan email korporat dan kata sandi terdaftar Anda.
-            </p>
-          </div>
-
-          {isInvitedUser && (
-            <div className="mb-4 p-3.5 rounded-xl bg-[#ECFDF5] border border-[#A7F3D0] flex items-center gap-3">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#059669] text-white">
-                <CheckCircle2 className="h-4 w-4" />
-              </div>
-              <div className="text-xs text-[#065F46]">
-                <div className="font-bold">Aktivasi Akun Undangan Resmi</div>
-                <div>Akun Anda telah didaftarkan. Silakan masukkan kata sandi Anda untuk mengaktifkan sesi.</div>
-              </div>
-            </div>
-          )}
-
-          {errorMessage && (
-            <div className="mb-4 rounded-xl bg-[#FEF2F2] border border-[#FCA5A5]/60 p-3 text-xs font-semibold text-[#EF4444] flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full bg-[#EF4444] shrink-0" />
-              <span>{errorMessage}</span>
-            </div>
-          )}
-
-          <form onSubmit={handleLoginSubmit} className="space-y-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="email" className="text-xs font-semibold text-[#0F172A]">
-                Email Korporat / Gmail
+          <div className="space-y-1">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="password" className="text-xs font-semibold text-[#0F172A]">
+                Kata Sandi
               </Label>
-              <div className="relative">
-                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#94A3B8]" />
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="nama@gmail.com atau nama@resourcesid.co.id"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className="pl-10 h-11 text-xs rounded-xl bg-white border-[#E2E8F0] focus:border-[#163A70] focus:ring-4 focus:ring-[#163A70]/10"
-                />
-              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setForgotEmail(email)
+                  setIsForgotOpen(true)
+                }}
+                className="text-xs font-semibold text-[#163A70] hover:underline cursor-pointer"
+              >
+                Lupa Sandi?
+              </button>
             </div>
 
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="password" className="text-xs font-semibold text-[#0F172A]">
-                  Kata Sandi
-                </Label>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setForgotEmail(email)
-                    setIsForgotOpen(true)
-                  }}
-                  className="text-xs font-semibold text-[#163A70] hover:underline cursor-pointer"
-                >
-                  Lupa Sandi?
-                </button>
-              </div>
-
-              <div className="relative">
-                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#94A3B8]" />
-                <Input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  className="pl-10 pr-10 h-11 text-xs rounded-xl bg-white border-[#E2E8F0] focus:border-[#163A70] focus:ring-4 focus:ring-[#163A70]/10"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((prev) => !prev)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#94A3B8] hover:text-[#0F172A] cursor-pointer"
-                >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              </div>
+            <div className="relative">
+              <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#94A3B8]" />
+              <Input
+                id="password"
+                type={showPassword ? 'text' : 'password'}
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                className="pl-10 pr-10 h-10 text-xs rounded-xl bg-white border-[#CBD5E1] focus:border-[#163A70] focus:ring-4 focus:ring-[#163A70]/10"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((prev) => !prev)}
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#94A3B8] hover:text-[#0F172A] cursor-pointer"
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
             </div>
-
-            <div className="flex items-center justify-between pt-1">
-              <label className="flex items-center gap-2 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
-                  className="h-4 w-4 rounded border-[#CBD5E1] text-[#163A70] focus:ring-[#163A70]"
-                />
-                <span className="text-xs text-[#475569]">Ingat sesi masuk</span>
-              </label>
-            </div>
-
-            <Button
-              type="submit"
-              disabled={loading}
-              className="w-full h-11 bg-[#163A70] hover:bg-[#0B2147] text-white font-bold text-xs shadow-md rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer"
-            >
-              {loading ? (
-                <span>Memproses Otentikasi...</span>
-              ) : (
-                <>
-                  <span>Masuk ke Portal RIDE</span>
-                  <ChevronRight className="h-4 w-4" />
-                </>
-              )}
-            </Button>
-          </form>
-
-          <div className="mt-8 border-t border-[#F1F5F9] pt-4 text-center">
-            <p className="text-[11px] text-[#64748B]">
-              Akses sistem internal &amp; privat. Registrasi akun baru hanya melalui undangan resmi Administrator.
-            </p>
           </div>
+
+          <div className="flex items-center justify-between pt-0.5">
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="h-3.5 w-3.5 rounded border-[#CBD5E1] text-[#163A70] focus:ring-[#163A70]"
+              />
+              <span className="text-xs text-[#475569]">Ingat sesi masuk</span>
+            </label>
+          </div>
+
+          <Button
+            type="submit"
+            disabled={loading}
+            className="w-full h-10 bg-[#163A70] hover:bg-[#0B2147] text-white font-bold text-xs shadow-sm rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer"
+          >
+            {loading ? (
+              <span>Memproses Otentikasi...</span>
+            ) : (
+              <>
+                <span>Masuk ke Portal RIDE</span>
+                <ChevronRight className="h-4 w-4" />
+              </>
+            )}
+          </Button>
+        </form>
+
+        <div className="mt-5 border-t border-[#F1F5F9] pt-3 text-center">
+          <p className="text-[11px] text-[#64748B]">
+            Akses internal &amp; privat · <span className="font-semibold text-[#163A70]">risetrack.id</span>
+          </p>
         </div>
       </div>
 
