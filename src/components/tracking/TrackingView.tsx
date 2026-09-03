@@ -266,6 +266,30 @@ export function TrackingView() {
     }
   }
 
+  // Reject Document Action (Non-Requester: Reviewer, Approver, Admin, etc.)
+  const [isRejectModalOpen, setIsRejectModalOpen] = useState(false)
+  const [rejectReason, setRejectReason] = useState('')
+  const [rejectLoading, setRejectLoading] = useState(false)
+
+  const handleRejectSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!activeDoc) return
+    if (!rejectReason.trim()) {
+      toast.error('Alasan penolakan dokumen wajib diisi.')
+      return
+    }
+
+    setRejectLoading(true)
+    const ok = await transitionDocument(activeDoc._id, 'reject', rejectReason.trim())
+    setRejectLoading(false)
+
+    if (ok) {
+      toast.error(`Pengajuan ${activeDoc.docNumber} telah ditolak.`)
+      setIsRejectModalOpen(false)
+      setRejectReason('')
+    }
+  }
+
   // Google Drive synchronization handler
   const [syncingDrive, setSyncingDrive] = useState(false)
   const handleSyncGoogleDrive = async (id: string) => {
@@ -839,8 +863,74 @@ export function TrackingView() {
                       })}
                     </div>
 
-                    <div className="text-[11.5px] text-[#475569] bg-[#F8FAFC] p-2.5 rounded-xl border border-[#E2E8F0] flex items-center justify-between">
-                      <span>Status Saat Ini: <b className="text-[#0B2147]">{activeDoc.revisionRequested ? 'Perlu Revisi (Revisi Diminta)' : activeDoc.statusLabel || STAGES[activeDoc.stage]?.label}</b></span>
+                    <div className="text-[11.5px] text-[#475569] bg-[#F8FAFC] p-2.5 rounded-xl border border-[#E2E8F0] flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span>Status Saat Ini:</span>
+                        <span
+                          className={`font-bold px-2 py-0.5 rounded-md text-[10.5px] ${
+                            activeDoc.rejected
+                              ? 'bg-[#FEF2F2] text-[#DC2626] border border-[#FCA5A5]'
+                              : activeDoc.revisionRequested
+                              ? 'bg-[#FFFBEB] text-[#D97706] border border-[#FDE68A]'
+                              : 'bg-[#EBF2FF] text-[#163A70] border border-[#BFDBFE]'
+                          }`}
+                        >
+                          {activeDoc.rejected
+                            ? 'Ditolak (Dibatalkan)'
+                            : activeDoc.revisionRequested
+                            ? 'Perlu Revisi (Revisi Diminta)'
+                            : activeDoc.statusLabel || STAGES[activeDoc.stage]?.label}
+                        </span>
+                      </div>
+
+                      {/* Workflow Operational Controls (Hanya untuk Non-Requester: Reviewer, Approver, Doc Controller, Admin) */}
+                      {!(user?.role === 'Requester' || user?.role === 'User') && !activeDoc.rejected && activeDoc.stage < 5 && (
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {!activeDoc.revisionRequested && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setIsRequestRevOpen(true)}
+                              className="h-7 text-[11px] text-[#D97706] border-[#FDE68A] hover:bg-[#FFFBEB] font-bold rounded-lg cursor-pointer"
+                            >
+                              <AlertTriangle className="h-3 w-3 mr-1" />
+                              Minta Revisi
+                            </Button>
+                          )}
+
+                          {activeDoc.revisionRequested && (
+                            <Button
+                              size="sm"
+                              onClick={() => transitionDocument(activeDoc._id, 'resolve_revision', 'Revisi telah diverifikasi')}
+                              className="h-7 text-[11px] bg-[#059669] hover:bg-[#047857] text-white font-bold rounded-lg cursor-pointer"
+                            >
+                              <Check className="h-3 w-3 mr-1" />
+                              Verifikasi Revisi
+                            </Button>
+                          )}
+
+                          {!activeDoc.revisionRequested && (
+                            <Button
+                              size="sm"
+                              onClick={() => transitionDocument(activeDoc._id, 'approve', 'Disetujui untuk lanjut ke tahap berikutnya')}
+                              className="h-7 text-[11px] bg-[#163A70] hover:bg-[#0B2147] text-white font-bold rounded-lg cursor-pointer"
+                            >
+                              <Check className="h-3 w-3 mr-1" />
+                              Setujui Tahap
+                            </Button>
+                          )}
+
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setIsRejectModalOpen(true)}
+                            className="h-7 text-[11px] text-[#DC2626] border-[#FCA5A5] hover:bg-[#FEF2F2] font-bold rounded-lg cursor-pointer"
+                          >
+                            <Ban className="h-3 w-3 mr-1" />
+                            Tolak Dokumen
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </CardContent>
@@ -1151,6 +1241,45 @@ export function TrackingView() {
               Kirim Permintaan Revisi
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reject Document Prompt Modal */}
+      <Dialog open={isRejectModalOpen} onOpenChange={setIsRejectModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-[#DC2626] flex items-center gap-2">
+              <Ban className="h-5 w-5 text-[#DC2626]" />
+              Tolak Pengajuan Dokumen — {activeDoc?.docNumber}
+            </DialogTitle>
+            <DialogDescription>
+              Tuliskan alasan penolakan dokumen secara jelas untuk pemohon berkas.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleRejectSubmit} className="space-y-3 pt-2">
+            <Textarea
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              placeholder="Jelaskan alasan pengajuan dokumen ini ditolak..."
+              rows={4}
+              required
+              className="text-xs rounded-xl"
+            />
+
+            <DialogFooter className="pt-2">
+              <Button type="button" variant="outline" onClick={() => setIsRejectModalOpen(false)}>
+                Batal
+              </Button>
+              <Button
+                type="submit"
+                disabled={rejectLoading}
+                className="bg-[#DC2626] hover:bg-[#B91C1C] text-white font-bold cursor-pointer"
+              >
+                {rejectLoading ? 'Menolak...' : 'Konfirmasi Tolak Dokumen'}
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
 
