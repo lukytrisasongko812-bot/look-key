@@ -693,21 +693,21 @@ export function TrackingView() {
           {activeDoc && (
             <div className="lg:col-span-8 space-y-4 sm:space-y-6">
               {/* Document Header & Quick Actions */}
-              <Card className="border-[#E2E8F0] shadow-sm rounded-2xl sm:rounded-3xl overflow-hidden bg-white">
-                <CardContent className="p-3.5 sm:p-6 space-y-3.5">
-                  <div className="space-y-3.5">
+              <Card className="border-[#E2E8F0] shadow-2xs rounded-2xl overflow-hidden bg-white">
+                <CardContent className="p-3.5 sm:p-5 space-y-3">
+                  <div className="space-y-3">
                     {/* Top Section: Full Width Document Metadata */}
                     <div className="flex flex-col gap-1.5">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-mono text-sm sm:text-base font-extrabold text-[#163A70] tracking-wide whitespace-nowrap bg-[#EBF2FF] px-2.5 py-0.5 rounded-lg border border-[#BFDBFE]">
+                        <span className="font-mono text-xs sm:text-sm font-extrabold text-[#163A70] tracking-wide whitespace-nowrap bg-[#EBF2FF] px-2.5 py-0.5 rounded-lg border border-[#BFDBFE]">
                           {activeDoc.docNumber}
                         </span>
-                        <Badge variant="outline" className="text-[10.5px] font-bold bg-[#F8FAFC] text-[#334155] border-[#CBD5E1]">
+                        <Badge variant="outline" className="text-[10px] sm:text-[10.5px] font-bold bg-[#F8FAFC] text-[#334155] border-[#CBD5E1]">
                           {activeDoc.category}
                         </Badge>
                         <Badge
                           variant="outline"
-                          className={`text-[10.5px] font-bold ${
+                          className={`text-[10px] sm:text-[10.5px] font-bold ${
                             activeDoc.priority === 'Critical'
                               ? 'bg-[#FEF2F2] text-[#DC2626] border-[#FCA5A5]'
                               : activeDoc.priority === 'Urgent'
@@ -719,11 +719,11 @@ export function TrackingView() {
                         </Badge>
                       </div>
 
-                      <h2 className="text-lg sm:text-xl font-bold font-display text-[#0B2147] leading-snug">
+                      <h2 className="text-sm sm:text-base font-bold font-display text-[#0B2147] leading-snug">
                         {activeDoc.name}
                       </h2>
                       
-                      <div className="text-xs text-[#64748B] flex flex-wrap items-center gap-2 pt-0.5">
+                      <div className="text-[11px] sm:text-xs text-[#64748B] flex flex-wrap items-center gap-1.5 sm:gap-2">
                         <span>Divisi: <b className="text-[#334155]">{activeDoc.division}</b></span>
                         <span>•</span>
                         <span>PIC: <b className="text-[#334155]">{activeDoc.pic}</b></span>
@@ -733,147 +733,114 @@ export function TrackingView() {
                     </div>
 
                     {/* Action Buttons Toolbar */}
-                    <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 pt-2 border-t border-[#F1F5F9]">
-                      {/* Google Drive Folder Button */}
+                    <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-[#F1F5F9]">
                       <a
-                        href={
-                          activeDoc.driveFolderUrl ||
-                          `https://drive.google.com/drive/search?q=${encodeURIComponent(activeDoc.docNumber)}`
-                        }
+                        href={activeDoc.driveFolderUrl || `https://drive.google.com/drive/search?q=${encodeURIComponent(activeDoc.docNumber)}`}
                         target="_blank"
                         rel="noreferrer"
-                        className="inline-flex items-center gap-1.5 h-7 sm:h-8 px-2.5 sm:px-3 text-[11px] sm:text-xs bg-[#0F9D58] hover:bg-[#0B8043] text-white font-bold rounded-xl cursor-pointer shadow-2xs transition-colors"
-                        title="Buka Folder Dokumen di Google Drive"
+                        className="inline-flex items-center gap-1.5 h-7 sm:h-8 px-2.5 sm:px-3 text-[11px] bg-[#0F9D58] hover:bg-[#0B8043] text-white font-bold rounded-xl shadow-2xs"
                       >
                         <FolderOpen className="h-3.5 w-3.5" />
                         <span>Google Drive</span>
                       </a>
-
-                      {/* Download .txt Log Button */}
                       <a
                         href={`/api/documents/${activeDoc._id}/sync-drive`}
                         download={`${activeDoc.docNumber}_log_riwayat.txt`}
-                        className="inline-flex items-center gap-1.5 h-7 sm:h-8 px-2.5 sm:px-3 text-[11px] sm:text-xs bg-white border border-[#CBD5E1] hover:bg-[#F1F5F9] text-[#163A70] font-bold rounded-xl cursor-pointer shadow-2xs transition-colors"
-                        title="Unduh Berkas Log Teks Riwayat (.txt)"
+                        className="inline-flex items-center gap-1.5 h-7 sm:h-8 px-2.5 sm:px-3 text-[11px] bg-white border border-[#CBD5E1] hover:bg-[#F1F5F9] text-[#163A70] font-bold rounded-xl shadow-2xs"
                       >
                         <FileText className="h-3.5 w-3.5" />
                         <span>Log Riwayat (.txt)</span>
                       </a>
-
-                      {/* Sync Drive Button */}
                       <Button
                         size="sm"
                         variant="outline"
                         disabled={syncingDrive}
                         onClick={() => handleSyncGoogleDrive(activeDoc._id)}
-                        className="h-7 sm:h-8 text-[11px] sm:text-xs border-[#CBD5E1] text-[#334155] hover:bg-[#F8FAFC] font-bold rounded-xl gap-1 cursor-pointer shadow-2xs px-2.5 sm:px-3"
-                        title="Sinkronkan folder & log teks ke Google Drive"
+                        className="h-7 sm:h-8 text-[11px] border-[#CBD5E1] text-[#334155] hover:bg-[#F8FAFC] font-bold rounded-xl gap-1 shadow-2xs px-2.5"
                       >
                         <RefreshCw className={`h-3.5 w-3.5 ${syncingDrive ? 'animate-spin' : ''}`} />
-                        <span>{syncingDrive ? 'Menyinkronkan...' : 'Sinkronisasi Drive'}</span>
+                        <span>{syncingDrive ? 'Menyinkronkan...' : 'Sinkronisasi'}</span>
                       </Button>
-
-                      {/* Upload Revision Button */}
                       <Button
                         size="sm"
                         onClick={() => setIsRevModalOpen(true)}
-                        className="h-7 sm:h-8 text-[11px] sm:text-xs bg-[#D97706] hover:bg-[#B45309] text-white font-bold rounded-xl gap-1 cursor-pointer shadow-2xs px-2.5 sm:px-3"
+                        className="h-7 sm:h-8 text-[11px] bg-[#D97706] hover:bg-[#B45309] text-white font-bold rounded-xl gap-1 shadow-2xs px-2.5"
                       >
                         <FileUp className="h-3.5 w-3.5" />
-                        <span>Unggah Revisi</span>
+                        <span>Revisi</span>
                       </Button>
-
-                      {/* Upload Final Document Button (Doc Controller / Approver / Admin) */}
                       {isDocumentController && (
                         <Button
                           size="sm"
                           onClick={() => setIsFinalModalOpen(true)}
-                          className="h-7 sm:h-8 text-[11px] sm:text-xs bg-[#059669] hover:bg-[#047857] text-white font-bold rounded-xl gap-1 cursor-pointer shadow-2xs px-2.5 sm:px-3"
+                          className="h-7 sm:h-8 text-[11px] bg-[#059669] hover:bg-[#047857] text-white font-bold rounded-xl gap-1 shadow-2xs px-2.5"
                         >
                           <ShieldCheck className="h-3.5 w-3.5" />
-                          <span>Unggah Final</span>
+                          <span>Final</span>
                         </Button>
                       )}
                     </div>
                   </div>
 
                   {/* 7 Stage Visual Pipeline */}
-                  <div className="pt-2">
-                    <div className="flex sm:grid sm:grid-cols-4 lg:grid-cols-7 gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar pb-1">
-                      {STAGES.map((st, idx) => {
-                        const Icon = st.icon
-                        const isPast = activeDoc.stage > idx
-                        const isCurrent = activeDoc.stage === idx
-                        const isRevision = isCurrent && activeDoc.revisionRequested
+                  <div className="pt-2 border-t border-[#F1F5F9] space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-[#0B2147] flex items-center gap-1.5">
+                        <BarChart3 className="h-3.5 w-3.5 text-[#163A70]" />
+                        <span>Alur Status 7 Tahap</span>
+                      </span>
+                      <span className="text-[11px] font-bold text-[#163A70]">
+                        Tahap {activeDoc.stage + 1} / 7
+                      </span>
+                    </div>
 
+                    <div className="h-1.5 w-full bg-[#E2E8F0] rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-[#163A70] to-[#2563EB] transition-all duration-500 rounded-full"
+                        style={{ width: `${Math.round(((activeDoc.stage + 1) / 7) * 100)}%` }}
+                      />
+                    </div>
+
+                    <div className="flex sm:grid sm:grid-cols-4 lg:grid-cols-7 gap-1.5 overflow-x-auto pb-1 no-scrollbar pt-1">
+                      {STAGES.map((st, i) => {
+                        const Icon = st.icon
+                        const isDone = i < activeDoc.stage
+                        const isCurrent = i === activeDoc.stage
                         return (
                           <div
                             key={st.key}
-                            className={`min-w-[100px] sm:min-w-0 p-2 sm:p-2.5 rounded-xl border text-center transition-all flex flex-col justify-between shrink-0 sm:shrink ${
-                              isRevision
-                                ? 'bg-[#FFFBEB] border-[#FDE68A] text-[#D97706]'
+                            className={`min-w-[95px] sm:min-w-0 p-2 rounded-xl text-center flex flex-col justify-between transition-all shrink-0 ${
+                              isDone
+                                ? 'bg-[#ECFDF5] border border-[#A7F3D0] text-[#059669]'
                                 : isCurrent
-                                ? 'bg-[#163A70] border-[#163A70] text-white shadow-xs ring-2 ring-[#BFDBFE]'
-                                : isPast
-                                ? 'bg-[#ECFDF5] border-[#A7F3D0] text-[#059669]'
-                                : 'bg-[#F8FAFC] border-[#E2E8F0] text-[#94A3B8]'
+                                ? activeDoc.revisionRequested
+                                  ? 'bg-[#FFFBEB] border-2 border-[#D97706] text-[#D97706] shadow-xs'
+                                  : 'bg-[#EBF2FF] border-2 border-[#163A70] text-[#163A70] shadow-xs'
+                                : 'bg-[#F8FAFC] border border-[#E2E8F0] text-[#94A3B8]'
                             }`}
                           >
-                            <div className="flex h-6 w-6 sm:h-7 sm:w-7 items-center justify-center rounded-lg mx-auto mb-1 bg-white/20">
-                              {isPast ? <Check className="h-3 w-3 sm:h-3.5 sm:w-3.5 stroke-[3]" /> : <Icon className="h-3 w-3 sm:h-3.5 sm:w-3.5" />}
+                            <div className="flex items-center justify-center mb-0.5">
+                              {isDone ? (
+                                <CheckCircle2 className="h-3.5 w-3.5 text-[#059669]" />
+                              ) : isCurrent ? (
+                                activeDoc.revisionRequested ? (
+                                  <AlertTriangle className="h-3.5 w-3.5 text-[#D97706] animate-pulse" />
+                                ) : (
+                                  <Clock className="h-3.5 w-3.5 text-[#163A70] animate-pulse" />
+                                )
+                              ) : (
+                                <Icon className="h-3.5 w-3.5 text-[#CBD5E1]" />
+                              )}
                             </div>
-                            <div className="text-[9px] sm:text-[9.5px] font-bold uppercase tracking-wider">
-                              T{idx + 1}
-                            </div>
-                            <div className="text-[9.5px] sm:text-[10px] font-semibold mt-0.5 leading-tight line-clamp-2">
-                              {st.label}
-                            </div>
+                            <div className="text-[10px] font-bold font-mono">T{i + 1}</div>
+                            <div className="text-[10px] font-semibold line-clamp-1 mt-0.5">{st.label}</div>
                           </div>
                         )
                       })}
                     </div>
-                  </div>
 
-                  {/* Workflow Operational Controls */}
-                  <div className="pt-3 border-t border-[#F1F5F9] flex flex-wrap items-center justify-between gap-3">
-                    <div className="text-xs text-[#475569]">
-                      Status Saat Ini: <b className="text-[#0B2147]">{activeDoc.statusLabel || STAGES[activeDoc.stage]?.label}</b>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      {isReviewer && !activeDoc.revisionRequested && activeDoc.stage < 4 && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setIsRequestRevOpen(true)}
-                          className="h-8 text-xs text-[#D97706] border-[#FDE68A] hover:bg-[#FFFBEB] font-bold rounded-lg cursor-pointer"
-                        >
-                          <AlertTriangle className="h-3.5 w-3.5 mr-1" />
-                          Minta Revisi
-                        </Button>
-                      )}
-
-                      {activeDoc.revisionRequested && (
-                        <Button
-                          size="sm"
-                          onClick={() => transitionDocument(activeDoc._id, 'resolve_revision', 'Revisi telah diverifikasi')}
-                          className="h-8 text-xs bg-[#059669] hover:bg-[#047857] text-white font-bold rounded-lg cursor-pointer"
-                        >
-                          <Check className="h-3.5 w-3.5 mr-1" />
-                          Verifikasi Revisi Selesai
-                        </Button>
-                      )}
-
-                      {isReviewer && !activeDoc.revisionRequested && activeDoc.stage < 5 && (
-                        <Button
-                          size="sm"
-                          onClick={() => transitionDocument(activeDoc._id, 'approve', 'Disetujui untuk lanjut ke tahap berikutnya')}
-                          className="h-8 text-xs bg-[#163A70] hover:bg-[#0B2147] text-white font-bold rounded-lg cursor-pointer"
-                        >
-                          <Check className="h-3.5 w-3.5 mr-1" />
-                          Setujui &amp; Lanjut Tahap
-                        </Button>
-                      )}
+                    <div className="text-[11.5px] text-[#475569] bg-[#F8FAFC] p-2.5 rounded-xl border border-[#E2E8F0] flex items-center justify-between">
+                      <span>Status Saat Ini: <b className="text-[#0B2147]">{activeDoc.revisionRequested ? 'Perlu Revisi (Revisi Diminta)' : activeDoc.statusLabel || STAGES[activeDoc.stage]?.label}</b></span>
                     </div>
                   </div>
                 </CardContent>
@@ -888,89 +855,31 @@ export function TrackingView() {
                 const reminders = activeDoc.reminders || { h60: true, h30: true, h15: true, h7: true, h1: true }
 
                 return (
-                  <Card className="border-[#CBD5E1] shadow-xs bg-gradient-to-br from-[#F8FAFC] to-[#F1F5F9] overflow-hidden">
-                    <CardContent className="p-5 sm:p-6 space-y-4">
-                      {/* Header with Expiry & Countdown */}
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#E2E8F0]">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <Clock className="h-4 w-4 text-[#163A70]" />
-                            <span className="text-sm font-bold font-display text-[#0B2147]">
-                              Masa Berlaku &amp; Pengingat Jatuh Tempo Kontrak
-                            </span>
-                            <span className={`px-2.5 py-0.5 rounded-full text-[10.5px] font-bold border ${tag.color}`}>
-                              {tag.label}
-                            </span>
-                            {activeDoc.decision && (
-                              <span className="px-2.5 py-0.5 rounded-full text-[10.5px] font-bold bg-[#F0FDF4] text-[#16A34A] border border-[#BBF7D0] flex items-center gap-1">
-                                <CheckCircle2 className="h-3 w-3" />
-                                {activeDoc.decision.type === 'renew'
-                                  ? 'Rekomendasi: Perpanjang'
-                                  : activeDoc.decision.type === 'amendment'
-                                  ? 'Rekomendasi: Adendum'
-                                  : 'Rekomendasi: Terminasi'}
-                              </span>
-                            )}
+                  <Card className="border-[#CBD5E1] shadow-2xs bg-gradient-to-br from-[#F8FAFC] to-[#F1F5F9] rounded-2xl overflow-hidden">
+                    <CardContent className="p-3.5 sm:p-5 space-y-3">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-2.5 border-b border-[#E2E8F0]">
+                        <div className="space-y-0.5">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <Clock className="h-3.5 w-3.5 text-[#163A70]" />
+                            <span className="text-xs sm:text-sm font-bold font-display text-[#0B2147]">Masa Berlaku &amp; Pengingat Jatuh Tempo</span>
+                            <span className={`px-2 py-0.2 rounded-full text-[10px] font-bold border ${tag.color}`}>{tag.label}</span>
                           </div>
-                          <div className="text-[11.5px] text-[#64748B]">
-                            Masa Berlaku:{' '}
-                            {start ? start.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}{' '}
-                            s/d <b className="text-[#0F172A]">{end.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</b>
+                          <div className="text-[11px] text-[#64748B]">
+                            Masa Berlaku: {start ? start.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'} s/d <b className="text-[#0F172A]">{end.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</b>
                           </div>
                         </div>
-
-                        {/* Buttons: Set Pengingat & Ajukan Justifikasi */}
-                        <div className="flex flex-wrap items-center gap-2 shrink-0">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleOpenReminderModal(activeDoc)}
-                            className="h-8 text-xs border-[#CBD5E1] text-[#163A70] hover:bg-[#EBF2FF] font-bold rounded-lg gap-1.5 cursor-pointer shadow-2xs"
-                            title="Atur interval pengingat H-60, H-30, H-15, H-7, H-1"
-                          >
-                            <BellRing className="h-3.5 w-3.5 text-[#163A70]" />
-                            <span>Set Pengingat</span>
-                          </Button>
-
-                          <Button
-                            size="sm"
-                            onClick={() => handleOpenDecisionModal(activeDoc, 'renew')}
-                            className="h-8 text-xs bg-[#059669] hover:bg-[#047857] text-white font-bold rounded-lg gap-1 cursor-pointer"
-                          >
-                            <RefreshCw className="h-3 w-3" />
-                            <span>Perpanjang</span>
-                          </Button>
-
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleOpenDecisionModal(activeDoc, 'amendment')}
-                            className="h-8 text-xs border-[#BFDBFE] text-[#2563EB] hover:bg-[#EFF6FF] font-bold rounded-lg gap-1 cursor-pointer"
-                          >
-                            <FileEdit className="h-3 w-3" />
-                            <span>Adendum</span>
-                          </Button>
-
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleOpenDecisionModal(activeDoc, 'terminate')}
-                            className="h-8 text-xs border-[#FCA5A5] text-[#DC2626] hover:bg-[#FEF2F2] font-bold rounded-lg gap-1 cursor-pointer"
-                          >
-                            <Ban className="h-3 w-3" />
-                            <span>Terminasi</span>
-                          </Button>
+                        <div className="flex flex-wrap items-center gap-1.5 shrink-0">
+                          <Button size="sm" variant="outline" onClick={() => handleOpenReminderModal(activeDoc)} className="h-7 text-[11px] border-[#CBD5E1] text-[#163A70] font-bold rounded-lg shadow-2xs px-2.5"><BellRing className="h-3 w-3 mr-1" />Set Pengingat</Button>
+                          <Button size="sm" onClick={() => handleOpenDecisionModal(activeDoc, 'renew')} className="h-7 text-[11px] bg-[#059669] text-white font-bold rounded-lg px-2.5"><RefreshCw className="h-3 w-3 mr-1" />Perpanjang</Button>
                         </div>
                       </div>
 
-                      {/* Reminder Milestone Bar */}
-                      <div className="p-3 rounded-xl bg-white border border-[#E2E8F0] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                        <div className="flex items-center gap-1.5 text-xs text-[#475569]">
-                          <Bell className="h-4 w-4 text-[#163A70]" />
-                          <span className="font-bold text-[#0B2147]">Status Pengingat Otomatis:</span>
+                      <div className="p-2.5 rounded-xl bg-white border border-[#E2E8F0] flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-1.5 text-[11px] text-[#475569]">
+                          <Bell className="h-3.5 w-3.5 text-[#163A70]" />
+                          <span className="font-bold text-[#0B2147]">Status Pengingat:</span>
                         </div>
-
-                        <div className="flex items-center gap-2 flex-wrap">
+                        <div className="flex items-center gap-1.5 flex-wrap">
                           {[
                             { key: 'h60', label: 'H-60', active: reminders.h60, passed: diffDays <= 60 },
                             { key: 'h30', label: 'H-30', active: reminders.h30, passed: diffDays <= 30 },
@@ -978,180 +887,81 @@ export function TrackingView() {
                             { key: 'h7', label: 'H-7', active: reminders.h7, passed: diffDays <= 7 },
                             { key: 'h1', label: 'H-1', active: reminders.h1, passed: diffDays <= 1 },
                           ].map((m) => (
-                            <div
-                              key={m.key}
-                              className={`px-2 py-0.5 rounded-lg text-[10.5px] font-bold flex items-center gap-1 border ${
-                                !m.active
-                                  ? 'bg-white text-[#94A3B8] border-[#E2E8F0] opacity-50'
-                                  : m.passed
-                                  ? 'bg-[#FEF2F2] text-[#DC2626] border-[#FCA5A5]'
-                                  : 'bg-[#ECFDF5] text-[#059669] border-[#A7F3D0]'
-                              }`}
-                            >
+                            <div key={m.key} className={`px-1.5 py-0.2 rounded text-[10px] font-bold flex items-center gap-0.5 border ${!m.active ? 'bg-white text-[#94A3B8] border-[#E2E8F0]' : m.passed ? 'bg-[#FEF2F2] text-[#DC2626] border-[#FCA5A5]' : 'bg-[#ECFDF5] text-[#059669] border-[#A7F3D0]'}`}>
                               <span>{m.label}</span>
-                              <span>{m.active ? (m.passed ? '🔔' : '✓') : '—'}</span>
                             </div>
                           ))}
                         </div>
                       </div>
-
-                      {/* Existing Decision Summary if already decided */}
-                      {activeDoc.decision && (
-                        <div className="p-3.5 rounded-xl bg-[#F0FDF4] border border-[#BBF7D0] text-xs space-y-1.5">
-                          <div className="flex items-center justify-between text-[#166534] font-bold">
-                            <span className="flex items-center gap-1.5">
-                              <CheckCircle2 className="h-4 w-4" />
-                              Rekomendasi / Justifikasi Kontrak Terdaftar ({activeDoc.decision.decidedBy || 'Pemohon'}):
-                            </span>
-                            <span className="text-[10.5px] text-[#15803D]">
-                              {new Date(activeDoc.decision.decidedAt).toLocaleDateString('id-ID', {
-                                day: 'numeric',
-                                month: 'short',
-                                year: 'numeric',
-                              })}
-                            </span>
-                          </div>
-                          <p className="text-[#166534] italic">&ldquo;{activeDoc.decision.justification}&rdquo;</p>
-                          {activeDoc.decision.considerations?.length > 0 && (
-                            <div className="pt-1 flex flex-wrap gap-1">
-                              {activeDoc.decision.considerations.map((c, i) => (
-                                <span key={i} className="px-2 py-0.5 rounded bg-white text-[#166534] text-[10px] font-semibold border border-[#BBF7D0]">
-                                  • {c}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      )}
                     </CardContent>
                   </Card>
                 )
               })()}
 
               {/* STRUCTURED DOCUMENT PACKAGE & VERSIONS (Area 5 & 6) */}
-              <Card className="border-[#E2E8F0] shadow-sm">
-                <CardContent className="p-6 space-y-4">
-                  <div className="flex items-center justify-between pb-3 border-b border-[#F1F5F9]">
+              <Card className="border-[#E2E8F0] shadow-2xs rounded-2xl overflow-hidden bg-white">
+                <CardContent className="p-3.5 sm:p-5 space-y-3">
+                  <div className="flex items-center justify-between pb-2.5 border-b border-[#F1F5F9]">
                     <div className="flex items-center gap-2">
-                      <Layers className="h-5 w-5 text-[#163A70]" />
+                      <Layers className="h-4 w-4 text-[#163A70]" />
                       <div>
-                        <h3 className="text-sm font-bold text-[#0B2147]">
-                          Paket Rangkaian Berkas &amp; Pelacakan Versi (Version Tracking)
-                        </h3>
-                        <p className="text-[11px] text-[#64748B]">
-                          Seluruh dokumen awal, riwayat revisi, berkas pendukung, dan dokumen final dalam satu tiket pengajuan.
-                        </p>
+                        <h3 className="text-xs sm:text-sm font-bold text-[#0B2147]">Paket Rangkaian Berkas &amp; Versi</h3>
+                        <p className="text-[10.5px] sm:text-[11px] text-[#64748B]">Seluruh riwayat versi dan dokumen final dalam satu tiket.</p>
                       </div>
                     </div>
                   </div>
 
-                  {/* Versions List */}
-                  <div className="space-y-3">
+                  <div className="space-y-2">
                     {activeDoc.versions && activeDoc.versions.length > 0 ? (
                       activeDoc.versions.map((ver, idx) => {
                         const isFinalVer = ver.version === 'FINAL' || ver.isFinal
                         const isInitialVer = ver.version === 'V0'
-
                         return (
-                          <div
-                            key={idx}
-                            className={`p-3.5 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
-                              isFinalVer
-                                ? 'bg-[#ECFDF5] border-[#A7F3D0]'
-                                : isInitialVer
-                                ? 'bg-[#F8FAFC] border-[#E2E8F0]'
-                                : 'bg-[#FFFBEB]/60 border-[#FDE68A]'
-                            }`}
-                          >
-                            <div className="space-y-1 min-w-0">
+                          <div key={idx} className={`p-2.5 sm:p-3 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-2 ${isFinalVer ? 'bg-[#ECFDF5] border-[#A7F3D0]' : isInitialVer ? 'bg-[#F8FAFC] border-[#E2E8F0]' : 'bg-[#FFFBEB]/60 border-[#FDE68A]'}`}>
+                            <div className="space-y-0.5 min-w-0">
                               <div className="flex items-center gap-2">
-                                <span
-                                  className={`px-2 py-0.5 rounded-md font-mono text-xs font-extrabold ${
-                                    isFinalVer
-                                      ? 'bg-[#059669] text-white'
-                                      : isInitialVer
-                                      ? 'bg-[#163A70] text-white'
-                                      : 'bg-[#D97706] text-white'
-                                  }`}
-                                >
-                                  {ver.version}
-                                </span>
-                                <span className="font-bold text-xs text-[#0F172A] truncate">
-                                  {ver.file.originalName}
-                                </span>
-                              </div>
-
-                              {ver.notes && (
-                                <div className="text-[11px] text-[#475569] bg-white/70 p-2 rounded-lg border border-black/5">
-                                  <b>Catatan Perubahan:</b> {ver.notes}
-                                </div>
-                              )}
-
-                              <div className="text-[10px] text-[#64748B]">
-                                Diunggah oleh: <b>{ver.uploadedBy}</b> •{' '}
-                                {new Date(ver.uploadedAt).toLocaleString('id-ID', {
-                                  day: 'numeric',
-                                  month: 'short',
-                                  year: 'numeric',
-                                  hour: '2-digit',
-                                  minute: '2-digit',
-                                })}
+                                <span className={`px-1.5 py-0.2 rounded font-mono text-[10.5px] font-extrabold ${isFinalVer ? 'bg-[#059669] text-white' : isInitialVer ? 'bg-[#163A70] text-white' : 'bg-[#D97706] text-white'}`}>{ver.version}</span>
+                                <span className="font-bold text-xs text-[#0F172A] truncate">{ver.file.originalName}</span>
                               </div>
                             </div>
-
-                            <div className="flex items-center gap-2 shrink-0">
-                              <a
-                                href={ver.file.url}
-                                download={ver.file.originalName}
-                                className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-xs font-bold bg-white text-[#163A70] border border-[#CBD5E1] hover:bg-[#F1F5F9] shadow-2xs cursor-pointer"
-                              >
-                                <Download className="h-3.5 w-3.5" />
-                                Unduh {ver.version}
-                              </a>
-                            </div>
+                            <a href={ver.file.url} download={ver.file.originalName} className="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg text-[11px] font-bold bg-white text-[#163A70] border border-[#CBD5E1] shadow-2xs"><Download className="h-3 w-3" />Unduh</a>
                           </div>
                         )
                       })
                     ) : (
-                      <div className="text-center py-4 text-xs text-[#64748B]">
-                        Belum ada riwayat versi pada dokumen ini.
-                      </div>
+                      <div className="text-center py-3 text-xs text-[#64748B]">Belum ada riwayat versi.</div>
                     )}
                   </div>
                 </CardContent>
               </Card>
 
               {/* DOCUMENT HISTORY & AUDIT TRAIL (Area 1) */}
-              <Card className="border-[#E2E8F0] shadow-sm">
-                <CardContent className="p-6 space-y-4">
-                  <div className="flex items-center gap-2 pb-3 border-b border-[#F1F5F9]">
-                    <History className="h-5 w-5 text-[#163A70]" />
+              <Card className="border-[#E2E8F0] shadow-2xs rounded-2xl overflow-hidden bg-white">
+                <CardContent className="p-3.5 sm:p-5 space-y-3">
+                  <div className="flex items-center gap-2 pb-2.5 border-b border-[#F1F5F9]">
+                    <History className="h-4 w-4 text-[#163A70]" />
                     <div>
-                      <h3 className="text-sm font-bold text-[#0B2147]">
-                        Riwayat Perkembangan Dokumen (Document History &amp; Traceability)
-                      </h3>
-                      <p className="text-[11px] text-[#64748B]">
-                        Log audit lengkap setiap aksi, pergantian status, catatan koreksi, dan pengesahan dokumen.
-                      </p>
+                      <h3 className="text-xs sm:text-sm font-bold text-[#0B2147]">Riwayat Perkembangan Dokumen</h3>
+                      <p className="text-[10.5px] sm:text-[11px] text-[#64748B]">Log audit lengkap setiap aksi dan pergantian status.</p>
                     </div>
                   </div>
 
                   <div className="overflow-x-auto rounded-xl border border-[#E2E8F0]">
                     <table className="w-full text-left text-xs border-collapse">
                       <thead>
-                        <tr className="border-b border-[#E2E8F0] bg-[#F8FAFC] text-[11px] font-bold text-[#64748B] uppercase tracking-wider">
-                          <th className="py-3 px-4">Waktu</th>
-                          <th className="py-3 px-4">Aksi / Perkembangan</th>
-                          <th className="py-3 px-4">Aktor / Pelaksana</th>
-                          <th className="py-3 px-4">Versi</th>
-                          <th className="py-3 px-4">Catatan Detail</th>
+                        <tr className="border-b border-[#E2E8F0] bg-[#F8FAFC] text-[10px] sm:text-[11px] font-bold text-[#64748B] uppercase">
+                          <th className="py-2.5 px-3">Waktu</th>
+                          <th className="py-2.5 px-3">Aksi</th>
+                          <th className="py-2.5 px-3">Pelaksana</th>
+                          <th className="py-2.5 px-3">Versi</th>
+                          <th className="py-2.5 px-3">Catatan</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-[#E2E8F0] bg-white">
                         {activeDoc.history && activeDoc.history.length > 0 ? (
                           activeDoc.history.map((hist, idx) => (
                             <tr key={idx} className="hover:bg-[#F8FAFC]">
-                              <td className="py-3 px-4 text-[#64748B] font-mono text-[11px] whitespace-nowrap">
+                              <td className="py-2.5 px-3 text-[#64748B] font-mono text-[10.5px] whitespace-nowrap">
                                 {new Date(hist.timestamp).toLocaleString('id-ID', {
                                   day: 'numeric',
                                   month: 'short',
@@ -1160,18 +970,18 @@ export function TrackingView() {
                                   minute: '2-digit',
                                 })}
                               </td>
-                              <td className="py-3 px-4 font-bold text-[#0F172A]">
+                              <td className="py-2.5 px-3 font-bold text-[#0F172A]">
                                 {hist.action}
                               </td>
-                              <td className="py-3 px-4 text-[#475569]">
+                              <td className="py-2.5 px-3 text-[#475569]">
                                 {hist.actor}
                               </td>
-                              <td className="py-3 px-4">
-                                <span className="font-mono text-[10px] font-bold px-1.5 py-0.5 rounded bg-[#F1F5F9] text-[#163A70]">
+                              <td className="py-2.5 px-3">
+                                <span className="font-mono text-[9.5px] font-bold px-1.5 py-0.5 rounded bg-[#F1F5F9] text-[#163A70]">
                                   {hist.versionTag || 'V0'}
                                 </span>
                               </td>
-                              <td className="py-3 px-4 text-[#64748B] max-w-xs">
+                              <td className="py-2.5 px-3 text-[#64748B] max-w-xs">
                                 {hist.notes || '-'}
                               </td>
                             </tr>

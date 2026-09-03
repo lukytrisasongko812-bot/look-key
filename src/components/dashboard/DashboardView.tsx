@@ -521,8 +521,8 @@ export function DashboardView() {
       </Card>
 
       {/* Real-time 7-Stage Workflow Progress Tracker */}
-      <Card className="border-[#E2E8F0] shadow-sm">
-        <CardContent className="p-6 space-y-6">
+      <Card className="border-[#E2E8F0] shadow-sm rounded-2xl sm:rounded-3xl overflow-hidden">
+        <CardContent className="p-3.5 sm:p-6 space-y-3.5 sm:space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b border-[#F1F5F9]">
             <div>
               <h2 className="text-base font-bold font-display text-[#0B2147]">

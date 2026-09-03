@@ -410,7 +410,7 @@ export function MyAccountView() {
         {/* Tab 1: Profile Information */}
         <TabsContent value="profile" className="focus-visible:outline-none">
           <Card className="border-[#E2E8F0] shadow-sm rounded-3xl bg-white overflow-hidden">
-            <CardContent className="p-6 sm:p-7">
+            <CardContent className="p-3.5 sm:p-6">
               <form onSubmit={handleProfileSave} className="space-y-5">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
                   <div className="space-y-1.5">
@@ -506,7 +506,7 @@ export function MyAccountView() {
         {/* Tab 2: Security & 2FA */}
         <TabsContent value="security" className="focus-visible:outline-none">
           <Card className="border-[#E2E8F0] shadow-sm rounded-3xl bg-white overflow-hidden">
-            <CardContent className="p-6 sm:p-7 space-y-4">
+            <CardContent className="p-3.5 sm:p-6 space-y-4">
               <div className="flex items-center justify-between p-4 sm:p-5 rounded-2xl bg-[#F8FAFC] border border-[#E2E8F0]">
                 <div className="space-y-1 pr-4">
                   <div className="text-xs sm:text-sm font-bold text-[#0B2147] flex items-center gap-2">
