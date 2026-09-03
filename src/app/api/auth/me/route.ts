@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getDriveUserById, saveDriveUser } from '@/lib/drive-store'
-import { getUserFromRequest } from '@/lib/auth'
+import { getUserFromRequest, signToken } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
 
@@ -51,18 +51,27 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Pengguna tidak ditemukan' }, { status: 404 })
     }
 
-    if (employeeName) user.employeeName = employeeName
-    if (position) user.position = position
-    if (division) user.division = division
-    if (phone !== undefined) user.phone = phone
+    if (employeeName && typeof employeeName === 'string') user.employeeName = employeeName.trim()
+    if (position && typeof position === 'string') user.position = position.trim()
+    if (division && typeof division === 'string') user.division = division.trim()
+    if (phone !== undefined && typeof phone === 'string') user.phone = phone.trim()
     if (twoFactorEnabled !== undefined) user.twoFactorEnabled = Boolean(twoFactorEnabled)
     if (avatarUrl !== undefined) user.avatarUrl = avatarUrl
     if (coverUrl !== undefined) user.coverUrl = coverUrl
 
     await saveDriveUser(user)
 
+    const token = signToken({
+      userId: user._id,
+      email: user.email,
+      role: user.role,
+      employeeName: user.employeeName,
+      division: user.division,
+    })
+
     return NextResponse.json({
       success: true,
+      token,
       user: {
         id: user._id,
         employeeName: user.employeeName,

@@ -616,6 +616,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       })
       if (res.ok) {
         const data = await res.json()
+        if (data.token) {
+          setToken(data.token)
+          localStorage.setItem('ride_token', data.token)
+        }
         if (data.user) {
           setUser(data.user)
           localStorage.setItem('ride_user', JSON.stringify(data.user))

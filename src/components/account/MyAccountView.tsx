@@ -31,6 +31,47 @@ import {
 } from '@/components/ui/dialog'
 import { toast } from 'sonner'
 
+function compressImage(file: File, maxWidth: number, maxHeight: number, quality = 0.85): Promise<string> {
+  return new Promise((resolve) => {
+    const reader = new FileReader()
+    reader.readAsDataURL(file)
+    reader.onload = (e) => {
+      const img = new Image()
+      img.src = e.target?.result as string
+      img.onload = () => {
+        const canvas = document.createElement('canvas')
+        let width = img.width
+        let height = img.height
+
+        if (width > height) {
+          if (width > maxWidth) {
+            height = Math.round((height * maxWidth) / width)
+            width = maxWidth
+          }
+        } else {
+          if (height > maxHeight) {
+            width = Math.round((width * maxHeight) / height)
+            height = maxHeight
+          }
+        }
+
+        canvas.width = width
+        canvas.height = height
+        const ctx = canvas.getContext('2d')
+        if (!ctx) {
+          resolve(e.target?.result as string)
+          return
+        }
+        ctx.drawImage(img, 0, 0, width, height)
+        const dataUrl = canvas.toDataURL('image/jpeg', quality)
+        resolve(dataUrl)
+      }
+      img.onerror = () => resolve(e.target?.result as string)
+    }
+    reader.onerror = () => resolve('')
+  })
+}
+
 export function MyAccountView() {
   const { user, updateProfile, changePassword, setCurrentView } = useApp()
 
@@ -40,10 +81,15 @@ export function MyAccountView() {
   const [email] = useState(user?.email || 'user@resourcesid.co.id')
   const [phone, setPhone] = useState(user?.phone || '+62 812-9876-5432')
 
+  // Optimistic Image Previews
+  const [previewAvatar, setPreviewAvatar] = useState<string | null>(null)
+  const [previewCover, setPreviewCover] = useState<string | null>(null)
+
   // Security Toggles
   const [twoFactor, setTwoFactor] = useState(user?.twoFactorEnabled ?? true)
   const [loginAlerts, setLoginAlerts] = useState(true)
   const [isSaved, setIsSaved] = useState(false)
+  const [savingProfile, setSavingProfile] = useState(false)
 
   // Password Change Modal
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false)
@@ -52,54 +98,77 @@ export function MyAccountView() {
   const [confirmPw, setConfirmPw] = useState('')
   const [pwLoading, setPwLoading] = useState(false)
 
+  // Synchronize form inputs whenever user context updates
+  React.useEffect(() => {
+    if (user) {
+      if (user.employeeName) setName(user.employeeName)
+      if (user.division) setDepartment(user.division)
+      if (user.position) setPosition(user.position)
+      if (user.phone) setPhone(user.phone)
+      if (user.twoFactorEnabled !== undefined) setTwoFactor(user.twoFactorEnabled)
+      if (user.avatarUrl) setPreviewAvatar(user.avatarUrl)
+      if (user.coverUrl) setPreviewCover(user.coverUrl)
+    }
+  }, [user])
+
   const handleProfileSave = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!name.trim()) {
+      toast.error('Nama lengkap tidak boleh kosong.')
+      return
+    }
+
+    setSavingProfile(true)
     const ok = await updateProfile({
-      employeeName: name,
-      division: department,
-      position,
-      phone,
+      employeeName: name.trim(),
+      division: department.trim(),
+      position: position.trim(),
+      phone: phone.trim(),
       twoFactorEnabled: twoFactor,
     })
+    setSavingProfile(false)
+
     if (ok) {
       setIsSaved(true)
-      toast.success('Profil berhasil diperbarui!')
+      toast.success('Profil & nama berhasil diperbarui!')
       setTimeout(() => setIsSaved(false), 2500)
     } else {
       toast.error('Gagal menyimpan profil.')
     }
   }
 
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-    const reader = new FileReader()
-    reader.onload = async (event) => {
-      const dataUrl = event.target?.result as string
-      const ok = await updateProfile({ avatarUrl: dataUrl })
-      if (ok) {
-        toast.success('Foto profil berhasil diperbarui & disinkronkan ke Google Drive!')
-      } else {
-        toast.error('Gagal memperbarui foto profil.')
-      }
+
+    // Fast client-side resize to 512x512
+    const compressedDataUrl = await compressImage(file, 512, 512, 0.85)
+    if (!compressedDataUrl) return
+
+    setPreviewAvatar(compressedDataUrl) // Instant smooth local preview
+    const ok = await updateProfile({ avatarUrl: compressedDataUrl })
+    if (ok) {
+      toast.success('Foto profil berhasil diperbarui & disinkronkan ke Google Drive!')
+    } else {
+      toast.error('Gagal memperbarui foto profil.')
     }
-    reader.readAsDataURL(file)
   }
 
-  const handleCoverUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-    const reader = new FileReader()
-    reader.onload = async (event) => {
-      const dataUrl = event.target?.result as string
-      const ok = await updateProfile({ coverUrl: dataUrl })
-      if (ok) {
-        toast.success('Foto sampul profil berhasil diperbarui & disinkronkan ke Google Drive!')
-      } else {
-        toast.error('Gagal memperbarui foto sampul.')
-      }
+
+    // Fast client-side resize to 1200x400
+    const compressedDataUrl = await compressImage(file, 1200, 400, 0.85)
+    if (!compressedDataUrl) return
+
+    setPreviewCover(compressedDataUrl) // Instant smooth local preview
+    const ok = await updateProfile({ coverUrl: compressedDataUrl })
+    if (ok) {
+      toast.success('Foto sampul profil berhasil diperbarui & disinkronkan ke Google Drive!')
+    } else {
+      toast.error('Gagal memperbarui foto sampul.')
     }
-    reader.readAsDataURL(file)
   }
 
   const handleChangePasswordSubmit = async (e: React.FormEvent) => {
@@ -158,11 +227,11 @@ export function MyAccountView() {
       {/* Profile Overview Card */}
       <Card className="border-[#E2E8F0] shadow-sm overflow-hidden">
         <div className="h-32 sm:h-36 bg-gradient-to-r from-[#0B2147] via-[#163A70] to-[#1E4D94] relative overflow-hidden group">
-          {user?.coverUrl && (
+          {(previewCover || user?.coverUrl) && (
             <img
-              src={user.coverUrl}
+              src={previewCover || user?.coverUrl}
               alt="Sampul Profil"
-              className="absolute inset-0 h-full w-full object-cover"
+              className="absolute inset-0 h-full w-full object-cover transition-opacity duration-300"
             />
           )}
           <div className="absolute inset-0 bg-black/25 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -184,12 +253,12 @@ export function MyAccountView() {
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 -mt-12 mb-4">
             <div className="flex items-end gap-4">
               <div className="relative group">
-                {user?.avatarUrl ? (
+                {(previewAvatar || user?.avatarUrl) ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    src={user.avatarUrl}
-                    alt={user.employeeName}
-                    className="h-24 w-24 rounded-2xl object-cover border-4 border-white shadow-md bg-white"
+                    src={previewAvatar || user?.avatarUrl}
+                    alt={name || user?.employeeName}
+                    className="h-24 w-24 rounded-2xl object-cover border-4 border-white shadow-md bg-white transition-opacity duration-300"
                   />
                 ) : (
                   <div className="h-24 w-24 rounded-2xl bg-gradient-to-tr from-[#0B2147] to-[#163A70] text-2xl font-extrabold text-white flex items-center justify-center border-4 border-white shadow-md">
@@ -210,14 +279,14 @@ export function MyAccountView() {
               <div>
                 <div className="flex items-center gap-2">
                   <h2 className="text-lg font-bold font-display text-[#0B2147]">
-                    {user?.employeeName || 'Pengguna'}
+                    {name || user?.employeeName || 'Pengguna'}
                   </h2>
                   <Badge className="bg-[#163A70] text-white text-[10px] py-0.5">
                     {user?.role || 'Reviewer'}
                   </Badge>
                 </div>
                 <p className="text-xs text-[#64748B] mt-0.5">
-                  {user?.position} • {user?.division}
+                  {position || user?.position} • {department || user?.division}
                 </p>
               </div>
             </div>
@@ -307,9 +376,12 @@ export function MyAccountView() {
                 <div className="pt-4 flex justify-end">
                   <Button
                     type="submit"
+                    disabled={savingProfile}
                     className="h-10 px-6 bg-[#163A70] hover:bg-[#0B2147] text-white font-bold text-xs rounded-xl cursor-pointer"
                   >
-                    {isSaved ? (
+                    {savingProfile ? (
+                      'Menyimpan...'
+                    ) : isSaved ? (
                       <>
                         <Check className="h-4 w-4 mr-1.5" /> Tersimpan!
                       </>
