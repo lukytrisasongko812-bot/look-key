@@ -401,40 +401,40 @@ export function TrackingView() {
     <div className="space-y-6 max-w-7xl mx-auto pb-12 animate-in fade-in duration-300">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold font-display text-[#0B2147]">
+        <h1 className="text-xl sm:text-2xl font-bold font-display text-[#0B2147] tracking-tight">
           Lacak &amp; Ajukan Dokumen
         </h1>
-        <p className="text-xs text-[#64748B] mt-1">
-          Pemesanan berkas baru, inspeksi riwayat revisi bertahap (V0, Rev.01, Rev.02), pemantauan jatuh tempo kontrak, dan pengesahan Dokumen Final.
+        <p className="text-xs text-[#64748B] mt-0.5">
+          Pemesanan berkas baru, inspeksi riwayat revisi bertahap (V0, Rev.01, Rev.02), dan alur 7 tahap legal.
         </p>
       </div>
 
-      {/* Tabs */}
-      <div className="flex border-b border-[#E2E8F0] gap-4">
+      {/* Segmented Sub-Tabs Navigasi Rapi */}
+      <div className="flex bg-[#F1F5F9] p-1 rounded-2xl gap-1 max-w-sm sm:max-w-md">
         <button
           onClick={() => setTrackSubTab('new')}
-          className={`pb-3 text-xs font-bold transition-all cursor-pointer border-b-2 flex items-center gap-2 ${
+          className={`flex-1 py-2 px-3 text-xs font-bold transition-all rounded-xl cursor-pointer flex items-center justify-center gap-1.5 ${
             trackSubTab === 'new'
-              ? 'border-[#163A70] text-[#163A70]'
-              : 'border-transparent text-[#64748B] hover:text-[#0F172A]'
+              ? 'bg-white text-[#163A70] shadow-xs'
+              : 'text-[#64748B] hover:text-[#0F172A]'
           }`}
         >
           <Plus className="h-3.5 w-3.5" />
-          <span>Formulir Pengajuan Baru</span>
+          <span>Pengajuan Baru</span>
         </button>
 
         <button
           onClick={() => setTrackSubTab('progress')}
-          className={`pb-3 text-xs font-bold transition-all cursor-pointer border-b-2 flex items-center gap-2 ${
+          className={`flex-1 py-2 px-3 text-xs font-bold transition-all rounded-xl cursor-pointer flex items-center justify-center gap-1.5 ${
             trackSubTab === 'progress'
-              ? 'border-[#163A70] text-[#163A70]'
-              : 'border-transparent text-[#64748B] hover:text-[#0F172A]'
+              ? 'bg-white text-[#163A70] shadow-xs'
+              : 'text-[#64748B] hover:text-[#0F172A]'
           }`}
         >
           <BarChart3 className="h-3.5 w-3.5" />
-          <span>Lacak &amp; Riwayat Revisi</span>
-          <span className="rounded-full bg-[#EBF2FF] px-2 py-0.5 text-[10px] font-bold text-[#163A70]">
-            {documents.length} Dokumen
+          <span>Lacak &amp; Riwayat</span>
+          <span className="rounded-full bg-[#EBF2FF] px-1.5 py-0.2 text-[9.5px] font-bold text-[#163A70]">
+            {documents.length}
           </span>
         </button>
       </div>
@@ -739,7 +739,7 @@ export function TrackingView() {
                     </div>
 
                     {/* Action Buttons Toolbar */}
-                    <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-[#F1F5F9]">
+                    <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 pt-2 border-t border-[#F1F5F9]">
                       {/* Google Drive Folder Button */}
                       <a
                         href={
@@ -748,7 +748,7 @@ export function TrackingView() {
                         }
                         target="_blank"
                         rel="noreferrer"
-                        className="inline-flex items-center gap-1.5 h-8 px-3 text-xs bg-[#0F9D58] hover:bg-[#0B8043] text-white font-bold rounded-xl cursor-pointer shadow-xs transition-colors"
+                        className="inline-flex items-center gap-1.5 h-7 sm:h-8 px-2.5 sm:px-3 text-[11px] sm:text-xs bg-[#0F9D58] hover:bg-[#0B8043] text-white font-bold rounded-xl cursor-pointer shadow-2xs transition-colors"
                         title="Buka Folder Dokumen di Google Drive"
                       >
                         <FolderOpen className="h-3.5 w-3.5" />
@@ -759,7 +759,7 @@ export function TrackingView() {
                       <a
                         href={`/api/documents/${activeDoc._id}/sync-drive`}
                         download={`${activeDoc.docNumber}_log_riwayat.txt`}
-                        className="inline-flex items-center gap-1.5 h-8 px-3 text-xs bg-white border border-[#CBD5E1] hover:bg-[#F1F5F9] text-[#163A70] font-bold rounded-xl cursor-pointer shadow-2xs transition-colors"
+                        className="inline-flex items-center gap-1.5 h-7 sm:h-8 px-2.5 sm:px-3 text-[11px] sm:text-xs bg-white border border-[#CBD5E1] hover:bg-[#F1F5F9] text-[#163A70] font-bold rounded-xl cursor-pointer shadow-2xs transition-colors"
                         title="Unduh Berkas Log Teks Riwayat (.txt)"
                       >
                         <FileText className="h-3.5 w-3.5" />
@@ -772,7 +772,7 @@ export function TrackingView() {
                         variant="outline"
                         disabled={syncingDrive}
                         onClick={() => handleSyncGoogleDrive(activeDoc._id)}
-                        className="h-8 text-xs border-[#CBD5E1] text-[#334155] hover:bg-[#F8FAFC] font-bold rounded-xl gap-1.5 cursor-pointer shadow-2xs"
+                        className="h-7 sm:h-8 text-[11px] sm:text-xs border-[#CBD5E1] text-[#334155] hover:bg-[#F8FAFC] font-bold rounded-xl gap-1 cursor-pointer shadow-2xs px-2.5 sm:px-3"
                         title="Sinkronkan folder & log teks ke Google Drive"
                       >
                         <RefreshCw className={`h-3.5 w-3.5 ${syncingDrive ? 'animate-spin' : ''}`} />
@@ -783,7 +783,7 @@ export function TrackingView() {
                       <Button
                         size="sm"
                         onClick={() => setIsRevModalOpen(true)}
-                        className="h-8 text-xs bg-[#D97706] hover:bg-[#B45309] text-white font-bold rounded-xl gap-1.5 cursor-pointer shadow-xs"
+                        className="h-7 sm:h-8 text-[11px] sm:text-xs bg-[#D97706] hover:bg-[#B45309] text-white font-bold rounded-xl gap-1 cursor-pointer shadow-2xs px-2.5 sm:px-3"
                       >
                         <FileUp className="h-3.5 w-3.5" />
                         <span>Unggah Revisi</span>
@@ -794,10 +794,10 @@ export function TrackingView() {
                         <Button
                           size="sm"
                           onClick={() => setIsFinalModalOpen(true)}
-                          className="h-8 text-xs bg-[#059669] hover:bg-[#047857] text-white font-bold rounded-xl gap-1.5 cursor-pointer shadow-xs"
+                          className="h-7 sm:h-8 text-[11px] sm:text-xs bg-[#059669] hover:bg-[#047857] text-white font-bold rounded-xl gap-1 cursor-pointer shadow-2xs px-2.5 sm:px-3"
                         >
                           <ShieldCheck className="h-3.5 w-3.5" />
-                          <span>Unggah Dokumen Final</span>
+                          <span>Unggah Final</span>
                         </Button>
                       )}
                     </div>
@@ -805,7 +805,7 @@ export function TrackingView() {
 
                   {/* 7 Stage Visual Pipeline */}
                   <div className="pt-2">
-                    <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+                    <div className="flex sm:grid sm:grid-cols-4 lg:grid-cols-7 gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar pb-1">
                       {STAGES.map((st, idx) => {
                         const Icon = st.icon
                         const isPast = activeDoc.stage > idx
@@ -815,23 +815,23 @@ export function TrackingView() {
                         return (
                           <div
                             key={st.key}
-                            className={`p-2.5 rounded-xl border text-center transition-all flex flex-col justify-between ${
+                            className={`min-w-[100px] sm:min-w-0 p-2 sm:p-2.5 rounded-xl border text-center transition-all flex flex-col justify-between shrink-0 sm:shrink ${
                               isRevision
                                 ? 'bg-[#FFFBEB] border-[#FDE68A] text-[#D97706]'
                                 : isCurrent
-                                ? 'bg-[#163A70] border-[#163A70] text-white shadow-xs'
+                                ? 'bg-[#163A70] border-[#163A70] text-white shadow-xs ring-2 ring-[#BFDBFE]'
                                 : isPast
                                 ? 'bg-[#ECFDF5] border-[#A7F3D0] text-[#059669]'
                                 : 'bg-[#F8FAFC] border-[#E2E8F0] text-[#94A3B8]'
                             }`}
                           >
-                            <div className="flex h-7 w-7 items-center justify-center rounded-lg mx-auto mb-1 bg-white/20">
-                              {isPast ? <Check className="h-3.5 w-3.5 stroke-[3]" /> : <Icon className="h-3.5 w-3.5" />}
+                            <div className="flex h-6 w-6 sm:h-7 sm:w-7 items-center justify-center rounded-lg mx-auto mb-1 bg-white/20">
+                              {isPast ? <Check className="h-3 w-3 sm:h-3.5 sm:w-3.5 stroke-[3]" /> : <Icon className="h-3 w-3 sm:h-3.5 sm:w-3.5" />}
                             </div>
-                            <div className="text-[9.5px] font-bold uppercase tracking-wider">
+                            <div className="text-[9px] sm:text-[9.5px] font-bold uppercase tracking-wider">
                               T{idx + 1}
                             </div>
-                            <div className="text-[10px] font-semibold mt-0.5 leading-tight line-clamp-2">
+                            <div className="text-[9.5px] sm:text-[10px] font-semibold mt-0.5 leading-tight line-clamp-2">
                               {st.label}
                             </div>
                           </div>

@@ -106,84 +106,84 @@ export function MyDocumentsView() {
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-12 animate-in fade-in duration-300">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold font-display text-[#0B2147]">
-            Dokumen Saya (Daftar Bundel Pengajuan)
+          <h1 className="text-xl sm:text-2xl font-bold font-display text-[#0B2147] tracking-tight">
+            Dokumen Saya
           </h1>
-          <p className="text-xs text-[#64748B] mt-1">
-            Daftar seluruh berkas per nomor pengajuan RIDE dengan inspeksi versi, draf perbaikan, dan berkas final.
+          <p className="text-xs text-[#64748B] mt-0.5">
+            Arsip berkas, inspeksi versi draf, dan pelacakan dokumen RIDE Anda.
           </p>
         </div>
 
         <Button
           onClick={() => setCurrentView('tracking', 'new')}
-          className="self-start sm:self-auto h-11 bg-[#163A70] hover:bg-[#0B2147] text-white font-bold text-xs rounded-xl gap-2 shadow-md cursor-pointer"
+          className="self-start sm:self-auto h-10 sm:h-11 bg-[#163A70] hover:bg-[#0B2147] text-white font-bold text-xs rounded-xl gap-2 shadow-sm cursor-pointer px-4"
         >
           <Plus className="h-4 w-4" />
           <span>Ajukan Dokumen Baru</span>
         </Button>
       </div>
 
-      {/* 3 Overview Metric Badges */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card className="border-[#E2E8F0] shadow-xs">
-          <CardContent className="p-4 flex items-center justify-between">
+      {/* 3 Overview Metric Badges (3-Kolom Rapi di Mobile & Desktop) */}
+      <div className="grid grid-cols-3 gap-2 sm:gap-4">
+        <Card className="border-[#E2E8F0] shadow-xs rounded-2xl overflow-hidden">
+          <CardContent className="p-2.5 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-2">
             <div>
-              <div className="text-xs font-semibold text-[#64748B]">Sedang Diproses</div>
-              <div className="text-2xl font-extrabold text-[#2563EB]">{inProgressCount}</div>
+              <div className="text-[10px] sm:text-xs font-semibold text-[#64748B] truncate">Diproses</div>
+              <div className="text-lg sm:text-2xl font-black text-[#2563EB] mt-0.5">{inProgressCount}</div>
             </div>
-            <div className="h-10 w-10 rounded-xl bg-[#EFF6FF] text-[#2563EB] flex items-center justify-center">
-              <FileCheck2 className="h-5 w-5" />
+            <div className="h-7 w-7 sm:h-10 sm:w-10 rounded-lg sm:rounded-xl bg-[#EFF6FF] text-[#2563EB] flex items-center justify-center shrink-0">
+              <FileCheck2 className="h-3.5 w-3.5 sm:h-5 sm:w-5" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-[#E2E8F0] shadow-xs">
-          <CardContent className="p-4 flex items-center justify-between">
+        <Card className="border-[#E2E8F0] shadow-xs rounded-2xl overflow-hidden">
+          <CardContent className="p-2.5 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-2">
             <div>
-              <div className="text-xs font-semibold text-[#64748B]">Perlu Revisi</div>
-              <div className="text-2xl font-extrabold text-[#D97706]">{revisionCount}</div>
+              <div className="text-[10px] sm:text-xs font-semibold text-[#64748B] truncate">Perlu Revisi</div>
+              <div className="text-lg sm:text-2xl font-black text-[#D97706] mt-0.5">{revisionCount}</div>
             </div>
-            <div className="h-10 w-10 rounded-xl bg-[#FFFBEB] text-[#D97706] flex items-center justify-center">
-              <AlertCircle className="h-5 w-5" />
+            <div className="h-7 w-7 sm:h-10 sm:w-10 rounded-lg sm:rounded-xl bg-[#FFFBEB] text-[#D97706] flex items-center justify-center shrink-0">
+              <AlertCircle className="h-3.5 w-3.5 sm:h-5 sm:w-5" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-[#E2E8F0] shadow-xs">
-          <CardContent className="p-4 flex items-center justify-between">
+        <Card className="border-[#E2E8F0] shadow-xs rounded-2xl overflow-hidden">
+          <CardContent className="p-2.5 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-2">
             <div>
-              <div className="text-xs font-semibold text-[#64748B]">Dokumen Final Sah</div>
-              <div className="text-2xl font-extrabold text-[#059669]">{finalCount}</div>
+              <div className="text-[10px] sm:text-xs font-semibold text-[#64748B] truncate">Final Sah</div>
+              <div className="text-lg sm:text-2xl font-black text-[#059669] mt-0.5">{finalCount}</div>
             </div>
-            <div className="h-10 w-10 rounded-xl bg-[#ECFDF5] text-[#059669] flex items-center justify-center">
-              <CheckCircle2 className="h-5 w-5" />
+            <div className="h-7 w-7 sm:h-10 sm:w-10 rounded-lg sm:rounded-xl bg-[#ECFDF5] text-[#059669] flex items-center justify-center shrink-0">
+              <CheckCircle2 className="h-3.5 w-3.5 sm:h-5 sm:w-5" />
             </div>
           </CardContent>
         </Card>
       </div>
 
       {/* Filter & Search Bar */}
-      <Card className="border-[#E2E8F0] shadow-sm">
-        <CardContent className="p-4 flex flex-col sm:flex-row gap-3 items-center justify-between">
+      <Card className="border-[#E2E8F0] shadow-sm rounded-2xl overflow-hidden">
+        <CardContent className="p-3 sm:p-4 flex flex-col sm:flex-row gap-2.5 sm:gap-3 items-stretch sm:items-center justify-between">
           <div className="relative w-full sm:w-80">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#94A3B8]" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#94A3B8]" />
             <Input
               type="text"
               placeholder="Cari nomor tiket, nama dokumen, PIC..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 h-10 text-xs rounded-xl"
+              className="pl-9 h-9 sm:h-10 text-xs rounded-xl"
             />
           </div>
 
-          <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto">
+          <div className="flex items-center gap-1.5 w-full sm:w-auto overflow-x-auto no-scrollbar pb-0.5">
             {['', 'Sedang Diproses', 'Perlu Revisi', 'Menunggu Persetujuan', 'Dokumen Final'].map((st) => (
               <button
                 key={st}
                 onClick={() => setStatusFilter(st)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
                   statusFilter === st
                     ? 'bg-[#163A70] text-white shadow-2xs'
                     : 'bg-[#F1F5F9] text-[#475569] hover:bg-[#E2E8F0]'

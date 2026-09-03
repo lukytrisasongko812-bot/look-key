@@ -407,19 +407,19 @@ export function DashboardView() {
       </div>
 
       {/* Contract Expiry & Reminders Section */}
-      <Card className="border-[#E2E8F0] shadow-sm">
-        <CardContent className="p-6">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4 pb-3 border-b border-[#F1F5F9]">
+      <Card className="border-[#E2E8F0] shadow-sm rounded-3xl overflow-hidden bg-white">
+        <CardContent className="p-4 sm:p-6 space-y-3.5">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 pb-3 border-b border-[#F1F5F9]">
             <div className="flex items-center gap-2.5">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#FFFBEB] text-[#D97706]">
-                <Clock className="h-5 w-5" />
+              <div className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-xl bg-[#FFFBEB] text-[#D97706] shrink-0">
+                <Clock className="h-4 w-4 sm:h-5 sm:w-5" />
               </div>
               <div>
-                <h2 className="text-base font-bold font-display text-[#0B2147]">
-                  Pengingat Jatuh Tempo &amp; Masa Berlaku Kontrak
+                <h2 className="text-sm sm:text-base font-bold font-display text-[#0B2147]">
+                  Pengingat Jatuh Tempo Kontrak
                 </h2>
-                <p className="text-xs text-[#64748B]">
-                  Dokumen kontrak yang mendekati tanggal berakhir (&le; 60 hari dari hari ini).
+                <p className="text-[11px] sm:text-xs text-[#64748B]">
+                  Dokumen kontrak yang mendekati tanggal berakhir (&le; 60 hari).
                 </p>
               </div>
             </div>
@@ -428,10 +428,10 @@ export function DashboardView() {
               variant="outline"
               size="sm"
               onClick={() => setCurrentView('tracking', 'progress')}
-              className="self-start sm:self-auto text-xs h-9 font-semibold text-[#163A70] rounded-xl cursor-pointer"
+              className="self-start sm:self-auto text-xs h-8 sm:h-9 font-semibold text-[#163A70] rounded-xl cursor-pointer gap-1"
             >
-              <span>Lacak Dokumen &amp; Jatuh Tempo</span>
-              <ArrowRight className="h-3.5 w-3.5 ml-1" />
+              <span>Lacak Jatuh Tempo</span>
+              <ArrowRight className="h-3.5 w-3.5" />
             </Button>
           </div>
 
@@ -450,7 +450,7 @@ export function DashboardView() {
                 return (
                   <div
                     key={doc._id}
-                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-xl border border-[#E2E8F0] p-4 hover:border-[#CBD5E1] transition-all bg-[#F8FAFC]/50"
+                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border border-[#E2E8F0] p-3.5 sm:p-4 hover:border-[#CBD5E1] transition-all bg-[#F8FAFC]/50"
                   >
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
@@ -458,7 +458,7 @@ export function DashboardView() {
                           {doc.docNumber}
                         </span>
                         <span
-                          className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
+                          className={`rounded-full px-2.5 py-0.5 text-[9.5px] font-bold ${
                             isCritical
                               ? 'bg-[#FEF2F2] text-[#DC2626] border border-[#FCA5A5]'
                               : isUrgent
@@ -475,7 +475,7 @@ export function DashboardView() {
                       </div>
 
                       <div className="font-bold text-xs text-[#0F172A]">{doc.name}</div>
-                      <div className="text-[11px] text-[#64748B] flex items-center gap-2">
+                      <div className="text-[11px] text-[#64748B] flex flex-wrap items-center gap-1.5">
                         <span>{doc.division}</span>
                         <span>•</span>
                         <span>Berakhir: {end.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
@@ -483,29 +483,32 @@ export function DashboardView() {
                     </div>
 
                     {canManageExpiry && (
-                      <div className="flex items-center gap-2 shrink-0">
+                      <div className="grid grid-cols-3 sm:flex sm:items-center gap-1.5 w-full sm:w-auto pt-1 sm:pt-0">
                         <Button
                           size="sm"
                           onClick={() => handleOpenDecision(doc, 'renew')}
-                          className="h-8 text-xs bg-[#059669] hover:bg-[#047857] text-white font-bold rounded-lg cursor-pointer"
+                          className="h-7 sm:h-8 text-[10.5px] sm:text-xs bg-[#059669] hover:bg-[#047857] text-white font-bold rounded-xl cursor-pointer px-2 justify-center"
                         >
-                          <RefreshCw className="h-3 w-3 mr-1" /> Perpanjang
+                          <RefreshCw className="h-3 w-3 mr-1 shrink-0" />
+                          <span>Perpanjang</span>
                         </Button>
                         <Button
                           size="sm"
                           variant="outline"
                           onClick={() => handleOpenDecision(doc, 'amendment')}
-                          className="h-8 text-xs text-[#2563EB] hover:bg-[#EFF6FF] border-[#BFDBFE] font-bold rounded-lg cursor-pointer"
+                          className="h-7 sm:h-8 text-[10.5px] sm:text-xs text-[#2563EB] hover:bg-[#EFF6FF] border-[#BFDBFE] font-bold rounded-xl cursor-pointer px-2 justify-center"
                         >
-                          <FileEdit className="h-3 w-3 mr-1" /> Adendum
+                          <FileEdit className="h-3 w-3 mr-1 shrink-0" />
+                          <span>Adendum</span>
                         </Button>
                         <Button
                           size="sm"
                           variant="outline"
                           onClick={() => handleOpenDecision(doc, 'terminate')}
-                          className="h-8 text-xs text-[#DC2626] hover:bg-[#FEF2F2] border-[#FCA5A5] font-bold rounded-lg cursor-pointer"
+                          className="h-7 sm:h-8 text-[10.5px] sm:text-xs text-[#DC2626] hover:bg-[#FEF2F2] border-[#FCA5A5] font-bold rounded-xl cursor-pointer px-2 justify-center"
                         >
-                          <Ban className="h-3 w-3 mr-1" /> Terminasi
+                          <Ban className="h-3 w-3 mr-1 shrink-0" />
+                          <span>Terminasi</span>
                         </Button>
                       </div>
                     )}
