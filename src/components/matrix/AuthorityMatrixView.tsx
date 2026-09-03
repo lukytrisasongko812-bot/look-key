@@ -3,6 +3,7 @@
 import React from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import {
   ShieldCheck,
   Check,
@@ -15,11 +16,36 @@ import {
   Briefcase,
   Layers,
   ArrowRight,
+  ShieldAlert,
 } from 'lucide-react'
 import { useApp } from '@/context/AppContext'
 
 export function AuthorityMatrixView() {
   const { user, setCurrentView } = useApp()
+
+  const isRequester = user?.role === 'Requester' || user?.role === 'User'
+
+  if (isRequester) {
+    return (
+      <div className="max-w-md mx-auto py-16 text-center space-y-4">
+        <div className="h-16 w-16 mx-auto rounded-2xl bg-[#FEF2F2] text-[#DC2626] flex items-center justify-center">
+          <ShieldAlert className="h-8 w-8" />
+        </div>
+        <h2 className="text-lg font-bold font-display text-[#0B2147]">Akses Terbatas</h2>
+        <p className="text-xs text-[#64748B] leading-relaxed">
+          Halaman Matriks Kewenangan (RBAC Matrix) hanya diperuntukkan bagi peran Reviewer, Approver, Document Controller, dan Administrator.
+        </p>
+        <div className="pt-2">
+          <Button
+            onClick={() => setCurrentView('dashboard')}
+            className="bg-[#163A70] hover:bg-[#0B2147] text-white text-xs font-bold rounded-xl px-5 h-10 shadow-xs cursor-pointer"
+          >
+            Kembali ke Beranda
+          </Button>
+        </div>
+      </div>
+    )
+  }
 
   const roles = [
     {

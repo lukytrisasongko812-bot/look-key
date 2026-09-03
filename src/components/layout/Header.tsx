@@ -189,22 +189,24 @@ export function Header() {
                     <span className="truncate">Profil &amp; Keamanan Akun</span>
                   </button>
 
-                  <button
-                    onMouseDown={(e) => {
-                      e.stopPropagation()
-                      setIsDropdownOpen(false)
-                      setCurrentView('matrix')
-                    }}
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setIsDropdownOpen(false)
-                      setCurrentView('matrix')
-                    }}
-                    className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold text-[#0F172A] hover:bg-[#EBF2FF] hover:text-[#163A70] transition-colors cursor-pointer"
-                  >
-                    <ShieldCheck className="h-4 w-4 shrink-0 text-[#64748B]" />
-                    <span className="truncate">Matriks Kewenangan (RBAC)</span>
-                  </button>
+                  {!(user?.role === 'Requester' || user?.role === 'User') && (
+                    <button
+                      onMouseDown={(e) => {
+                        e.stopPropagation()
+                        setIsDropdownOpen(false)
+                        setCurrentView('matrix')
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setIsDropdownOpen(false)
+                        setCurrentView('matrix')
+                      }}
+                      className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold text-[#0F172A] hover:bg-[#EBF2FF] hover:text-[#163A70] transition-colors cursor-pointer"
+                    >
+                      <ShieldCheck className="h-4 w-4 shrink-0 text-[#64748B]" />
+                      <span className="truncate">Matriks Kewenangan (RBAC)</span>
+                    </button>
+                  )}
 
                   {(user?.role === 'Administrator' || user?.role === 'Director / BOD') && (
                     <>

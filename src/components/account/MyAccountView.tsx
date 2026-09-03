@@ -397,13 +397,15 @@ export function MyAccountView() {
               <Shield className="h-3.5 w-3.5" />
               <span>Keamanan &amp; 2FA</span>
             </TabsTrigger>
-            <TabsTrigger
-              value="authority"
-              className="px-4 py-2 rounded-xl text-xs font-bold text-[#64748B] data-[state=active]:bg-white data-[state=active]:text-[#163A70] data-[state=active]:shadow-xs transition-all flex items-center gap-1.5"
-            >
-              <ShieldCheck className="h-3.5 w-3.5" />
-              <span>Peran &amp; Matriks</span>
-            </TabsTrigger>
+            {!(user?.role === 'Requester' || user?.role === 'User') && (
+              <TabsTrigger
+                value="authority"
+                className="px-4 py-2 rounded-xl text-xs font-bold text-[#64748B] data-[state=active]:bg-white data-[state=active]:text-[#163A70] data-[state=active]:shadow-xs transition-all flex items-center gap-1.5"
+              >
+                <ShieldCheck className="h-3.5 w-3.5" />
+                <span>Peran &amp; Matriks</span>
+              </TabsTrigger>
+            )}
           </TabsList>
         </div>
 
@@ -547,46 +549,46 @@ export function MyAccountView() {
         </TabsContent>
 
         {/* Tab 3: Authority & Roles */}
-        <TabsContent value="authority" className="focus-visible:outline-none">
-          <Card className="border-[#E2E8F0] shadow-sm rounded-3xl bg-white overflow-hidden">
-            <CardContent className="p-6 sm:p-7 space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-[#F1F5F9]">
-                <div>
-                  <h3 className="text-sm font-bold text-[#0B2147]">
-                    Peran Pengguna Anda: <span className="text-[#163A70] font-black">{user?.role}</span>
-                  </h3>
-                  <p className="text-xs text-[#64748B] mt-0.5">
-                    Tingkat kewenangan menentukan wewenang operasional Anda dalam siklus alur 7 tahap dokumen.
-                  </p>
+        {!(user?.role === 'Requester' || user?.role === 'User') && (
+          <TabsContent value="authority" className="focus-visible:outline-none">
+            <Card className="border-[#E2E8F0] shadow-sm rounded-2xl sm:rounded-3xl bg-white overflow-hidden">
+              <CardContent className="p-3.5 sm:p-6 space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#F1F5F9]">
+                  <div>
+                    <h3 className="text-sm font-bold text-[#0B2147]">
+                      Peran Pengguna Anda: <span className="text-[#163A70] font-black">{user?.role}</span>
+                    </h3>
+                    <p className="text-xs text-[#64748B] mt-0.5">
+                      Tingkat kewenangan menentukan wewenang operasional Anda dalam siklus alur 7 tahap dokumen.
+                    </p>
+                  </div>
+                  <Button
+                    size="sm"
+                    type="button"
+                    onClick={() => setCurrentView('matrix')}
+                    className="bg-[#163A70] hover:bg-[#0B2147] text-white font-bold text-xs rounded-xl gap-1.5 shrink-0"
+                  >
+                    <ShieldCheck className="h-4 w-4" />
+                    <span>Matriks Lengkap</span>
+                  </Button>
                 </div>
-                <Button
-                  size="sm"
-                  type="button"
-                  onClick={() => setCurrentView('matrix')}
-                  className="bg-[#163A70] hover:bg-[#0B2147] text-white font-bold text-xs rounded-xl gap-1.5 shrink-0"
-                >
-                  <ShieldCheck className="h-4 w-4" />
-                  <span>Matriks Lengkap</span>
-                </Button>
-              </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-[#475569]">
-                <div className="p-4 rounded-2xl bg-[#F8FAFC] border border-[#E2E8F0] space-y-1">
-                  <span className="font-bold text-[#0B2147] block">Hak Pembuatan Dokumen:</span>
-                  <span>Diizinkan membuat draf pengajuan berkas baru (V0).</span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-[#475569]">
+                  <div className="p-3.5 rounded-2xl bg-[#F8FAFC] border border-[#E2E8F0] space-y-1">
+                    <span className="font-bold text-[#0B2147] block">Hak Pembuatan Dokumen:</span>
+                    <span>Diizinkan membuat draf pengajuan berkas baru (V0).</span>
+                  </div>
+                  <div className="p-3.5 rounded-2xl bg-[#F8FAFC] border border-[#E2E8F0] space-y-1">
+                    <span className="font-bold text-[#0B2147] block">Hak Review &amp; Revisi:</span>
+                    <span>
+                      Dapat memeriksa, memberi catatan revisi, dan menyetujui tahapan.
+                    </span>
+                  </div>
                 </div>
-                <div className="p-4 rounded-2xl bg-[#F8FAFC] border border-[#E2E8F0] space-y-1">
-                  <span className="font-bold text-[#0B2147] block">Hak Review &amp; Revisi:</span>
-                  <span>
-                    {user?.role === 'Requester'
-                      ? 'Dapat mengunggah draf perbaikan dokumen.'
-                      : 'Dapat memeriksa, memberi catatan revisi, dan menyetujui tahapan.'}
-                  </span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
       </Tabs>
 
       {/* Password Change Dialog */}

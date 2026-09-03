@@ -162,6 +162,7 @@ export function DashboardView() {
   }
 
   const isAdmin = user?.role === 'Administrator' || user?.role === 'Director / BOD'
+  const isRequester = user?.role === 'Requester' || user?.role === 'User'
   const reviewBadgeCount = documents.filter((d) => d.stage === 0 || d.stage === 1 || d.revisionRequested).length
   const myDocsBadgeCount = documents.filter((d) => !user || d.pic === user.employeeName || d.picEmail === user.email || d.createdBy === user.email).length
 
@@ -202,12 +203,16 @@ export function DashboardView() {
         }
       },
     },
-    {
-      id: 'matrix',
-      title: 'Matriks SOP',
-      icon: ShieldCheck,
-      action: () => setCurrentView('matrix'),
-    },
+    ...(!isRequester
+      ? [
+          {
+            id: 'matrix',
+            title: 'Matriks SOP',
+            icon: ShieldCheck,
+            action: () => setCurrentView('matrix'),
+          },
+        ]
+      : []),
     ...(isAdmin
       ? [
           {

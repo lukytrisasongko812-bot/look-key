@@ -37,6 +37,7 @@ export function Sidebar() {
     badge?: number | string
     badgeColor?: string
     adminOnly?: boolean
+    hideForRequester?: boolean
   }[] = [
     {
       id: 'dashboard',
@@ -60,6 +61,7 @@ export function Sidebar() {
       id: 'matrix',
       label: 'Matriks Kewenangan',
       icon: <ShieldCheck className="h-4 w-4 shrink-0" />,
+      hideForRequester: true,
     },
     {
       id: 'myAccount',
@@ -81,7 +83,8 @@ export function Sidebar() {
     },
   ]
 
-  const navItems = allNavItems.filter((item) => !item.adminOnly || isAdmin)
+  const isRequester = user?.role === 'Requester' || user?.role === 'User'
+  const navItems = allNavItems.filter((item) => (!item.adminOnly || isAdmin) && (!item.hideForRequester || !isRequester))
 
   return (
     <>

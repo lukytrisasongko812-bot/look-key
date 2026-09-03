@@ -32,6 +32,7 @@ export function AppMenuView() {
   } = useApp()
 
   const isAdmin = user?.role === 'Administrator' || user?.role === 'Director / BOD'
+  const isRequester = user?.role === 'Requester' || user?.role === 'User'
   const reviewCount = documents.filter((d) => d.stage === 0 || d.stage === 1 || d.revisionRequested).length
   const myDocsCount = documents.filter((d) => !user || d.pic === user.employeeName || d.picEmail === user.email || d.createdBy === user.email).length
 
@@ -53,16 +54,16 @@ export function AppMenuView() {
     },
     {
       id: 'tracking',
-      title: 'Lacak Alur',
+      title: 'Lacak Berkas',
       icon: GitPullRequestDraft,
-      badge: reviewCount > 0 ? `${reviewCount}` : undefined,
+      badge: reviewCount > 0 ? reviewCount : undefined,
       action: () => setCurrentView('tracking', 'progress'),
     },
     {
-      id: 'myDocuments',
+      id: 'documents',
       title: 'Dokumen',
       icon: Files,
-      badge: myDocsCount > 0 ? `${myDocsCount}` : undefined,
+      badge: myDocsCount > 0 ? myDocsCount : undefined,
       action: () => setCurrentView('myDocuments'),
     },
     {
@@ -81,12 +82,16 @@ export function AppMenuView() {
         }
       },
     },
-    {
-      id: 'matrix',
-      title: 'Matriks SOP',
-      icon: ShieldCheck,
-      action: () => setCurrentView('matrix'),
-    },
+    ...(!isRequester
+      ? [
+          {
+            id: 'matrix',
+            title: 'Matriks SOP',
+            icon: ShieldCheck,
+            action: () => setCurrentView('matrix'),
+          },
+        ]
+      : []),
     ...(isAdmin
       ? [
           {
