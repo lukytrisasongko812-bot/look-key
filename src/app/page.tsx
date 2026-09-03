@@ -46,7 +46,7 @@ export default function HomePage() {
       <Header />
       <div className="flex flex-1 relative items-start">
         <Sidebar />
-        <main className="flex-1 p-3.5 sm:p-4 md:p-6 pb-24 md:pb-6 min-w-0 max-w-7xl mx-auto w-full">
+        <main className="flex-1 px-3.5 sm:px-4 md:px-6 py-3.5 sm:py-5 pb-28 md:pb-8 min-w-0 max-w-7xl mx-auto w-full">
           {currentView === 'dashboard' && <DashboardView />}
           {currentView === 'tracking' && <TrackingView />}
           {currentView === 'myDocuments' && <MyDocumentsView />}

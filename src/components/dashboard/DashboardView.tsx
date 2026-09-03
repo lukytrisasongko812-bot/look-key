@@ -251,7 +251,7 @@ export function DashboardView() {
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-12 animate-in fade-in duration-300">
       {/* Top Hero Banner */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#0B2147] via-[#163A70] to-[#1E4D94] p-6 sm:p-8 text-white shadow-lg">
+      <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-r from-[#0B2147] via-[#163A70] to-[#1E4D94] p-4 sm:p-7 text-white shadow-md">
         <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-[11px] font-semibold text-white/90 backdrop-blur-md mb-2 border border-white/10">
@@ -262,17 +262,17 @@ export function DashboardView() {
               <span>{user?.division || 'Direktorat Umum'}</span>
             </div>
 
-            <h1 className="text-xl sm:text-2xl font-bold font-display tracking-tight text-white">
+            <h1 className="text-lg sm:text-2xl font-bold font-display tracking-tight text-white">
               Selamat Datang, {user?.employeeName || 'Pengguna'}
             </h1>
-            <p className="text-xs text-white/80 mt-1 max-w-xl">
+            <p className="text-xs text-white/80 mt-1 max-w-xl leading-relaxed">
               Ringkasan pemesanan, riwayat revisi berkas, tracking persetujuan, dan pemantauan masa berlaku kontrak Anda.
             </p>
           </div>
 
           <Button
             onClick={() => setCurrentView('tracking', 'new')}
-            className="self-start sm:self-auto h-11 bg-white text-[#163A70] hover:bg-[#EBF2FF] font-bold text-xs shadow-md border-0 shrink-0 cursor-pointer rounded-xl gap-2"
+            className="self-start sm:self-auto h-10 sm:h-11 bg-white text-[#163A70] hover:bg-[#EBF2FF] font-bold text-xs shadow-md border-0 shrink-0 cursor-pointer rounded-xl gap-2 px-4"
           >
             <Plus className="h-4 w-4 text-[#163A70]" />
             <span>Ajukan Dokumen Baru</span>
@@ -281,7 +281,7 @@ export function DashboardView() {
       </div>
 
       {/* Menu Layanan & Aplikasi (App Grid 4 Kolom di Beranda) */}
-      <div className="space-y-3">
+      <div className="space-y-2.5 sm:space-y-3">
         <div className="flex items-center justify-between px-1">
           <div className="flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-[#163A70]" />
@@ -302,7 +302,7 @@ export function DashboardView() {
                 key={item.id}
                 type="button"
                 onClick={item.action}
-                className="relative flex flex-col items-center justify-center p-2 sm:p-3 rounded-2xl bg-white border border-[#E2E8F0] shadow-2xs hover:shadow-md hover:border-[#CBD5E1] transition-all active:scale-95 cursor-pointer text-center group min-h-[102px] sm:min-h-[114px]"
+                className="relative flex flex-col items-center justify-center p-2 sm:p-3 rounded-2xl bg-white border border-[#E2E8F0] shadow-2xs hover:shadow-md hover:border-[#CBD5E1] transition-all active:scale-95 cursor-pointer text-center group min-h-[96px] sm:min-h-[114px]"
               >
                 {item.badge && (
                   <span className="absolute top-1.5 right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#DC2626] px-1 text-[9px] font-extrabold text-white shadow-xs">
@@ -314,10 +314,10 @@ export function DashboardView() {
                   <Icon className="h-5 w-5 sm:h-6 sm:w-6 stroke-[2]" />
                 </div>
 
-                <span className="text-[10.5px] sm:text-xs font-bold text-[#0B2147] leading-tight text-center break-words hyphens-auto w-full px-0.5 whitespace-normal">
+                <span className="text-[10px] sm:text-xs font-bold text-[#0B2147] leading-tight text-center break-words hyphens-auto w-full px-0.5 whitespace-normal">
                   {item.title}
                 </span>
-                <span className="text-[9px] sm:text-[10px] text-[#64748B] leading-tight text-center break-words w-full px-0.5 mt-0.5 whitespace-normal line-clamp-2">
+                <span className="text-[8.5px] sm:text-[10px] text-[#64748B] leading-tight text-center break-words w-full px-0.5 mt-0.5 whitespace-normal line-clamp-2">
                   {item.subtitle}
                 </span>
               </button>
@@ -327,94 +327,94 @@ export function DashboardView() {
       </div>
 
       {/* 4 Simple KPI Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
         {/* Total Documents */}
         <Card
           onClick={() => setCurrentView('myDocuments')}
-          className="hover:shadow-md transition-all hover:translate-y-[-2px] border-[#E2E8F0] cursor-pointer"
+          className="hover:shadow-md transition-all hover:translate-y-[-2px] border-[#E2E8F0] cursor-pointer rounded-2xl overflow-hidden"
         >
-          <CardContent className="p-4 sm:p-5">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#EBF2FF] text-[#163A70]">
-                <Inbox className="h-5 w-5" />
+          <CardContent className="p-3.5 sm:p-5">
+            <div className="flex items-center justify-between mb-2 sm:mb-3">
+              <div className="flex h-9 w-9 sm:h-11 sm:w-11 items-center justify-center rounded-xl sm:rounded-2xl bg-[#EBF2FF] text-[#163A70]">
+                <Inbox className="h-4 w-4 sm:h-5 sm:w-5" />
               </div>
-              <span className="rounded-full bg-[#ECFDF5] px-2 py-0.5 text-[10px] font-bold text-[#059669]">
+              <span className="rounded-full bg-[#ECFDF5] px-2 py-0.5 text-[9.5px] sm:text-[10px] font-bold text-[#059669]">
                 Semua
               </span>
             </div>
-            <div className="text-xs font-semibold text-[#64748B]">Pengajuan Saya</div>
-            <div className="text-2xl sm:text-3xl font-extrabold text-[#0B2147] mt-0.5">
+            <div className="text-[11px] sm:text-xs font-semibold text-[#64748B]">Pengajuan Saya</div>
+            <div className="text-xl sm:text-3xl font-extrabold text-[#0B2147] mt-0.5">
               {totalCount}
             </div>
-            <div className="text-[11px] text-[#94A3B8] mt-1">Total berkas terdaftar</div>
+            <div className="text-[10px] sm:text-[11px] text-[#94A3B8] mt-0.5">Total berkas terdaftar</div>
           </CardContent>
         </Card>
 
         {/* Revision Needed */}
         <Card
           onClick={() => setCurrentView('tracking', 'progress')}
-          className={`hover:shadow-md transition-all hover:translate-y-[-2px] border-[#E2E8F0] cursor-pointer ${
+          className={`hover:shadow-md transition-all hover:translate-y-[-2px] border-[#E2E8F0] cursor-pointer rounded-2xl overflow-hidden ${
             revisionCount > 0 ? 'ring-1 ring-[#D97706]/40 bg-[#FFFBEB]/30' : ''
           }`}
         >
-          <CardContent className="p-4 sm:p-5">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#FFFBEB] text-[#D97706]">
-                <AlertTriangle className="h-5 w-5" />
+          <CardContent className="p-3.5 sm:p-5">
+            <div className="flex items-center justify-between mb-2 sm:mb-3">
+              <div className="flex h-9 w-9 sm:h-11 sm:w-11 items-center justify-center rounded-xl sm:rounded-2xl bg-[#FFFBEB] text-[#D97706]">
+                <AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5" />
               </div>
-              <span className="rounded-full bg-[#FFFBEB] px-2 py-0.5 text-[10px] font-bold text-[#D97706] border border-[#FDE68A]">
+              <span className="rounded-full bg-[#FFFBEB] px-2 py-0.5 text-[9.5px] sm:text-[10px] font-bold text-[#D97706] border border-[#FDE68A]">
                 Tindakan
               </span>
             </div>
-            <div className="text-xs font-semibold text-[#64748B]">Perlu Revisi</div>
-            <div className="text-2xl sm:text-3xl font-extrabold text-[#D97706] mt-0.5">
+            <div className="text-[11px] sm:text-xs font-semibold text-[#64748B]">Perlu Revisi</div>
+            <div className="text-xl sm:text-3xl font-extrabold text-[#D97706] mt-0.5">
               {revisionCount}
             </div>
-            <div className="text-[11px] text-[#94A3B8] mt-1">Menunggu unggah perbaikan</div>
+            <div className="text-[10px] sm:text-[11px] text-[#94A3B8] mt-0.5">Menunggu perbaikan</div>
           </CardContent>
         </Card>
 
         {/* In Progress */}
         <Card
           onClick={() => setCurrentView('tracking', 'progress')}
-          className="hover:shadow-md transition-all hover:translate-y-[-2px] border-[#E2E8F0] cursor-pointer"
+          className="hover:shadow-md transition-all hover:translate-y-[-2px] border-[#E2E8F0] cursor-pointer rounded-2xl overflow-hidden"
         >
-          <CardContent className="p-4 sm:p-5">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#EFF6FF] text-[#2563EB]">
-                <FileCheck2 className="h-5 w-5" />
+          <CardContent className="p-3.5 sm:p-5">
+            <div className="flex items-center justify-between mb-2 sm:mb-3">
+              <div className="flex h-9 w-9 sm:h-11 sm:w-11 items-center justify-center rounded-xl sm:rounded-2xl bg-[#EFF6FF] text-[#2563EB]">
+                <FileCheck2 className="h-4 w-4 sm:h-5 sm:w-5" />
               </div>
-              <span className="rounded-full bg-[#EFF6FF] px-2 py-0.5 text-[10px] font-bold text-[#2563EB]">
+              <span className="rounded-full bg-[#EFF6FF] px-2 py-0.5 text-[9.5px] sm:text-[10px] font-bold text-[#2563EB]">
                 Berjalan
               </span>
             </div>
-            <div className="text-xs font-semibold text-[#64748B]">Sedang Diproses</div>
-            <div className="text-2xl sm:text-3xl font-extrabold text-[#2563EB] mt-0.5">
+            <div className="text-[11px] sm:text-xs font-semibold text-[#64748B]">Sedang Diproses</div>
+            <div className="text-xl sm:text-3xl font-extrabold text-[#2563EB] mt-0.5">
               {inProgressCount}
             </div>
-            <div className="text-[11px] text-[#94A3B8] mt-1">Peninjauan, draf &amp; persetujuan</div>
+            <div className="text-[10px] sm:text-[11px] text-[#94A3B8] mt-0.5">Peninjauan &amp; draf</div>
           </CardContent>
         </Card>
 
         {/* Completed / Final Documents */}
         <Card
           onClick={() => setCurrentView('myDocuments')}
-          className="hover:shadow-md transition-all hover:translate-y-[-2px] border-[#E2E8F0] cursor-pointer"
+          className="hover:shadow-md transition-all hover:translate-y-[-2px] border-[#E2E8F0] cursor-pointer rounded-2xl overflow-hidden"
         >
-          <CardContent className="p-4 sm:p-5">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#ECFDF5] text-[#059669]">
-                <CheckCircle2 className="h-5 w-5" />
+          <CardContent className="p-3.5 sm:p-5">
+            <div className="flex items-center justify-between mb-2 sm:mb-3">
+              <div className="flex h-9 w-9 sm:h-11 sm:w-11 items-center justify-center rounded-xl sm:rounded-2xl bg-[#ECFDF5] text-[#059669]">
+                <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5" />
               </div>
-              <span className="rounded-full bg-[#ECFDF5] px-2 py-0.5 text-[10px] font-bold text-[#059669]">
-                Sah &amp; Arsip
+              <span className="rounded-full bg-[#ECFDF5] px-2 py-0.5 text-[9.5px] sm:text-[10px] font-bold text-[#059669]">
+                Sah
               </span>
             </div>
-            <div className="text-xs font-semibold text-[#64748B]">Dokumen Final (Selesai)</div>
-            <div className="text-2xl sm:text-3xl font-extrabold text-[#059669] mt-0.5">
+            <div className="text-[11px] sm:text-xs font-semibold text-[#64748B]">Dokumen Final</div>
+            <div className="text-xl sm:text-3xl font-extrabold text-[#059669] mt-0.5">
               {completedCount}
             </div>
-            <div className="text-[11px] text-[#94A3B8] mt-1">Dokumen final bertanda tangan</div>
+            <div className="text-[10px] sm:text-[11px] text-[#94A3B8] mt-0.5">Bertanda tangan sah</div>
           </CardContent>
         </Card>
       </div>
