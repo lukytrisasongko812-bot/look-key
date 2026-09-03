@@ -84,7 +84,7 @@ export function RideLogo({
               whiteText ? 'text-white/80' : 'text-[#64748B]'
             }`}
           >
-            Ekosistem Dokumen Terintegrasi
+            Request Integrated Document Ecosystem
           </span>
         )}
       </div>

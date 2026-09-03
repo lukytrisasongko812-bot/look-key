@@ -159,7 +159,9 @@ export function DashboardView() {
         <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-[11px] font-semibold text-white/90 backdrop-blur-md mb-2 border border-white/10">
-              <span>Portal Terintegrasi RIDE</span>
+              <span className="font-bold text-[#60A5FA]">RIDE</span>
+              <span className="text-white/40">•</span>
+              <span>Request Integrated Document Ecosystem</span>
               <span className="text-white/40">•</span>
               <span>{user?.division || 'Direktorat Umum'}</span>
             </div>

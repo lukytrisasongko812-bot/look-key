@@ -153,8 +153,8 @@ export function Sidebar() {
             <div className="text-[11px] font-bold font-display text-[#0B2147] tracking-wider">
               PLATFORM RIDE
             </div>
-            <div className="text-[9.5px] text-[#64748B] mt-0.5">
-              Ekosistem Dokumen Terintegrasi
+            <div className="text-[9.5px] text-[#64748B] mt-0.5 leading-tight">
+              Request Integrated Document Ecosystem
             </div>
           </div>
         )}

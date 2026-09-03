@@ -225,6 +225,9 @@ export function LoginScreen() {
         </div>
 
         <div className="mb-4">
+          <div className="text-[11px] font-bold tracking-wide text-[#163A70] uppercase mb-0.5">
+            Request Integrated Document Ecosystem
+          </div>
           <h2 className="text-lg font-bold font-display text-[#0B2147]">
             Masuk ke Akun
           </h2>
