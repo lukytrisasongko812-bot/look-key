@@ -12,15 +12,15 @@ interface RideSpinnerProps {
 export function RideSpinner({
   size = 'md',
   speed = 'normal',
-  showGlow = true,
+  showGlow = false,
   className = '',
 }: RideSpinnerProps) {
   const sizeMap = {
     xs: 'w-4 h-4',
     sm: 'w-6 h-6',
-    md: 'w-9 h-9',
-    lg: 'w-12 h-12',
-    xl: 'w-16 h-16',
+    md: 'w-8 h-8',
+    lg: 'w-11 h-11',
+    xl: 'w-14 h-14',
   }
 
   const speedMap = {
@@ -30,10 +30,10 @@ export function RideSpinner({
   }
 
   return (
-    <div className={`relative inline-flex items-center justify-center ${sizeMap[size]} ${className}`}>
+    <div className={`relative inline-flex items-center justify-center shrink-0 ${sizeMap[size]} ${className}`}>
       {/* Ambient Pulsing Glow Aura */}
       {showGlow && (
-        <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-[#1C3F5E]/30 via-[#0E786B]/30 to-[#F2C342]/40 blur-sm animate-pulse" />
+        <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-[#1C3F5E]/25 via-[#0E786B]/25 to-[#F2C342]/30 blur-xs animate-pulse" />
       )}
 
       {/* Spinning RIDE 3-Blade Pinwheel */}
@@ -63,76 +63,67 @@ export function RideSpinner({
 }
 
 interface RideLoadingScreenProps {
-  title?: string
-  subtitle?: string
   message?: string
+  className?: string
 }
 
 export function RideLoadingScreen({
-  title = 'RIDE PLATFORM',
-  subtitle = 'Request Integrated Document Ecosystem',
   message = 'Memuat Portal RIDE...',
+  className = '',
 }: RideLoadingScreenProps) {
   return (
-    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-gradient-to-b from-[#0B2147] via-[#0F2A54] to-[#071731] text-white select-none overflow-hidden animate-in fade-in duration-300">
-      {/* Background Decorative Ambient Radial Circles */}
-      <div className="absolute top-1/4 -left-20 w-96 h-96 rounded-full bg-[#2563EB]/10 blur-3xl pointer-events-none" />
-      <div className="absolute bottom-1/4 -right-20 w-96 h-96 rounded-full bg-[#0E786B]/15 blur-3xl pointer-events-none" />
+    <div
+      className={`min-h-screen w-full flex flex-col items-center justify-center bg-transparent select-none p-4 animate-in fade-in duration-200 ${className}`}
+    >
+      <div className="flex flex-col items-center justify-center gap-3">
+        {/* Floating Rotating RIDE Pinwheel Emblem */}
+        <div className="relative flex items-center justify-center">
+          {/* Subtle Ambient Pulse Aura */}
+          <div className="absolute -inset-1.5 rounded-2xl bg-gradient-to-tr from-[#163A70]/15 via-[#0E786B]/15 to-[#F2C342]/20 blur-sm animate-pulse" />
 
-      {/* Main Glassmorphic Loading Container */}
-      <div className="relative z-10 flex flex-col items-center max-w-sm mx-auto px-6 py-8 rounded-3xl bg-white/[0.04] border border-white/10 backdrop-blur-xl shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
-        
-        {/* Floating Rotating RIDE Logo Card */}
-        <div className="relative mb-5 flex items-center justify-center">
-          {/* Animated Background Rings */}
-          <div className="absolute -inset-3 rounded-full bg-gradient-to-tr from-[#60A5FA]/20 via-[#34D399]/20 to-[#FBBF24]/25 blur-md animate-pulse" />
-          <div className="absolute -inset-1.5 rounded-full border border-white/20 animate-ping opacity-25" />
-
-          <div className="relative flex h-16 w-16 items-center justify-center rounded-2xl bg-white/95 p-2 shadow-xl border border-white/40">
-            <RideSpinner size="lg" speed="normal" showGlow={false} />
+          <div className="relative flex h-13 w-13 items-center justify-center rounded-2xl bg-white p-2 shadow-md border border-[#E2E8F0]">
+            <RideSpinner size="md" speed="normal" showGlow={false} />
           </div>
         </div>
 
-        {/* Brand Headings */}
-        <div className="text-center space-y-1">
-          <div className="flex items-center justify-center gap-2">
-            <span className="font-display font-black text-xl tracking-wider text-white">
-              {title}
+        {/* Brand Text & Status */}
+        <div className="flex flex-col items-center text-center">
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs font-black font-display tracking-wider text-[#0B2147] uppercase">
+              RIDE Platform
             </span>
-            <span className="rounded-md bg-[#60A5FA]/20 px-1.5 py-0.5 text-[9px] font-bold text-[#93C5FD] tracking-wide uppercase border border-[#60A5FA]/30">
-              v2.6
+            <span className="h-1 w-1 rounded-full bg-[#CBD5E1]" />
+            <span className="text-[11px] font-semibold text-[#163A70]">
+              {message}
             </span>
           </div>
-
-          <p className="text-[11px] font-medium text-white/70 max-w-[240px] leading-tight">
-            {subtitle}
-          </p>
-        </div>
-
-        {/* Modern Shimmer Progress Bar */}
-        <div className="w-48 h-1.5 bg-white/10 rounded-full overflow-hidden mt-6 relative">
-          <div className="absolute inset-y-0 w-24 bg-gradient-to-r from-transparent via-[#60A5FA] to-transparent rounded-full animate-pulse" />
-        </div>
-
-        {/* Dynamic Status Text with pulsing dot */}
-        <div className="flex items-center gap-2 mt-3.5">
-          <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#60A5FA] opacity-75" />
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-[#60A5FA]" />
-          </span>
-          <span className="text-xs font-semibold text-white/90 tracking-wide">
-            {message}
+          <span className="text-[9px] text-[#64748B] mt-0.5">
+            Request Integrated Document Ecosystem
           </span>
         </div>
+      </div>
+    </div>
+  )
+}
 
-        {/* Footer Endorsement */}
-        <div className="mt-7 pt-4 border-t border-white/10 flex items-center justify-center gap-2 opacity-80 hover:opacity-100 transition-opacity">
-          <img
-            src="/resources-id-logo.png"
-            alt="RESOURCES ID"
-            className="h-4 w-auto object-contain brightness-0 invert opacity-80"
-          />
+export function RideLoadingOverlay({
+  message = 'Memuat...',
+  className = '',
+}: {
+  message?: string
+  className?: string
+}) {
+  return (
+    <div
+      className={`absolute inset-0 z-30 flex flex-col items-center justify-center bg-white/70 backdrop-blur-[2px] rounded-2xl animate-in fade-in duration-200 select-none ${className}`}
+    >
+      <div className="flex flex-col items-center gap-2">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white shadow-sm border border-[#E2E8F0]">
+          <RideSpinner size="sm" speed="normal" showGlow={false} />
         </div>
+        <span className="text-[11px] font-bold text-[#163A70]">
+          {message}
+        </span>
       </div>
     </div>
   )
