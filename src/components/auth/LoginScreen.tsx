@@ -36,11 +36,11 @@ export function LoginScreen() {
   useEffect(() => {
     const t1 = setTimeout(() => {
       setIntroFading(true)
-    }, 2000)
+    }, 1000)
 
     const t2 = setTimeout(() => {
       setShowIntro(false)
-    }, 2400)
+    }, 1300)
 
     return () => {
       clearTimeout(t1)
