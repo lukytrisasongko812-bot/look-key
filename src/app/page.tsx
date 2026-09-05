@@ -16,18 +16,24 @@ import { AuthorityMatrixView } from '@/components/matrix/AuthorityMatrixView'
 import { AppMenuView } from '@/components/menu/AppMenuView'
 import { MobileBottomNav } from '@/components/layout/MobileBottomNav'
 
-import { RideLoadingScreen } from '@/components/common/RideSpinner'
+import { RideSplashScreen } from '@/components/common/RideSplashScreen'
 
 export default function HomePage() {
   const { isAuthenticated, authLoading, currentView } = useApp()
   const [mounted, setMounted] = React.useState(false)
+  const [splashFinished, setSplashFinished] = React.useState(false)
 
   React.useEffect(() => {
     setMounted(true)
   }, [])
 
-  if (!mounted || (authLoading && !isAuthenticated)) {
-    return <RideLoadingScreen message="Memuat Portal RIDE..." />
+  if (!mounted || (authLoading && !isAuthenticated) || !splashFinished) {
+    return (
+      <RideSplashScreen
+        minDuration={1400}
+        onFinish={() => setSplashFinished(true)}
+      />
+    )
   }
 
   if (!isAuthenticated) {
