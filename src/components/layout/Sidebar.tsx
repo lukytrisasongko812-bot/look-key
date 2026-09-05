@@ -168,15 +168,26 @@ export function Sidebar() {
           </div>
         </div>
 
-        {/* Brand System Footer */}
-        {!isSidebarCollapsed && (
-          <div className="p-3.5 border-t border-[#F1F5F9] bg-[#F8FAFC]/70 flex flex-col items-center justify-center text-center">
-            <div className="text-[11px] font-bold font-display text-[#0B2147] tracking-wider">
-              PLATFORM RIDE
+        {/* Brand System Footer (Pojok Kiri Bawah) */}
+        {!isSidebarCollapsed ? (
+          <div className="p-3.5 border-t border-[#E2E8F0] bg-[#F8FAFC] flex flex-col items-center justify-center text-center gap-2">
+            <img
+              src="/resources-id-logo.png"
+              alt="RESOURCES ID - Shared Service Center of MIND ID"
+              className="h-6 w-auto max-w-[145px] object-contain shrink-0"
+            />
+            <div className="flex flex-col items-center">
+              <span className="text-[10.5px] font-extrabold font-display text-[#0B2147] tracking-wider uppercase">
+                Platform RIDE
+              </span>
+              <span className="text-[8.5px] font-medium text-[#64748B] leading-tight mt-0.5">
+                Request Integrated Document Ecosystem
+              </span>
             </div>
-            <div className="text-[9.5px] text-[#64748B] mt-0.5 leading-tight">
-              Request Integrated Document Ecosystem
-            </div>
+          </div>
+        ) : (
+          <div className="p-2.5 border-t border-[#E2E8F0] bg-[#F8FAFC] flex items-center justify-center" title="RESOURCES ID • Platform RIDE">
+            <div className="h-2 w-2 rounded-full bg-[#163A70]" />
           </div>
         )}
       </aside>

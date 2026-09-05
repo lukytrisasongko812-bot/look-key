@@ -234,12 +234,19 @@ export function AppMenuView() {
       </button>
 
       {/* App Footer Info */}
-      <div className="text-center pt-2">
-        <div className="text-[11px] font-bold font-display text-[#0B2147] tracking-wider">
-          RIDE PLATFORM v2.6.0
-        </div>
-        <div className="text-[10px] text-[#64748B] mt-0.5">
-          Request Integrated Document Ecosystem • RESOURCES ID
+      <div className="flex flex-col items-center justify-center text-center pt-3 pb-2 gap-1.5">
+        <img
+          src="/resources-id-logo.png"
+          alt="RESOURCES ID"
+          className="h-6 w-auto max-w-[145px] object-contain shrink-0"
+        />
+        <div>
+          <div className="text-[11px] font-bold font-display text-[#0B2147] tracking-wider uppercase">
+            Platform RIDE v2.6.0
+          </div>
+          <div className="text-[9px] text-[#64748B] mt-0.5">
+            Request Integrated Document Ecosystem
+          </div>
         </div>
       </div>
     </div>

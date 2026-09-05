@@ -48,7 +48,7 @@ export function Header() {
     : 'RD'
 
   return (
-    <header className="sticky top-0 z-40 flex h-16 sm:h-[68px] w-full items-center justify-between border-b border-[#E2E8F0] bg-white/95 backdrop-blur-md px-3.5 sm:px-6 shadow-2xs transition-all">
+    <header className="sticky top-0 z-40 flex h-14 sm:h-16 w-full items-center justify-between border-b border-[#E2E8F0] bg-white/95 backdrop-blur-md px-3.5 sm:px-6 shadow-2xs transition-all">
       {/* Left side: Hamburger, Logo, Search */}
       <div className="flex items-center gap-3 sm:gap-4">
         <button
@@ -69,7 +69,7 @@ export function Header() {
           className="cursor-pointer transition-opacity hover:opacity-90 flex items-center gap-3"
           onClick={() => setCurrentView('dashboard')}
         >
-          <RideLogo size="sm" showSubtitle={true} showResourcesLogo={true} />
+          <RideLogo size="sm" showSubtitle={false} showResourcesLogo={false} />
         </div>
 
         {/* Global Search Bar */}
