@@ -62,19 +62,35 @@ export async function DELETE(
     const { id } = await params
     const tokenUser = getUserFromRequest(request)
 
-    if (tokenUser?.role !== 'Administrator') {
+    if (tokenUser?.role !== 'Administrator' && tokenUser?.role !== 'Director / BOD') {
       return NextResponse.json(
-        { error: 'Hanya Administrator yang berhak menghapus akun pengguna.' },
+        { error: 'Hanya Administrator atau Superadmin yang berhak menghapus keanggotaan pengguna.' },
         { status: 403 }
+      )
+    }
+
+    const targetUser = await getDriveUserById(id)
+    if (!targetUser) {
+      return NextResponse.json({ error: 'Pengguna tidak ditemukan.' }, { status: 404 })
+    }
+
+    // Safeguard: Prevent deleting own active account
+    if (tokenUser?.email?.toLowerCase() === targetUser.email.toLowerCase() || tokenUser?.userId === id) {
+      return NextResponse.json(
+        { error: 'Anda tidak dapat menghapus akun Anda sendiri.' },
+        { status: 400 }
       )
     }
 
     const ok = await deleteDriveUser(id)
     if (!ok) {
-      return NextResponse.json({ error: 'Pengguna tidak ditemukan.' }, { status: 404 })
+      return NextResponse.json({ error: 'Gagal menghapus pengguna dari database.' }, { status: 500 })
     }
 
-    return NextResponse.json({ success: true })
+    return NextResponse.json({
+      success: true,
+      message: `Keanggotaan ${targetUser.employeeName} (${targetUser.email}) berhasil dihapus.`,
+    })
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed to delete user'
     return NextResponse.json({ error: message }, { status: 500 })

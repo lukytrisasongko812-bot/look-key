@@ -28,6 +28,8 @@ import {
   RefreshCw,
   Layers,
   ArrowRight,
+  Trash2,
+  AlertTriangle,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -37,6 +39,7 @@ export function UsersView() {
     token,
     allUsers,
     updateUserRole,
+    deleteUser,
     fetchAllUsers,
     setCurrentView,
   } = useApp()
@@ -45,6 +48,10 @@ export function UsersView() {
 
   const [search, setSearch] = useState('')
   const [roleFilter, setRoleFilter] = useState('ALL')
+
+  // Delete User Confirmation Modal State
+  const [deleteTargetUser, setDeleteTargetUser] = useState<typeof allUsers[0] | null>(null)
+  const [deleteLoading, setDeleteLoading] = useState(false)
 
   // Invite Modal State
   const [isInviteOpen, setIsInviteOpen] = useState(false)
@@ -107,6 +114,20 @@ export function UsersView() {
       toast.success(`Link undangan untuk ${targetEmail} berhasil disalin!`)
     } else {
       toast.info(`Link: ${link}`)
+    }
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteTargetUser) return
+    setDeleteLoading(true)
+    const res = await deleteUser(deleteTargetUser.id)
+    setDeleteLoading(false)
+
+    if (res.success) {
+      toast.success(`Keanggotaan ${deleteTargetUser.employeeName} (${deleteTargetUser.email}) berhasil dihapus!`)
+      setDeleteTargetUser(null)
+    } else {
+      toast.error(res.error || 'Gagal menghapus pengguna.')
     }
   }
 
@@ -332,15 +353,29 @@ export function UsersView() {
                           </select>
                         </td>
                         <td className="py-3.5 px-4 text-right">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => copyInvitationLink(u.email)}
-                            className="h-8 text-xs font-bold text-[#163A70] border-[#BFDBFE] hover:bg-[#EBF2FF] rounded-lg gap-1.5 cursor-pointer"
-                          >
-                            <Copy className="h-3 w-3" />
-                            <span>Salin Link Undangan</span>
-                          </Button>
+                          <div className="flex items-center justify-end gap-1.5">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => copyInvitationLink(u.email)}
+                              className="h-8 text-xs font-bold text-[#163A70] border-[#BFDBFE] hover:bg-[#EBF2FF] rounded-lg gap-1.5 cursor-pointer"
+                            >
+                              <Copy className="h-3 w-3" />
+                              <span>Salin Link</span>
+                            </Button>
+
+                            {u.email.toLowerCase() !== user?.email?.toLowerCase() && u.id !== user?.id && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setDeleteTargetUser(u)}
+                                className="h-8 text-xs font-bold text-[#DC2626] border-[#FCA5A5] hover:bg-[#FEF2F2] hover:text-[#B91C1C] rounded-lg px-2.5 cursor-pointer shadow-2xs"
+                                title="Hapus Keanggotaan Pengguna"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     )
@@ -489,6 +524,64 @@ export function UsersView() {
               </Button>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete User Confirmation Modal */}
+      <Dialog open={!!deleteTargetUser} onOpenChange={(open) => !open && setDeleteTargetUser(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-[#FEF2F2] text-[#DC2626] mb-2">
+              <AlertTriangle className="h-6 w-6" />
+            </div>
+            <DialogTitle className="text-center text-[#0B2147]">
+              Konfirmasi Hapus Keanggotaan Pengguna
+            </DialogTitle>
+            <DialogDescription className="text-center text-xs text-[#64748B]">
+              Tindakan ini akan menghapus akun dan seluruh hak akses keanggotaan pengguna dari sistem RIDE secara permanen.
+            </DialogDescription>
+          </DialogHeader>
+
+          {deleteTargetUser && (
+            <div className="p-3.5 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] space-y-1.5 text-xs">
+              <div className="flex justify-between">
+                <span className="text-[#64748B]">Nama Lengkap:</span>
+                <span className="font-bold text-[#0F172A]">{deleteTargetUser.employeeName}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[#64748B]">Email:</span>
+                <span className="font-mono text-[#0F172A]">{deleteTargetUser.email}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[#64748B]">Peran (Role):</span>
+                <span className="font-bold text-[#DC2626]">{deleteTargetUser.role}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[#64748B]">Divisi &amp; Jabatan:</span>
+                <span className="text-[#0F172A]">{deleteTargetUser.division} · {deleteTargetUser.position}</span>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="pt-2 flex gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setDeleteTargetUser(null)}
+              className="h-10 text-xs rounded-xl"
+            >
+              Batal
+            </Button>
+            <Button
+              type="button"
+              disabled={deleteLoading}
+              onClick={handleDeleteConfirm}
+              className="h-10 text-xs bg-[#DC2626] hover:bg-[#B91C1C] text-white font-bold rounded-xl gap-1.5"
+            >
+              <Trash2 className="h-4 w-4" />
+              {deleteLoading ? 'Menghapus...' : 'Ya, Hapus Keanggotaan'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

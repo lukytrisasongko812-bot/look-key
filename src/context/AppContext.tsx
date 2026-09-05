@@ -170,6 +170,7 @@ interface AppContextType {
   markNotificationsRead: () => Promise<void>
   updateProfile: (profileData: Partial<UserProfile>) => Promise<boolean>
   updateUserRole: (userId: string, newRole: UserRole) => Promise<boolean>
+  deleteUser: (userId: string) => Promise<{ success: boolean; error?: string }>
   changePassword: (currentPassword: string, newPassword: string) => Promise<{ success: boolean; error?: string }>
 }
 
@@ -872,6 +873,27 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  const deleteUser = async (userId: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const headers: Record<string, string> = {}
+      if (token) headers['Authorization'] = `Bearer ${token}`
+
+      const res = await fetch(`/api/users/${userId}`, {
+        method: 'DELETE',
+        headers,
+      })
+      const data = await res.json().catch(() => ({}))
+      if (res.ok) {
+        await fetchAllUsers()
+        return { success: true }
+      }
+      return { success: false, error: data.error || 'Gagal menghapus keanggotaan pengguna.' }
+    } catch (e) {
+      console.error('Failed to delete user', e)
+      return { success: false, error: 'Terjadi kesalahan jaringan.' }
+    }
+  }
+
   const changePassword = async (currentPassword: string, newPassword: string) => {
     try {
       const headers: Record<string, string> = { 'Content-Type': 'application/json' }
@@ -945,6 +967,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         markNotificationsRead,
         updateProfile,
         updateUserRole,
+        deleteUser,
         changePassword,
       }}
     >
