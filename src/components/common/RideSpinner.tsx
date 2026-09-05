@@ -3,7 +3,7 @@
 import React from 'react'
 
 interface RideSpinnerProps {
-  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl'
+  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl'
   speed?: 'normal' | 'fast' | 'slow'
   showGlow?: boolean
   className?: string
@@ -19,8 +19,9 @@ export function RideSpinner({
     xs: 'w-4 h-4',
     sm: 'w-6 h-6',
     md: 'w-8 h-8',
-    lg: 'w-11 h-11',
-    xl: 'w-14 h-14',
+    lg: 'w-12 h-12',
+    xl: 'w-16 h-16',
+    '2xl': 'w-20 h-20',
   }
 
   const speedMap = {

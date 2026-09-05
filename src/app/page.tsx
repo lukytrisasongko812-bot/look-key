@@ -16,28 +16,20 @@ import { AuthorityMatrixView } from '@/components/matrix/AuthorityMatrixView'
 import { AppMenuView } from '@/components/menu/AppMenuView'
 import { MobileBottomNav } from '@/components/layout/MobileBottomNav'
 
-import { RideSplashScreen } from '@/components/common/RideSplashScreen'
-
 export default function HomePage() {
   const { isAuthenticated, authLoading, currentView } = useApp()
   const [mounted, setMounted] = React.useState(false)
-  const [splashFinished, setSplashFinished] = React.useState(false)
 
   React.useEffect(() => {
     setMounted(true)
   }, [])
 
-  if (!mounted || (authLoading && !isAuthenticated) || !splashFinished) {
-    return (
-      <RideSplashScreen
-        minDuration={1400}
-        onFinish={() => setSplashFinished(true)}
-      />
-    )
+  if (!mounted || (authLoading && !isAuthenticated)) {
+    return <LoginScreen initialIntro={true} />
   }
 
   if (!isAuthenticated) {
-    return <LoginScreen />
+    return <LoginScreen initialIntro={false} />
   }
 
   return (

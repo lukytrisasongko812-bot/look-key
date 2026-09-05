@@ -27,8 +27,24 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 
-export function LoginScreen() {
+export function LoginScreen({ initialIntro = true }: { initialIntro?: boolean }) {
   const { login, verifyOtp } = useApp()
+
+  const [showIntro, setShowIntro] = useState(initialIntro)
+  const [introFading, setIntroFading] = useState(false)
+
+  useEffect(() => {
+    if (initialIntro) {
+      const timer = setTimeout(() => {
+        setIntroFading(true)
+        setTimeout(() => {
+          setShowIntro(false)
+        }, 400) // smooth fade out to login card
+      }, 2000) // exactly 2 seconds of clean kincir rotation
+
+      return () => clearTimeout(timer)
+    }
+  }, [initialIntro])
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -218,30 +234,51 @@ export function LoginScreen() {
       <div className="absolute inset-0 bg-black/20" />
       <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/30" />
 
-      {/* Compact Login Container */}
-      <div className="relative z-10 w-full max-w-[420px] rounded-2xl border border-white/50 bg-white/95 p-6 sm:p-7 shadow-[0_25px_60px_-10px_rgba(0,0,0,0.45)] backdrop-blur-xl animate-card-in">
-        
-        {/* Dual Brand Logos Header: RIDE & RESOURCES ID */}
-        <div className="pb-4 mb-4 border-b border-[#F1F5F9]">
-          <div className="flex items-center justify-between gap-3">
-            <RideLogo size="sm" showSubtitle={true} />
-            <div className="h-8 w-[1px] bg-[#E2E8F0] shrink-0" />
-            <img
-              src="/resources-id-logo.png"
-              alt="RESOURCES ID - Shared Service Center of MIND ID"
-              className="h-8 w-auto max-w-[145px] object-contain shrink-0"
-            />
+      {/* 2-Second Clean Intro: Rotating RIDE Kincir Logo + Clean Text Only */}
+      {showIntro ? (
+        <div
+          className={`relative z-20 flex flex-col items-center justify-center text-center transition-all duration-400 ease-out select-none ${
+            introFading ? 'opacity-0 scale-95' : 'opacity-100 scale-100 animate-in fade-in duration-300'
+          }`}
+        >
+          {/* Pure Floating Rotating RIDE Kincir Logo - 100% Transparent */}
+          <div className="mb-4">
+            <RideSpinner size="2xl" speed="normal" showGlow={false} />
           </div>
-        </div>
 
-        <div className="mb-4">
-          <h2 className="text-lg font-bold font-display text-[#0B2147]">
-            Masuk ke Akun
-          </h2>
-          <p className="text-xs text-[#64748B] mt-0.5">
-            Gunakan email dan kata sandi terdaftar Anda.
+          {/* Clean Brand Text */}
+          <h1 className="text-3xl sm:text-4xl font-black font-display tracking-widest text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.6)]">
+            RIDE
+          </h1>
+          <p className="text-xs sm:text-sm font-semibold tracking-wide text-white/90 drop-shadow-[0_1px_6px_rgba(0,0,0,0.6)] mt-1.5 max-w-xs sm:max-w-md">
+            Request Integrated Document Ecosystem
           </p>
         </div>
+      ) : (
+        /* Compact Login Container */
+        <div className="relative z-10 w-full max-w-[420px] rounded-2xl border border-white/50 bg-white/95 p-6 sm:p-7 shadow-[0_25px_60px_-10px_rgba(0,0,0,0.45)] backdrop-blur-xl animate-in fade-in zoom-in-95 duration-400">
+          
+          {/* Dual Brand Logos Header: RIDE & RESOURCES ID */}
+          <div className="pb-4 mb-4 border-b border-[#F1F5F9]">
+            <div className="flex items-center justify-between gap-3">
+              <RideLogo size="sm" showSubtitle={true} />
+              <div className="h-8 w-[1px] bg-[#E2E8F0] shrink-0" />
+              <img
+                src="/resources-id-logo.png"
+                alt="RESOURCES ID - Shared Service Center of MIND ID"
+                className="h-8 w-auto max-w-[145px] object-contain shrink-0"
+              />
+            </div>
+          </div>
+
+          <div className="mb-4">
+            <h2 className="text-lg font-bold font-display text-[#0B2147]">
+              Masuk ke Akun
+            </h2>
+            <p className="text-xs text-[#64748B] mt-0.5">
+              Gunakan email dan kata sandi terdaftar Anda.
+            </p>
+          </div>
 
         {isInvitedUser && (
           <div className="mb-4 p-3 rounded-xl bg-[#ECFDF5] border border-[#A7F3D0] flex items-center gap-2.5">
@@ -356,6 +393,7 @@ export function LoginScreen() {
           </p>
         </div>
       </div>
+      )}
 
       {/* 2FA OTP Modal */}
       <Dialog open={isOtpOpen} onOpenChange={setIsOtpOpen}>
