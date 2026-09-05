@@ -1278,13 +1278,17 @@ export async function deleteDriveUser(id: string) {
       await User.findByIdAndDelete(id)
     } catch {}
     await User.deleteOne({ _id: id })
+    await User.deleteOne({ id: id })
+    await User.deleteOne({ email: id.toLowerCase() })
   } catch (err) {
     console.error('[MongoDB deleteDriveUser Error]', err)
   }
 
   await initAndSeedDriveStore()
   const store = getStore()
-  const idx = store.users.findIndex((u) => u._id === id || u.id === id)
+  const idx = store.users.findIndex(
+    (u) => u._id === id || u.id === id || u.email.toLowerCase() === id.toLowerCase()
+  )
   if (idx >= 0) {
     store.users.splice(idx, 1)
     return true
