@@ -249,8 +249,8 @@ export function DashboardView() {
       <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-r from-[#0B2147] via-[#163A70] to-[#1E4D94] p-4 sm:p-7 text-white shadow-md">
         <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-5">
           <div className="space-y-3.5">
-            {/* RIDE Title, Kepanjangan, and Logo Resources ID */}
-            <div className="space-y-2">
+            {/* RIDE Title & Kepanjangan */}
+            <div className="space-y-1">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="font-black text-2xl sm:text-3xl font-display tracking-wider text-white">
                   RIDE
@@ -267,17 +267,6 @@ export function DashboardView() {
               {/* Tulisan RIDE dibawahnya dijelaskan kepanjangannya */}
               <div className="text-xs sm:text-sm font-semibold text-white/90 tracking-tight">
                 Request Integrated Document Ecosystem
-              </div>
-
-              {/* Logo Resources ID diletakkan dibawah tulisan RIDE */}
-              <div className="pt-0.5">
-                <div className="inline-flex items-center bg-white px-3 py-1.5 rounded-xl shadow-xs border border-white/20">
-                  <img
-                    src="/resources-id-logo.png"
-                    alt="RESOURCES ID - Shared Service Center of MIND ID"
-                    className="h-5 sm:h-6 w-auto object-contain"
-                  />
-                </div>
               </div>
             </div>
 

@@ -6,6 +6,7 @@ interface RideLogoProps {
   size?: 'sm' | 'md' | 'lg' | 'xl'
   whiteText?: boolean
   showSubtitle?: boolean
+  showResourcesLogo?: boolean
   className?: string
 }
 
@@ -13,6 +14,7 @@ export function RideLogo({
   size = 'md',
   whiteText = false,
   showSubtitle = true,
+  showResourcesLogo = false,
   className = '',
 }: RideLogoProps) {
   const iconSizes = {
@@ -34,6 +36,13 @@ export function RideLogo({
     md: 'text-[10px]',
     lg: 'text-xs',
     xl: 'text-xs',
+  }
+
+  const resourcesLogoSizes = {
+    sm: 'h-3.5',
+    md: 'h-4',
+    lg: 'h-5',
+    xl: 'h-6',
   }
 
   return (
@@ -86,6 +95,15 @@ export function RideLogo({
           >
             Request Integrated Document Ecosystem
           </span>
+        )}
+        {showResourcesLogo && (
+          <div className="mt-1">
+            <img
+              src="/resources-id-logo.png"
+              alt="RESOURCES ID"
+              className={`${resourcesLogoSizes[size]} w-auto object-contain`}
+            />
+          </div>
         )}
       </div>
     </div>
