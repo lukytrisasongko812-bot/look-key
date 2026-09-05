@@ -328,13 +328,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             } catch {}
 
             const userEmail = (data.user.email || cachedUser?.email || '').toLowerCase()
-            const storedAvatar = (userEmail ? localStorage.getItem(`ride_avatar_${userEmail}`) : null) || data.user.avatarUrl || cachedUser?.avatarUrl || undefined
-            const storedCover = (userEmail ? localStorage.getItem(`ride_cover_${userEmail}`) : null) || data.user.coverUrl || cachedUser?.coverUrl || undefined
+            const liveAvatar = data.user.avatarUrl || (userEmail ? localStorage.getItem(`ride_avatar_${userEmail}`) : null) || cachedUser?.avatarUrl || undefined
+            const liveCover = data.user.coverUrl || (userEmail ? localStorage.getItem(`ride_cover_${userEmail}`) : null) || cachedUser?.coverUrl || undefined
+
+            if (userEmail) {
+              if (data.user.avatarUrl) {
+                try { localStorage.setItem(`ride_avatar_${userEmail}`, data.user.avatarUrl) } catch {}
+              }
+              if (data.user.coverUrl) {
+                try { localStorage.setItem(`ride_cover_${userEmail}`, data.user.coverUrl) } catch {}
+              }
+            }
 
             const mergedUser: UserProfile = {
               ...data.user,
-              avatarUrl: storedAvatar,
-              coverUrl: storedCover,
+              avatarUrl: liveAvatar,
+              coverUrl: liveCover,
             }
             setUser(mergedUser)
             userRef.current = mergedUser
@@ -357,6 +366,60 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     } else {
       setAuthLoading(false)
       fetchDocuments()
+    }
+  }, [fetchDocuments])
+
+  // Cross-device automatic synchronization when browser window/tab gains focus or becomes visible
+  useEffect(() => {
+    const handleSyncOnFocus = () => {
+      const currentTok = tokenRef.current || localStorage.getItem('ride_token') || localStorage.getItem('rise_token')
+      if (currentTok) {
+        fetch('/api/auth/me', {
+          headers: { Authorization: `Bearer ${currentTok}` },
+        })
+          .then((r) => r.json())
+          .then((d) => {
+            if (d.user) {
+              const uEmail = (d.user.email || '').toLowerCase()
+              if (uEmail) {
+                if (d.user.avatarUrl) {
+                  try { localStorage.setItem(`ride_avatar_${uEmail}`, d.user.avatarUrl) } catch {}
+                }
+                if (d.user.coverUrl) {
+                  try { localStorage.setItem(`ride_cover_${uEmail}`, d.user.coverUrl) } catch {}
+                }
+              }
+              setUser((prev) => {
+                if (!prev) return d.user
+                const updated = {
+                  ...prev,
+                  ...d.user,
+                  avatarUrl: d.user.avatarUrl || prev.avatarUrl,
+                  coverUrl: d.user.coverUrl || prev.coverUrl,
+                }
+                userRef.current = updated
+                try { localStorage.setItem('ride_user', JSON.stringify(updated)) } catch {}
+                return updated
+              })
+            }
+          })
+          .catch(() => {})
+
+        fetchDocuments()
+      }
+    }
+
+    window.addEventListener('focus', handleSyncOnFocus)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        handleSyncOnFocus()
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    return () => {
+      window.removeEventListener('focus', handleSyncOnFocus)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
   }, [fetchDocuments])
 
@@ -696,13 +759,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }
         if (data.user) {
           const userEmail = (data.user.email || activeEmail).toLowerCase()
-          const storedAvatar = (userEmail ? localStorage.getItem(`ride_avatar_${userEmail}`) : null) || data.user.avatarUrl || profileData.avatarUrl
-          const storedCover = (userEmail ? localStorage.getItem(`ride_cover_${userEmail}`) : null) || data.user.coverUrl || profileData.coverUrl
+          const liveAvatar = data.user.avatarUrl || profileData.avatarUrl || (userEmail ? localStorage.getItem(`ride_avatar_${userEmail}`) : null)
+          const liveCover = data.user.coverUrl || profileData.coverUrl || (userEmail ? localStorage.getItem(`ride_cover_${userEmail}`) : null)
+
+          if (userEmail) {
+            if (liveAvatar) {
+              try { localStorage.setItem(`ride_avatar_${userEmail}`, liveAvatar) } catch {}
+            }
+            if (liveCover) {
+              try { localStorage.setItem(`ride_cover_${userEmail}`, liveCover) } catch {}
+            }
+          }
 
           const mergedUser: UserProfile = {
             ...data.user,
-            avatarUrl: storedAvatar,
-            coverUrl: storedCover,
+            avatarUrl: liveAvatar || undefined,
+            coverUrl: liveCover || undefined,
           }
           setUser(mergedUser)
           userRef.current = mergedUser

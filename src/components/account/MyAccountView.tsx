@@ -141,8 +141,8 @@ export function MyAccountView() {
       if (user.twoFactorEnabled !== undefined) setTwoFactor(user.twoFactorEnabled)
 
       const email = user.email?.toLowerCase() || ''
-      const storedAvatar = (email ? localStorage.getItem(`ride_avatar_${email}`) : null) || user.avatarUrl
-      const storedCover = (email ? localStorage.getItem(`ride_cover_${email}`) : null) || user.coverUrl
+      const storedAvatar = user.avatarUrl || (email ? localStorage.getItem(`ride_avatar_${email}`) : null)
+      const storedCover = user.coverUrl || (email ? localStorage.getItem(`ride_cover_${email}`) : null)
 
       if (storedAvatar) setPreviewAvatar(storedAvatar)
       if (storedCover) setPreviewCover(storedCover)

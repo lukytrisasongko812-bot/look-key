@@ -1,6 +1,9 @@
 import bcrypt from 'bcryptjs'
 import { UserRole } from '@/context/AppContext'
 import { syncUserToGoogleDrive, syncDocumentToGoogleDrive } from './gdrive'
+import { connectToDatabase } from './db'
+import { User } from '@/models/User'
+import { DocumentModel } from '@/models/Document'
 
 export interface StoredFile {
   originalName: string
@@ -143,11 +146,6 @@ export async function initAndSeedDriveStore() {
     return
   }
 
-  const existingUsersMap = new Map<string, StoredUser>()
-  for (const u of store.users) {
-    if (u.email) existingUsersMap.set(u.email.toLowerCase(), u)
-  }
-
   const defaultPasswordHash = await bcrypt.hash('Password123!', 10)
   const now = new Date().toISOString()
 
@@ -200,22 +198,50 @@ export async function initAndSeedDriveStore() {
     },
   ]
 
-  store.users = seedUsers.map((su) => {
-    const existing = existingUsersMap.get(su.email.toLowerCase())
-    if (existing) {
-      return {
-        ...su,
-        employeeName: existing.employeeName || su.employeeName,
-        position: existing.position || su.position,
-        division: existing.division || su.division,
-        phone: existing.phone || su.phone,
-        avatarUrl: existing.avatarUrl || su.avatarUrl,
-        coverUrl: existing.coverUrl || su.coverUrl,
-        passwordHash: existing.passwordHash || su.passwordHash,
+  try {
+    await connectToDatabase()
+    const dbUsers = await User.find({}).lean()
+    if (!dbUsers || dbUsers.length === 0) {
+      for (const su of seedUsers) {
+        await User.create({
+          employeeName: su.employeeName,
+          email: su.email.toLowerCase(),
+          passwordHash: su.passwordHash,
+          position: su.position,
+          division: su.division,
+          role: su.role,
+          phone: su.phone,
+          twoFactorEnabled: su.twoFactorEnabled,
+          avatarUrl: su.avatarUrl || '',
+          coverUrl: su.coverUrl || '',
+        })
       }
+      store.users = seedUsers
+    } else {
+      store.users = dbUsers.map((u: any) => ({
+        _id: u._id.toString(),
+        id: u._id.toString(),
+        employeeName: u.employeeName,
+        email: u.email,
+        passwordHash: u.passwordHash,
+        position: u.position || 'Reviewer',
+        division: u.division || 'Direktorat Umum',
+        role: (u.role || 'Reviewer') as UserRole,
+        phone: u.phone,
+        avatarUrl: u.avatarUrl || undefined,
+        coverUrl: u.coverUrl || undefined,
+        twoFactorEnabled: u.twoFactorEnabled ?? true,
+        isActive: u.isActive ?? true,
+        createdAt: u.createdAt ? new Date(u.createdAt).toISOString() : now,
+        updatedAt: u.updatedAt ? new Date(u.updatedAt).toISOString() : now,
+      }))
     }
-    return su
-  })
+  } catch (err) {
+    console.error('[MongoDB initAndSeed error, fallback to memory]', err)
+    if (store.users.length === 0) {
+      store.users = seedUsers
+    }
+  }
 
   // 2. Official Corporate Documents seeded directly with Google Drive Folder IDs & Versions
   store.documents = [
@@ -1057,15 +1083,68 @@ export async function deleteDriveDocument(id: string) {
 // ----------------------------------------------------
 
 export async function getDriveUsers() {
+  try {
+    await connectToDatabase()
+    const dbUsers = await User.find({}).lean()
+    if (dbUsers && dbUsers.length > 0) {
+      return dbUsers.map((u: any) => ({
+        _id: u._id.toString(),
+        id: u._id.toString(),
+        employeeName: u.employeeName,
+        email: u.email,
+        position: u.position || 'Reviewer',
+        division: u.division || 'Direktorat Umum',
+        role: (u.role || 'Reviewer') as UserRole,
+        phone: u.phone,
+        avatarUrl: u.avatarUrl || undefined,
+        coverUrl: u.coverUrl || undefined,
+        twoFactorEnabled: u.twoFactorEnabled ?? true,
+        isActive: u.isActive ?? true,
+        createdAt: u.createdAt ? new Date(u.createdAt).toISOString() : new Date().toISOString(),
+        updatedAt: u.updatedAt ? new Date(u.updatedAt).toISOString() : new Date().toISOString(),
+      }))
+    }
+  } catch (err) {
+    console.error('[MongoDB getDriveUsers Error]', err)
+  }
+
   await initAndSeedDriveStore()
   const store = getStore()
   return store.users.map(({ passwordHash, twoFactorSecret, ...safe }) => safe)
 }
 
 export async function getDriveUserByEmail(email: string) {
+  const clean = email.toLowerCase().trim()
+  try {
+    await connectToDatabase()
+    const dbUser: any = await User.findOne({ email: clean }).lean()
+    if (dbUser) {
+      return {
+        _id: dbUser._id.toString(),
+        id: dbUser._id.toString(),
+        employeeName: dbUser.employeeName,
+        email: dbUser.email,
+        passwordHash: dbUser.passwordHash,
+        position: dbUser.position || 'Reviewer',
+        division: dbUser.division || 'Direktorat Umum',
+        role: (dbUser.role || 'Reviewer') as UserRole,
+        phone: dbUser.phone,
+        avatarUrl: dbUser.avatarUrl || undefined,
+        coverUrl: dbUser.coverUrl || undefined,
+        twoFactorEnabled: dbUser.twoFactorEnabled ?? true,
+        twoFactorSecret: dbUser.twoFactorCode || undefined,
+        twoFactorExpires: dbUser.twoFactorExpires ? new Date(dbUser.twoFactorExpires).toISOString() : null,
+        isActive: dbUser.isActive ?? true,
+        createdAt: dbUser.createdAt ? new Date(dbUser.createdAt).toISOString() : new Date().toISOString(),
+        updatedAt: dbUser.updatedAt ? new Date(dbUser.updatedAt).toISOString() : new Date().toISOString(),
+      }
+    }
+  } catch (err) {
+    console.error('[MongoDB getDriveUserByEmail Error]', err)
+  }
+
   await initAndSeedDriveStore()
   const store = getStore()
-  const clean = email.toLowerCase().trim()
   return (
     store.users.find(
       (u) =>
@@ -1077,6 +1156,40 @@ export async function getDriveUserByEmail(email: string) {
 }
 
 export async function getDriveUserById(id: string) {
+  try {
+    await connectToDatabase()
+    let dbUser: any = null
+    try {
+      dbUser = await User.findById(id).lean()
+    } catch {}
+    if (!dbUser) {
+      dbUser = await User.findOne({ _id: id }).lean()
+    }
+    if (dbUser) {
+      return {
+        _id: dbUser._id.toString(),
+        id: dbUser._id.toString(),
+        employeeName: dbUser.employeeName,
+        email: dbUser.email,
+        passwordHash: dbUser.passwordHash,
+        position: dbUser.position || 'Reviewer',
+        division: dbUser.division || 'Direktorat Umum',
+        role: (dbUser.role || 'Reviewer') as UserRole,
+        phone: dbUser.phone,
+        avatarUrl: dbUser.avatarUrl || undefined,
+        coverUrl: dbUser.coverUrl || undefined,
+        twoFactorEnabled: dbUser.twoFactorEnabled ?? true,
+        twoFactorSecret: dbUser.twoFactorCode || undefined,
+        twoFactorExpires: dbUser.twoFactorExpires ? new Date(dbUser.twoFactorExpires).toISOString() : null,
+        isActive: dbUser.isActive ?? true,
+        createdAt: dbUser.createdAt ? new Date(dbUser.createdAt).toISOString() : new Date().toISOString(),
+        updatedAt: dbUser.updatedAt ? new Date(dbUser.updatedAt).toISOString() : new Date().toISOString(),
+      }
+    }
+  } catch (err) {
+    console.error('[MongoDB getDriveUserById Error]', err)
+  }
+
   await initAndSeedDriveStore()
   const store = getStore()
   return store.users.find((u) => u._id === id || u.id === id) || null
@@ -1091,11 +1204,47 @@ export async function saveDriveUser(user: StoredUser) {
   } else {
     store.users.push(user)
   }
+
+  try {
+    await connectToDatabase()
+    await User.findOneAndUpdate(
+      { email: user.email.toLowerCase() },
+      {
+        employeeName: user.employeeName,
+        position: user.position,
+        division: user.division,
+        role: user.role,
+        phone: user.phone,
+        avatarUrl: user.avatarUrl || '',
+        coverUrl: user.coverUrl || '',
+        twoFactorEnabled: user.twoFactorEnabled,
+        twoFactorCode: user.twoFactorSecret || null,
+        twoFactorExpires: user.twoFactorExpires ? new Date(user.twoFactorExpires) : null,
+        passwordHash: user.passwordHash,
+        isActive: user.isActive,
+        updatedAt: new Date(),
+      },
+      { upsert: true, new: true }
+    )
+  } catch (err) {
+    console.error('[MongoDB saveDriveUser Error]', err)
+  }
+
   syncUserToGoogleDrive(user).catch((e) => console.error('[Background GDrive Sync User Error]', e))
   return user
 }
 
 export async function deleteDriveUser(id: string) {
+  try {
+    await connectToDatabase()
+    try {
+      await User.findByIdAndDelete(id)
+    } catch {}
+    await User.deleteOne({ _id: id })
+  } catch (err) {
+    console.error('[MongoDB deleteDriveUser Error]', err)
+  }
+
   await initAndSeedDriveStore()
   const store = getStore()
   const idx = store.users.findIndex((u) => u._id === id || u.id === id)
