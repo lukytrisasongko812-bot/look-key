@@ -16,6 +16,8 @@ import { AuthorityMatrixView } from '@/components/matrix/AuthorityMatrixView'
 import { AppMenuView } from '@/components/menu/AppMenuView'
 import { MobileBottomNav } from '@/components/layout/MobileBottomNav'
 
+import { RideLoadingScreen } from '@/components/common/RideSpinner'
+
 export default function HomePage() {
   const { isAuthenticated, authLoading, currentView } = useApp()
   const [mounted, setMounted] = React.useState(false)
@@ -25,16 +27,7 @@ export default function HomePage() {
   }, [])
 
   if (!mounted || (authLoading && !isAuthenticated)) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-[#F6F8FB]">
-        <div className="flex flex-col items-center gap-3">
-          <div className="h-10 w-10 animate-spin rounded-full border-3 border-[#163A70] border-t-transparent" />
-          <div className="text-xs font-bold text-[#163A70] tracking-wider uppercase font-display">
-            Memuat Portal RIDE...
-          </div>
-        </div>
-      </div>
-    )
+    return <RideLoadingScreen message="Memuat Portal RIDE..." />
   }
 
   if (!isAuthenticated) {

@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { useApp } from '@/context/AppContext'
 import { RideLogo } from '@/components/common/RideLogo'
+import { RideSpinner } from '@/components/common/RideSpinner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -336,7 +337,10 @@ export function LoginScreen() {
             className="w-full h-10 bg-[#163A70] hover:bg-[#0B2147] text-white font-bold text-xs shadow-sm rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer"
           >
             {loading ? (
-              <span>Memproses Otentikasi...</span>
+              <div className="flex items-center gap-2">
+                <RideSpinner size="xs" showGlow={false} speed="fast" />
+                <span>Memproses Otentikasi...</span>
+              </div>
             ) : (
               <>
                 <span>Masuk ke Portal RIDE</span>
@@ -389,9 +393,16 @@ export function LoginScreen() {
             <Button
               type="submit"
               disabled={loading || otpValues.join('').length < 6}
-              className="w-full h-11 bg-[#163A70] hover:bg-[#0B2147] text-white font-bold text-xs rounded-xl cursor-pointer"
+              className="w-full h-11 bg-[#163A70] hover:bg-[#0B2147] text-white font-bold text-xs rounded-xl cursor-pointer flex items-center justify-center gap-2"
             >
-              {loading ? 'Memverifikasi...' : 'Verifikasi & Lanjutkan Masuk'}
+              {loading ? (
+                <>
+                  <RideSpinner size="xs" showGlow={false} speed="fast" />
+                  <span>Memverifikasi...</span>
+                </>
+              ) : (
+                'Verifikasi & Lanjutkan Masuk'
+              )}
             </Button>
 
             <div className="text-center pt-2">
