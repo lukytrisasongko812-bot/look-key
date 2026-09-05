@@ -168,26 +168,15 @@ export function Sidebar() {
           </div>
         </div>
 
-        {/* Brand System Footer (Pojok Kiri Bawah) */}
-        {!isSidebarCollapsed ? (
-          <div className="p-2.5 sm:p-3 border-t border-[#E2E8F0] bg-[#F8FAFC] flex flex-col items-center justify-center text-center gap-1.5">
-            <img
-              src="/resources-id-logo.png"
-              alt="RESOURCES ID - Shared Service Center of MIND ID"
-              className="h-4.5 w-auto max-w-[115px] object-contain shrink-0 opacity-85 hover:opacity-100 transition-opacity"
-            />
-            <div className="flex flex-col items-center">
-              <span className="text-[10px] font-extrabold font-display text-[#0B2147] tracking-wider uppercase">
-                Platform RIDE
-              </span>
-              <span className="text-[8px] font-medium text-[#64748B] leading-tight">
-                Request Integrated Document Ecosystem
-              </span>
+        {/* Brand System Footer */}
+        {!isSidebarCollapsed && (
+          <div className="p-3 border-t border-[#F1F5F9] bg-[#F8FAFC]/70 flex flex-col items-center justify-center text-center">
+            <div className="text-[10.5px] font-bold font-display text-[#0B2147] tracking-wider uppercase">
+              PLATFORM RIDE
             </div>
-          </div>
-        ) : (
-          <div className="p-2.5 border-t border-[#E2E8F0] bg-[#F8FAFC] flex items-center justify-center" title="RESOURCES ID • Platform RIDE">
-            <div className="h-2 w-2 rounded-full bg-[#163A70]" />
+            <div className="text-[8.5px] text-[#64748B] mt-0.5 leading-tight">
+              Request Integrated Document Ecosystem
+            </div>
           </div>
         )}
       </aside>

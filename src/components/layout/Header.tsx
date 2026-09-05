@@ -66,10 +66,16 @@ export function Header() {
         </button>
 
         <div
-          className="cursor-pointer transition-opacity hover:opacity-90 flex items-center gap-3"
+          className="cursor-pointer transition-opacity hover:opacity-90 flex items-center gap-2.5 sm:gap-3"
           onClick={() => setCurrentView('dashboard')}
         >
-          <RideLogo size="sm" showSubtitle={true} showResourcesLogo={false} />
+          <RideLogo size="sm" showSubtitle={true} />
+          <div className="h-5 sm:h-6 w-[1px] bg-[#CBD5E1] shrink-0" />
+          <img
+            src="/resources-id-logo.png"
+            alt="RESOURCES ID - MIND ID"
+            className="h-4 sm:h-5.5 w-auto max-w-[105px] sm:max-w-[135px] object-contain shrink-0"
+          />
         </div>
 
         {/* Global Search Bar */}
