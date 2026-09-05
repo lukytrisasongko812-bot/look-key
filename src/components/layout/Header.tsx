@@ -69,13 +69,7 @@ export function Header() {
           className="cursor-pointer transition-opacity hover:opacity-90 flex items-center gap-3"
           onClick={() => setCurrentView('dashboard')}
         >
-          <RideLogo size="sm" showSubtitle={false} />
-          <div className="hidden sm:block h-6 w-[1px] bg-[#CBD5E1]" />
-          <img
-            src="/resources-id-logo.png"
-            alt="RESOURCES ID - MIND ID"
-            className="hidden sm:block h-7 w-auto object-contain shrink-0"
-          />
+          <RideLogo size="sm" showSubtitle={true} />
         </div>
 
         {/* Global Search Bar */}

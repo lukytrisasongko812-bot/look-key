@@ -247,25 +247,54 @@ export function DashboardView() {
     <div className="space-y-3.5 sm:space-y-5 max-w-7xl mx-auto pb-12 animate-in fade-in duration-300">
       {/* Top Hero Banner */}
       <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-r from-[#0B2147] via-[#163A70] to-[#1E4D94] p-4 sm:p-7 text-white shadow-md">
-        <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-[11px] font-semibold text-white/90 backdrop-blur-md mb-2 border border-white/10">
-              <span className="font-bold text-[#60A5FA]">RIDE</span>
-              <span className="text-white/40">•</span>
-              <span>{user?.division || 'Direktorat Legal & Governance'}</span>
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-5">
+          <div className="space-y-3.5">
+            {/* RIDE Title, Kepanjangan, and Logo Resources ID */}
+            <div className="space-y-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-black text-2xl sm:text-3xl font-display tracking-wider text-white">
+                  RIDE
+                </span>
+                <span className="rounded-md bg-[#60A5FA]/20 px-2 py-0.5 text-[10px] font-bold text-[#93C5FD] tracking-wide uppercase border border-[#60A5FA]/30">
+                  Platform
+                </span>
+                <span className="text-white/40">•</span>
+                <span className="text-xs text-white/80 font-medium">
+                  {user?.division || 'Direktorat Legal & Governance'}
+                </span>
+              </div>
+
+              {/* Tulisan RIDE dibawahnya dijelaskan kepanjangannya */}
+              <div className="text-xs sm:text-sm font-semibold text-white/90 tracking-tight">
+                Request Integrated Document Ecosystem
+              </div>
+
+              {/* Logo Resources ID diletakkan dibawah tulisan RIDE */}
+              <div className="pt-0.5">
+                <div className="inline-flex items-center bg-white px-3 py-1.5 rounded-xl shadow-xs border border-white/20">
+                  <img
+                    src="/resources-id-logo.png"
+                    alt="RESOURCES ID - Shared Service Center of MIND ID"
+                    className="h-5 sm:h-6 w-auto object-contain"
+                  />
+                </div>
+              </div>
             </div>
 
-            <h1 className="text-lg sm:text-2xl font-bold font-display tracking-tight text-white">
-              Selamat Datang, {user?.employeeName || 'Pengguna'}
-            </h1>
-            <p className="text-xs text-white/80 mt-1 max-w-xl leading-relaxed">
-              Pantau pengajuan berkas, tracking persetujuan, dan jatuh tempo kontrak Anda.
-            </p>
+            {/* Greeting & Subtext */}
+            <div className="pt-1">
+              <h1 className="text-base sm:text-lg font-bold font-display tracking-tight text-white/95">
+                Selamat Datang, {user?.employeeName || 'Pengguna'}
+              </h1>
+              <p className="text-xs text-white/75 mt-0.5 max-w-xl leading-relaxed">
+                Pantau pengajuan berkas, tracking persetujuan, dan jatuh tempo kontrak Anda dalam satu ekosistem terpadu.
+              </p>
+            </div>
           </div>
 
           <Button
             onClick={() => setCurrentView('tracking', 'new')}
-            className="self-start sm:self-auto h-10 sm:h-11 bg-white text-[#163A70] hover:bg-[#EBF2FF] font-bold text-xs shadow-md border-0 shrink-0 cursor-pointer rounded-xl gap-2 px-4"
+            className="self-start md:self-auto h-10 sm:h-11 bg-white text-[#163A70] hover:bg-[#EBF2FF] font-bold text-xs shadow-md border-0 shrink-0 cursor-pointer rounded-xl gap-2 px-4.5 transition-transform active:scale-95"
           >
             <Plus className="h-4 w-4 text-[#163A70]" />
             <span>Ajukan Dokumen</span>
