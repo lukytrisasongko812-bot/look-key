@@ -75,16 +75,9 @@ export function RideLoadingScreen({
     <div
       className={`min-h-screen w-full flex flex-col items-center justify-center bg-transparent select-none p-4 animate-in fade-in duration-200 ${className}`}
     >
-      <div className="flex flex-col items-center justify-center gap-3">
-        {/* Floating Rotating RIDE Pinwheel Emblem */}
-        <div className="relative flex items-center justify-center">
-          {/* Subtle Ambient Pulse Aura */}
-          <div className="absolute -inset-1.5 rounded-2xl bg-gradient-to-tr from-[#163A70]/15 via-[#0E786B]/15 to-[#F2C342]/20 blur-sm animate-pulse" />
-
-          <div className="relative flex h-13 w-13 items-center justify-center rounded-2xl bg-white p-2 shadow-md border border-[#E2E8F0]">
-            <RideSpinner size="md" speed="normal" showGlow={false} />
-          </div>
-        </div>
+      <div className="flex flex-col items-center justify-center gap-3 bg-transparent">
+        {/* Floating Rotating RIDE Pinwheel Emblem - 100% Transparent */}
+        <RideSpinner size="lg" speed="normal" showGlow={false} />
 
         {/* Brand Text & Status */}
         <div className="flex flex-col items-center text-center">
@@ -115,15 +108,15 @@ export function RideLoadingOverlay({
 }) {
   return (
     <div
-      className={`absolute inset-0 z-30 flex flex-col items-center justify-center bg-white/70 backdrop-blur-[2px] rounded-2xl animate-in fade-in duration-200 select-none ${className}`}
+      className={`absolute inset-0 z-30 flex flex-col items-center justify-center bg-transparent animate-in fade-in duration-200 select-none ${className}`}
     >
       <div className="flex flex-col items-center gap-2">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white shadow-sm border border-[#E2E8F0]">
-          <RideSpinner size="sm" speed="normal" showGlow={false} />
-        </div>
-        <span className="text-[11px] font-bold text-[#163A70]">
-          {message}
-        </span>
+        <RideSpinner size="md" speed="normal" showGlow={false} />
+        {message && (
+          <span className="text-[11px] font-bold text-[#163A70]">
+            {message}
+          </span>
+        )}
       </div>
     </div>
   )
