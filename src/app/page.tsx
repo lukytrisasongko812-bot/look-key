@@ -24,12 +24,12 @@ export default function HomePage() {
     setMounted(true)
   }, [])
 
-  if (!mounted || (authLoading && !isAuthenticated)) {
-    return <LoginScreen initialIntro={true} />
+  if (!mounted || authLoading) {
+    return <div className="min-h-screen bg-[#071326]" />
   }
 
   if (!isAuthenticated) {
-    return <LoginScreen initialIntro={false} />
+    return <LoginScreen />
   }
 
   return (

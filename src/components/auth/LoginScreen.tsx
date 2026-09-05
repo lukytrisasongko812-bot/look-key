@@ -27,24 +27,26 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 
-export function LoginScreen({ initialIntro = true }: { initialIntro?: boolean }) {
+export function LoginScreen() {
   const { login, verifyOtp } = useApp()
 
-  const [showIntro, setShowIntro] = useState(initialIntro)
+  const [showIntro, setShowIntro] = useState(true)
   const [introFading, setIntroFading] = useState(false)
 
   useEffect(() => {
-    if (initialIntro) {
-      const timer = setTimeout(() => {
-        setIntroFading(true)
-        setTimeout(() => {
-          setShowIntro(false)
-        }, 400) // smooth fade out to login card
-      }, 2000) // exactly 2 seconds of clean kincir rotation
+    const t1 = setTimeout(() => {
+      setIntroFading(true)
+    }, 2000)
 
-      return () => clearTimeout(timer)
+    const t2 = setTimeout(() => {
+      setShowIntro(false)
+    }, 2400)
+
+    return () => {
+      clearTimeout(t1)
+      clearTimeout(t2)
     }
-  }, [initialIntro])
+  }, [])
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
