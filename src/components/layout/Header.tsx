@@ -69,7 +69,7 @@ export function Header() {
           className="cursor-pointer transition-opacity hover:opacity-90 flex items-center gap-3"
           onClick={() => setCurrentView('dashboard')}
         >
-          <RideLogo size="sm" showSubtitle={false} showResourcesLogo={false} />
+          <RideLogo size="sm" showSubtitle={true} showResourcesLogo={false} />
         </div>
 
         {/* Global Search Bar */}

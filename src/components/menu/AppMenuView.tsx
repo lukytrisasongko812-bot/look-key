@@ -238,13 +238,13 @@ export function AppMenuView() {
         <img
           src="/resources-id-logo.png"
           alt="RESOURCES ID"
-          className="h-6 w-auto max-w-[145px] object-contain shrink-0"
+          className="h-4.5 w-auto max-w-[115px] object-contain shrink-0 opacity-85 hover:opacity-100 transition-opacity"
         />
         <div>
-          <div className="text-[11px] font-bold font-display text-[#0B2147] tracking-wider uppercase">
+          <div className="text-[10px] font-bold font-display text-[#0B2147] tracking-wider uppercase">
             Platform RIDE v2.6.0
           </div>
-          <div className="text-[9px] text-[#64748B] mt-0.5">
+          <div className="text-[8.5px] text-[#64748B] mt-0.5">
             Request Integrated Document Ecosystem
           </div>
         </div>
