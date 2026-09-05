@@ -320,6 +320,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       })
         .then((res) => res.json())
         .then((data) => {
+          if (data.token) {
+            setToken(data.token)
+            tokenRef.current = data.token
+            try { localStorage.setItem('ride_token', data.token) } catch {}
+          }
           if (data.user) {
             let cachedUser: UserProfile | null = null
             try {
@@ -379,6 +384,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         })
           .then((r) => r.json())
           .then((d) => {
+            if (d.token) {
+              setToken(d.token)
+              tokenRef.current = d.token
+              try { localStorage.setItem('ride_token', d.token) } catch {}
+            }
             if (d.user) {
               const uEmail = (d.user.email || '').toLowerCase()
               if (uEmail) {
@@ -394,6 +404,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
                 const updated = {
                   ...prev,
                   ...d.user,
+                  role: d.user.role || prev.role,
                   avatarUrl: d.user.avatarUrl || prev.avatarUrl,
                   coverUrl: d.user.coverUrl || prev.coverUrl,
                 }

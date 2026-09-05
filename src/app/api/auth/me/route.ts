@@ -11,12 +11,26 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Tidak terotentikasi' }, { status: 401 })
     }
 
-    const user = await getDriveUserById(tokenUser.userId)
+    let user = await getDriveUserById(tokenUser.userId)
+    if (!user && tokenUser.email) {
+      user = await getDriveUserById(tokenUser.email)
+    }
+
     if (!user) {
       return NextResponse.json({ error: 'Pengguna tidak ditemukan' }, { status: 404 })
     }
 
+    const token = signToken({
+      userId: user._id,
+      email: user.email,
+      role: user.role,
+      employeeName: user.employeeName,
+      division: user.division,
+    })
+
     return NextResponse.json({
+      success: true,
+      token,
       user: {
         id: user._id,
         employeeName: user.employeeName,

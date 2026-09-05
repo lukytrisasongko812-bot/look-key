@@ -1114,10 +1114,17 @@ export async function getDriveUsers() {
 }
 
 export async function getDriveUserByEmail(email: string) {
+  if (!email) return null
   const clean = email.toLowerCase().trim()
   try {
     await connectToDatabase()
-    const dbUser: any = await User.findOne({ email: clean }).lean()
+    const dbUser: any = await User.findOne({
+      $or: [
+        { email: clean },
+        { email: clean === 'lukytrisasongko812@gmail.com' ? 'lukytrissasongko812@gmail.com' : clean },
+        { email: clean === 'lukytrissasongko812@gmail.com' ? 'lukytrisasongko812@gmail.com' : clean },
+      ]
+    }).lean()
     if (dbUser) {
       return {
         _id: dbUser._id.toString(),
@@ -1156,14 +1163,30 @@ export async function getDriveUserByEmail(email: string) {
 }
 
 export async function getDriveUserById(id: string) {
+  if (!id) return null
+  const cleanId = id.trim()
   try {
     await connectToDatabase()
     let dbUser: any = null
-    try {
-      dbUser = await User.findById(id).lean()
-    } catch {}
+    const mongooseModule = await import('mongoose')
+    if (mongooseModule.default.Types.ObjectId.isValid(cleanId)) {
+      try {
+        dbUser = await User.findById(cleanId).lean()
+      } catch {}
+    }
     if (!dbUser) {
-      dbUser = await User.findOne({ _id: id }).lean()
+      dbUser = await User.findOne({
+        $or: [
+          { email: cleanId.toLowerCase() },
+          { email: cleanId.toLowerCase() === 'lukytrisasongko812@gmail.com' ? 'lukytrissasongko812@gmail.com' : cleanId.toLowerCase() },
+        ]
+      }).lean()
+    }
+    if (!dbUser) {
+      const inMem = getStore().users.find((u) => u._id === cleanId || u.id === cleanId)
+      if (inMem && inMem.email) {
+        dbUser = await User.findOne({ email: inMem.email.toLowerCase() }).lean()
+      }
     }
     if (dbUser) {
       return {
@@ -1192,7 +1215,7 @@ export async function getDriveUserById(id: string) {
 
   await initAndSeedDriveStore()
   const store = getStore()
-  return store.users.find((u) => u._id === id || u.id === id) || null
+  return store.users.find((u) => u._id === cleanId || u.id === cleanId || u.email.toLowerCase() === cleanId.toLowerCase()) || null
 }
 
 export async function saveDriveUser(user: StoredUser) {
