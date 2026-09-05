@@ -93,6 +93,9 @@ export async function POST(request: NextRequest) {
         position: user.position,
         division: user.division,
         role: user.role,
+        phone: user.phone,
+        avatarUrl: user.avatarUrl,
+        coverUrl: user.coverUrl,
         twoFactorEnabled: user.twoFactorEnabled,
       },
     })

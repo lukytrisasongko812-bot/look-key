@@ -43,6 +43,9 @@ export async function PATCH(
         division: user.division,
         role: user.role,
         isActive: user.isActive,
+        phone: user.phone,
+        avatarUrl: user.avatarUrl,
+        coverUrl: user.coverUrl,
       },
     })
   } catch (error: unknown) {

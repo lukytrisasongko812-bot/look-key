@@ -463,10 +463,27 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }
       }
       if (data.token && data.user) {
+        const uEmail = (data.user.email || email || '').toLowerCase()
+        const userAvatar = data.user.avatarUrl || (uEmail ? localStorage.getItem(`ride_avatar_${uEmail}`) : null) || undefined
+        const userCover = data.user.coverUrl || (uEmail ? localStorage.getItem(`ride_cover_${uEmail}`) : null) || undefined
+        if (uEmail) {
+          if (data.user.avatarUrl) {
+            try { localStorage.setItem(`ride_avatar_${uEmail}`, data.user.avatarUrl) } catch {}
+          }
+          if (data.user.coverUrl) {
+            try { localStorage.setItem(`ride_cover_${uEmail}`, data.user.coverUrl) } catch {}
+          }
+        }
+        const fullUser: UserProfile = {
+          ...data.user,
+          avatarUrl: userAvatar,
+          coverUrl: userCover,
+        }
         setToken(data.token)
-        setUser(data.user)
+        setUser(fullUser)
+        userRef.current = fullUser
         localStorage.setItem('ride_token', data.token)
-        localStorage.setItem('ride_user', JSON.stringify(data.user))
+        localStorage.setItem('ride_user', JSON.stringify(fullUser))
         return { success: true }
       }
       return { success: false, error: 'Respon otentikasi tidak valid' }
@@ -488,10 +505,27 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         return { success: false, error: data.error || 'Kode OTP tidak valid atau kadaluarsa' }
       }
       if (data.token && data.user) {
+        const uEmail = (data.user.email || email || '').toLowerCase()
+        const userAvatar = data.user.avatarUrl || (uEmail ? localStorage.getItem(`ride_avatar_${uEmail}`) : null) || undefined
+        const userCover = data.user.coverUrl || (uEmail ? localStorage.getItem(`ride_cover_${uEmail}`) : null) || undefined
+        if (uEmail) {
+          if (data.user.avatarUrl) {
+            try { localStorage.setItem(`ride_avatar_${uEmail}`, data.user.avatarUrl) } catch {}
+          }
+          if (data.user.coverUrl) {
+            try { localStorage.setItem(`ride_cover_${uEmail}`, data.user.coverUrl) } catch {}
+          }
+        }
+        const fullUser: UserProfile = {
+          ...data.user,
+          avatarUrl: userAvatar,
+          coverUrl: userCover,
+        }
         setToken(data.token)
-        setUser(data.user)
+        setUser(fullUser)
+        userRef.current = fullUser
         localStorage.setItem('ride_token', data.token)
-        localStorage.setItem('ride_user', JSON.stringify(data.user))
+        localStorage.setItem('ride_user', JSON.stringify(fullUser))
         return { success: true }
       }
       return { success: false, error: 'Otentikasi OTP gagal' }
@@ -513,10 +547,27 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         return { success: false, error: data.error || 'SSO Login gagal' }
       }
       if (data.token && data.user) {
+        const uEmail = (data.user.email || email || '').toLowerCase()
+        const userAvatar = data.user.avatarUrl || (uEmail ? localStorage.getItem(`ride_avatar_${uEmail}`) : null) || undefined
+        const userCover = data.user.coverUrl || (uEmail ? localStorage.getItem(`ride_cover_${uEmail}`) : null) || undefined
+        if (uEmail) {
+          if (data.user.avatarUrl) {
+            try { localStorage.setItem(`ride_avatar_${uEmail}`, data.user.avatarUrl) } catch {}
+          }
+          if (data.user.coverUrl) {
+            try { localStorage.setItem(`ride_cover_${uEmail}`, data.user.coverUrl) } catch {}
+          }
+        }
+        const fullUser: UserProfile = {
+          ...data.user,
+          avatarUrl: userAvatar,
+          coverUrl: userCover,
+        }
         setToken(data.token)
-        setUser(data.user)
+        setUser(fullUser)
+        userRef.current = fullUser
         localStorage.setItem('ride_token', data.token)
-        localStorage.setItem('ride_user', JSON.stringify(data.user))
+        localStorage.setItem('ride_user', JSON.stringify(fullUser))
         return { success: true }
       }
       return { success: false, error: 'Respon SSO tidak valid' }

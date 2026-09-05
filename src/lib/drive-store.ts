@@ -1223,30 +1223,44 @@ export async function saveDriveUser(user: StoredUser) {
   const store = getStore()
   const idx = store.users.findIndex((u) => u._id === user._id || u.email.toLowerCase() === user.email.toLowerCase())
   if (idx >= 0) {
-    store.users[idx] = { ...user, updatedAt: new Date().toISOString() }
+    const existing = store.users[idx]
+    store.users[idx] = {
+      ...existing,
+      ...user,
+      avatarUrl: user.avatarUrl !== undefined ? user.avatarUrl : existing.avatarUrl,
+      coverUrl: user.coverUrl !== undefined ? user.coverUrl : existing.coverUrl,
+      updatedAt: new Date().toISOString(),
+    }
   } else {
     store.users.push(user)
   }
 
   try {
     await connectToDatabase()
+    const updateFields: any = {
+      employeeName: user.employeeName,
+      position: user.position,
+      division: user.division,
+      role: user.role,
+      phone: user.phone,
+      twoFactorEnabled: user.twoFactorEnabled,
+      twoFactorCode: user.twoFactorSecret !== undefined ? user.twoFactorSecret : null,
+      twoFactorExpires: user.twoFactorExpires ? new Date(user.twoFactorExpires) : null,
+      passwordHash: user.passwordHash,
+      isActive: user.isActive,
+      updatedAt: new Date(),
+    }
+
+    if (user.avatarUrl !== undefined) {
+      updateFields.avatarUrl = user.avatarUrl
+    }
+    if (user.coverUrl !== undefined) {
+      updateFields.coverUrl = user.coverUrl
+    }
+
     await User.findOneAndUpdate(
       { email: user.email.toLowerCase() },
-      {
-        employeeName: user.employeeName,
-        position: user.position,
-        division: user.division,
-        role: user.role,
-        phone: user.phone,
-        avatarUrl: user.avatarUrl || '',
-        coverUrl: user.coverUrl || '',
-        twoFactorEnabled: user.twoFactorEnabled,
-        twoFactorCode: user.twoFactorSecret || null,
-        twoFactorExpires: user.twoFactorExpires ? new Date(user.twoFactorExpires) : null,
-        passwordHash: user.passwordHash,
-        isActive: user.isActive,
-        updatedAt: new Date(),
-      },
+      { $set: updateFields },
       { upsert: true, new: true }
     )
   } catch (err) {
