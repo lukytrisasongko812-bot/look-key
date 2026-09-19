@@ -7,6 +7,9 @@ export interface IDocFile {
   mimeType: string
   url: string
   uploadedAt: Date
+  dataUrl?: string
+  driveFileId?: string
+  driveViewUrl?: string
 }
 
 export interface IDocVersion {
@@ -86,8 +89,11 @@ const DocFileSchema = new Schema<IDocFile>(
     filename: { type: String, required: true },
     size: { type: Number, required: true },
     mimeType: { type: String, required: true },
-    url: { type: String, required: true },
+    url: { type: String, default: '' },
     uploadedAt: { type: Date, default: Date.now },
+    dataUrl: { type: String, default: '' },
+    driveFileId: { type: String, default: '' },
+    driveViewUrl: { type: String, default: '' },
   },
   { _id: false }
 )

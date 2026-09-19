@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getDriveDocumentById, saveDriveDocument } from '@/lib/drive-store'
-import { generateDocumentTxtLog } from '@/lib/gdrive'
+import { generateDocumentTxtLog, syncDocumentToGoogleDrive } from '@/lib/gdrive'
 
 export const dynamic = 'force-dynamic'
 
@@ -15,9 +15,11 @@ export async function POST(
       return NextResponse.json({ error: 'Dokumen tidak ditemukan' }, { status: 404 })
     }
 
-    const folderUrl = `https://drive.google.com/drive/search?q=${encodeURIComponent(doc.docNumber)}`
-    doc.driveFolderUrl = folderUrl
-    doc.driveFolderId = `gdrive-${doc.docNumber.toLowerCase()}`
+    const gdriveResult = await syncDocumentToGoogleDrive(doc)
+    if (gdriveResult.folderId) {
+      doc.driveFolderId = gdriveResult.folderId
+      doc.driveFolderUrl = gdriveResult.folderUrl
+    }
     await saveDriveDocument(doc)
 
     const txtLog = generateDocumentTxtLog(doc as any)
@@ -27,7 +29,7 @@ export async function POST(
       folderId: doc.driveFolderId,
       folderUrl: doc.driveFolderUrl,
       isLive: true,
-      message: 'Folder Google Drive & file log teks (.txt) berhasil disinkronkan!',
+      message: 'Folder Google Drive & seluruh berkas dokumen berhasil disinkronkan langsung!',
       txtLog,
       docNumber: doc.docNumber,
     })

@@ -44,6 +44,8 @@ import {
   Bell,
   BellRing,
   FileEdit,
+  ExternalLink,
+  Paperclip,
 } from 'lucide-react'
 import { Switch } from '@/components/ui/switch'
 import {
@@ -124,52 +126,155 @@ export function TrackingView() {
   const [isRequestRevOpen, setIsRequestRevOpen] = useState(false)
   const [requestRevReason, setRequestRevReason] = useState('')
 
+  // New Request Separate File States (Draf Utama & Dokumen Pendukung)
+  const [mainDraftFile, setMainDraftFile] = useState<DocumentFile | null>(null)
+  const [supportingFilesList, setSupportingFilesList] = useState<DocumentFile[]>([])
+
   // Active Doc Selection
   const activeDoc: DocumentItem | undefined =
     documents.find((d) => d.docNumber === selectedDocNumber) || documents[0]
 
-  // File Upload Handlers (Simulation to real structured metadata)
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Helper: Read File as Base64 Data URL
+  const readFileAsDataUrl = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(reader.result as string)
+      reader.onerror = reject
+      reader.readAsDataURL(file)
+    })
+  }
+
+  // Upload Handlers for New Submission
+  const handleMainDraftUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.size > 20 * 1024 * 1024) {
+      toast.error(`Berkas "${file.name}" melebihi batas ukuran maksimal 20 MB.`)
+      return
+    }
+    try {
+      const dataUrl = await readFileAsDataUrl(file)
+      const docFile: DocumentFile = {
+        originalName: file.name,
+        filename: file.name.toLowerCase().replace(/\s+/g, '_'),
+        size: file.size,
+        mimeType: file.type || 'application/pdf',
+        url: dataUrl,
+        dataUrl,
+        uploadedAt: new Date().toISOString(),
+      }
+      setMainDraftFile(docFile)
+      toast.success(`Draf dokumen utama "${file.name}" siap diajukan.`)
+    } catch (err) {
+      toast.error('Gagal membaca berkas draf utama.')
+    }
+  }
+
+  const handleSupportingFilesUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const fileList = e.target.files
     if (!fileList || fileList.length === 0) return
 
-    const newFiles: DocumentFile[] = Array.from(fileList).map((f) => ({
-      originalName: f.name,
-      filename: f.name.toLowerCase().replace(/\s+/g, '_'),
-      size: f.size,
-      mimeType: f.type || 'application/pdf',
-      url: `/files/${f.name}`,
-      uploadedAt: new Date().toISOString(),
-    }))
+    const newDocs: DocumentFile[] = []
+    for (const file of Array.from(fileList)) {
+      if (file.size > 20 * 1024 * 1024) {
+        toast.error(`Berkas "${file.name}" melebihi batas maksimal 20 MB.`)
+        continue
+      }
+      try {
+        const dataUrl = await readFileAsDataUrl(file)
+        newDocs.push({
+          originalName: file.name,
+          filename: file.name.toLowerCase().replace(/\s+/g, '_'),
+          size: file.size,
+          mimeType: file.type || 'application/pdf',
+          url: dataUrl,
+          dataUrl,
+          uploadedAt: new Date().toISOString(),
+        })
+      } catch (err) {
+        console.error('Error reading supporting file:', file.name, err)
+      }
+    }
+
+    setSupportingFilesList((prev) => [...prev, ...newDocs])
+    toast.success(`${newDocs.length} dokumen pendukung berhasil ditambahkan.`)
+  }
+
+  // Combined fallback uploader
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const fileList = e.target.files
+    if (!fileList || fileList.length === 0) return
+
+    const newFiles: DocumentFile[] = []
+    for (const f of Array.from(fileList)) {
+      if (f.size > 20 * 1024 * 1024) {
+        toast.error(`Berkas "${f.name}" melebihi batas maksimal 20 MB.`)
+        continue
+      }
+      try {
+        const dataUrl = await readFileAsDataUrl(f)
+        newFiles.push({
+          originalName: f.name,
+          filename: f.name.toLowerCase().replace(/\s+/g, '_'),
+          size: f.size,
+          mimeType: f.type || 'application/pdf',
+          url: dataUrl,
+          dataUrl,
+          uploadedAt: new Date().toISOString(),
+        })
+      } catch (err) {
+        console.error('Error reading file:', f.name, err)
+      }
+    }
 
     setUploadedFiles((prev) => [...prev, ...newFiles])
     toast.success(`${newFiles.length} berkas berhasil ditambahkan ke formulir pengajuan.`)
   }
 
-  const handleRevFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleRevFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-    setRevFile({
-      originalName: file.name,
-      filename: file.name.toLowerCase().replace(/\s+/g, '_'),
-      size: file.size,
-      mimeType: file.type || 'application/pdf',
-      url: `/files/${file.name}`,
-      uploadedAt: new Date().toISOString(),
-    })
+    if (file.size > 20 * 1024 * 1024) {
+      toast.error(`Berkas revisi melebihi batas maksimal 20 MB.`)
+      return
+    }
+    try {
+      const dataUrl = await readFileAsDataUrl(file)
+      setRevFile({
+        originalName: file.name,
+        filename: file.name.toLowerCase().replace(/\s+/g, '_'),
+        size: file.size,
+        mimeType: file.type || 'application/pdf',
+        url: dataUrl,
+        dataUrl,
+        uploadedAt: new Date().toISOString(),
+      })
+    } catch (err) {
+      toast.error('Gagal membaca berkas revisi.')
+    }
   }
 
-  const handleFinalFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFinalFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-    setFinalFile({
-      originalName: file.name,
-      filename: file.name.toLowerCase().replace(/\s+/g, '_'),
-      size: file.size,
-      mimeType: file.type || 'application/pdf',
-      url: `/files/${file.name}`,
-      uploadedAt: new Date().toISOString(),
-    })
+    if (file.size > 20 * 1024 * 1024) {
+      toast.error(`Berkas dokumen final melebihi batas maksimal 20 MB.`)
+      return
+    }
+    try {
+      const dataUrl = await readFileAsDataUrl(file)
+      setFinalFile({
+        originalName: file.name,
+        filename: file.name.toLowerCase().replace(/\s+/g, '_'),
+        size: file.size,
+        mimeType: file.type || 'application/pdf',
+        url: dataUrl,
+        dataUrl,
+        uploadedAt: new Date().toISOString(),
+      })
+    } catch (err) {
+      toast.error('Gagal membaca berkas final.')
+    }
   }
 
   // Create Request Submit
@@ -179,6 +284,16 @@ export function TrackingView() {
       toast.error('Nama dokumen / kontrak wajib diisi.')
       return
     }
+
+    const effectiveInitial = mainDraftFile || (uploadedFiles.length > 0 ? uploadedFiles[0] : null)
+    const effectiveSupporting = [
+      ...supportingFilesList,
+      ...(uploadedFiles.length > 1 ? uploadedFiles.slice(1) : []),
+    ]
+    const allFiles = [
+      ...(effectiveInitial ? [effectiveInitial] : []),
+      ...effectiveSupporting,
+    ]
 
     setIsSubmitting(true)
     const newDoc = await createDocument({
@@ -191,18 +306,22 @@ export function TrackingView() {
       contractEnd: reqNoDuration ? null : reqEnd || null,
       noDuration: reqNoDuration,
       notes: reqNotes,
-      files: uploadedFiles,
-    })
+      initialDocument: effectiveInitial,
+      supportingDocuments: effectiveSupporting,
+      files: allFiles,
+    } as any)
     setIsSubmitting(false)
 
     if (newDoc) {
-      toast.success(`Pengajuan ${newDoc.docNumber} berhasil dibuat!`)
+      toast.success(`Pengajuan ${newDoc.docNumber} berhasil dibuat dan disinkronkan ke Google Drive!`)
       setSelectedDocNumber(newDoc.docNumber)
       setTrackSubTab('progress')
       // Reset
       setReqName('')
       setReqNotes('')
       setUploadedFiles([])
+      setMainDraftFile(null)
+      setSupportingFilesList([])
     }
   }
 
@@ -600,39 +719,84 @@ export function TrackingView() {
                 />
               </div>
 
-              {/* Upload Initial Files (V0) */}
-              <div className="space-y-1 pt-1">
-                <Label className="text-xs font-semibold">Unggah Draf Awal (V0)</Label>
-                <div className="rounded-2xl border-2 border-dashed border-[#CBD5E1] p-4 text-center hover:border-[#163A70] transition-colors bg-[#F8FAFC]">
-                  <Upload className="mx-auto h-6 w-6 text-[#94A3B8] mb-1.5" />
+              {/* Upload Main Draft File (V0) */}
+              <div className="space-y-1.5 pt-1">
+                <Label className="text-xs font-semibold text-[#0B2147] flex items-center gap-1.5">
+                  <FileText className="h-3.5 w-3.5 text-[#163A70]" />
+                  Draf Dokumen Utama (V0) <span className="text-[#DC2626]">*</span>
+                </Label>
+                <div className="rounded-2xl border-2 border-dashed border-[#CBD5E1] p-3.5 text-center hover:border-[#163A70] transition-colors bg-[#F8FAFC]">
+                  <Upload className="mx-auto h-5 w-5 text-[#94A3B8] mb-1" />
                   <div className="text-xs font-semibold text-[#0F172A]">
-                    Klik atau seret file PDF / Word ke sini
+                    Pilih Berkas Draf Utama (PDF / Word DOCX)
+                  </div>
+                  <input
+                    type="file"
+                    accept=".pdf,.doc,.docx"
+                    onChange={handleMainDraftUpload}
+                    className="mt-2 block w-full text-xs text-[#64748B] file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-[#163A70] file:text-white hover:file:bg-[#0B2147] cursor-pointer"
+                  />
+                </div>
+
+                {mainDraftFile && (
+                  <div className="flex items-center justify-between p-2.5 rounded-xl border border-[#A7F3D0] bg-[#ECFDF5] text-xs">
+                    <div className="flex items-center gap-2 truncate">
+                      <FileCheck className="h-4 w-4 text-[#059669] shrink-0" />
+                      <span className="font-bold text-[#065F46] truncate">{mainDraftFile.originalName}</span>
+                      <Badge className="text-[9px] bg-[#059669] text-white">
+                        Draf Utama (V0) • {(mainDraftFile.size / 1024).toFixed(1)} KB
+                      </Badge>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setMainDraftFile(null)}
+                      className="text-[#DC2626] hover:bg-[#FEE2E2] p-1 rounded-lg cursor-pointer"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Upload Supporting Documents (Lampiran Pengajuan) */}
+              <div className="space-y-1.5 pt-2">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-semibold text-[#0B2147] flex items-center gap-1.5">
+                    <Paperclip className="h-3.5 w-3.5 text-[#059669]" />
+                    Dokumen Pendukung / Lampiran Pengajuan (Opsional)
+                  </Label>
+                  <span className="text-[11px] text-[#64748B]">PDF, DOCX, XLSX, JPG, PNG (Maks 20MB)</span>
+                </div>
+                <div className="rounded-2xl border-2 border-dashed border-[#CBD5E1] p-3.5 text-center hover:border-[#059669] transition-colors bg-[#F8FAFC]">
+                  <Upload className="mx-auto h-5 w-5 text-[#94A3B8] mb-1" />
+                  <div className="text-xs font-semibold text-[#0F172A]">
+                    Pilih satu atau beberapa berkas pendukung (KTP, NPWP, Memo, Spesifikasi, Penawaran)
                   </div>
                   <input
                     type="file"
                     multiple
-                    onChange={handleFileUpload}
-                    className="mt-2.5 block w-full text-xs text-[#64748B] file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-[#163A70] file:text-white hover:file:bg-[#0B2147] cursor-pointer"
+                    onChange={handleSupportingFilesUpload}
+                    className="mt-2 block w-full text-xs text-[#64748B] file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-[#059669] file:text-white hover:file:bg-[#047857] cursor-pointer"
                   />
                 </div>
 
-                {uploadedFiles.length > 0 && (
+                {supportingFilesList.length > 0 && (
                   <div className="mt-2 space-y-1.5">
-                    {uploadedFiles.map((f, i) => (
+                    {supportingFilesList.map((f, i) => (
                       <div
                         key={i}
                         className="flex items-center justify-between p-2 rounded-xl border border-[#E2E8F0] bg-white text-xs"
                       >
                         <div className="flex items-center gap-2 truncate">
-                          <FileText className="h-4 w-4 text-[#163A70] shrink-0" />
+                          <Paperclip className="h-3.5 w-3.5 text-[#059669] shrink-0" />
                           <span className="font-semibold text-[#0F172A] truncate">{f.originalName}</span>
-                          <Badge variant="outline" className="text-[9.5px] font-mono">
-                            {i === 0 ? 'Draf Awal (V0)' : 'Lampiran'}
+                          <Badge variant="outline" className="text-[9.5px] font-mono text-[#059669] border-[#A7F3D0]">
+                            Lampiran • {(f.size / 1024).toFixed(1)} KB
                           </Badge>
                         </div>
                         <button
                           type="button"
-                          onClick={() => setUploadedFiles((prev) => prev.filter((_, idx) => idx !== i))}
+                          onClick={() => setSupportingFilesList((prev) => prev.filter((_, idx) => idx !== i))}
                           className="text-[#DC2626] hover:bg-[#FEF2F2] p-1 rounded-lg cursor-pointer"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
@@ -1007,14 +1171,63 @@ export function TrackingView() {
                         const isFinalVer = ver.version === 'FINAL' || ver.isFinal
                         const isInitialVer = ver.version === 'V0'
                         return (
-                          <div key={idx} className={`p-2.5 sm:p-3 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-2 ${isFinalVer ? 'bg-[#ECFDF5] border-[#A7F3D0]' : isInitialVer ? 'bg-[#F8FAFC] border-[#E2E8F0]' : 'bg-[#FFFBEB]/60 border-[#FDE68A]'}`}>
+                          <div
+                            key={idx}
+                            className={`p-2.5 sm:p-3 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-2 ${
+                              isFinalVer
+                                ? 'bg-[#ECFDF5] border-[#A7F3D0]'
+                                : isInitialVer
+                                ? 'bg-[#F8FAFC] border-[#E2E8F0]'
+                                : 'bg-[#FFFBEB]/60 border-[#FDE68A]'
+                            }`}
+                          >
                             <div className="space-y-0.5 min-w-0">
                               <div className="flex items-center gap-2">
-                                <span className={`px-1.5 py-0.2 rounded font-mono text-[10.5px] font-extrabold ${isFinalVer ? 'bg-[#059669] text-white' : isInitialVer ? 'bg-[#163A70] text-white' : 'bg-[#D97706] text-white'}`}>{ver.version}</span>
-                                <span className="font-bold text-xs text-[#0F172A] truncate">{ver.file.originalName}</span>
+                                <span
+                                  className={`px-1.5 py-0.2 rounded font-mono text-[10.5px] font-extrabold ${
+                                    isFinalVer
+                                      ? 'bg-[#059669] text-white'
+                                      : isInitialVer
+                                      ? 'bg-[#163A70] text-white'
+                                      : 'bg-[#D97706] text-white'
+                                  }`}
+                                >
+                                  {ver.version}
+                                </span>
+                                <span className="font-bold text-xs text-[#0F172A] truncate">
+                                  {ver.file.originalName}
+                                </span>
+                                {ver.file.size && (
+                                  <span className="text-[10px] text-[#64748B]">
+                                    ({(ver.file.size / 1024).toFixed(1)} KB)
+                                  </span>
+                                )}
                               </div>
+                              {ver.notes && (
+                                <p className="text-[10.5px] text-[#64748B] italic truncate pl-1">
+                                  Catatan: {ver.notes}
+                                </p>
+                              )}
                             </div>
-                            <a href={ver.file.url} download={ver.file.originalName} className="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg text-[11px] font-bold bg-white text-[#163A70] border border-[#CBD5E1] shadow-2xs"><Download className="h-3 w-3" />Unduh</a>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <a
+                                href={ver.file.driveViewUrl || ver.file.url || activeDoc.driveFolderUrl || '#'}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg text-[11px] font-bold bg-[#163A70] text-white hover:bg-[#0B2147] shadow-2xs"
+                              >
+                                <ExternalLink className="h-3 w-3" />
+                                Buka di Drive
+                              </a>
+                              <a
+                                href={ver.file.url}
+                                download={ver.file.originalName}
+                                className="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg text-[11px] font-bold bg-white text-[#163A70] border border-[#CBD5E1] shadow-2xs hover:bg-[#F8FAFC]"
+                              >
+                                <Download className="h-3 w-3" />
+                                Unduh
+                              </a>
+                            </div>
                           </div>
                         )
                       })
@@ -1022,6 +1235,87 @@ export function TrackingView() {
                       <div className="text-center py-3 text-xs text-[#64748B]">Belum ada riwayat versi.</div>
                     )}
                   </div>
+
+                  {/* DOKUMEN PENDUKUNG / LAMPIRAN PENGAJUAN */}
+                  {(() => {
+                    const supportingList =
+                      activeDoc.supportingDocuments && activeDoc.supportingDocuments.length > 0
+                        ? activeDoc.supportingDocuments
+                        : activeDoc.files && activeDoc.files.length > 1
+                        ? activeDoc.files.slice(1)
+                        : []
+
+                    if (supportingList.length === 0) return null
+
+                    return (
+                      <div className="pt-3 border-t border-[#F1F5F9] space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Paperclip className="h-4 w-4 text-[#059669]" />
+                            <div>
+                              <h4 className="text-xs font-bold text-[#0B2147]">
+                                Dokumen Pendukung &amp; Lampiran Pengajuan ({supportingList.length})
+                              </h4>
+                              <p className="text-[10px] text-[#64748B]">
+                                Seluruh berkas lampiran utuh yang diajukan pemohon dalam tiket ini.
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="space-y-1.5">
+                          {supportingList.map((f, i) => (
+                            <div
+                              key={i}
+                              className="p-2.5 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] flex flex-col sm:flex-row sm:items-center justify-between gap-2"
+                            >
+                              <div className="flex items-center gap-2 truncate">
+                                <FileText className="h-4 w-4 text-[#059669] shrink-0" />
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-semibold text-xs text-[#0F172A] truncate">
+                                      {f.originalName || f.filename}
+                                    </span>
+                                    <Badge
+                                      variant="outline"
+                                      className="text-[9.5px] font-mono text-[#059669] border-[#A7F3D0]"
+                                    >
+                                      Lampiran • {f.size ? (f.size / 1024).toFixed(1) + ' KB' : '-'}
+                                    </Badge>
+                                  </div>
+                                  {f.uploadedAt && (
+                                    <div className="text-[10px] text-[#94A3B8]">
+                                      Diunggah: {new Date(f.uploadedAt).toLocaleString('id-ID')}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                <a
+                                  href={f.driveViewUrl || f.url || activeDoc.driveFolderUrl || '#'}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg text-[11px] font-bold bg-[#059669] text-white hover:bg-[#047857] shadow-2xs"
+                                >
+                                  <ExternalLink className="h-3 w-3" />
+                                  Lihat di Drive
+                                </a>
+                                <a
+                                  href={f.url || f.driveViewUrl || '#'}
+                                  download={f.originalName || f.filename}
+                                  className="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg text-[11px] font-bold bg-white text-[#163A70] border border-[#CBD5E1] shadow-2xs hover:bg-[#F8FAFC]"
+                                >
+                                  <Download className="h-3 w-3" />
+                                  Unduh
+                                </a>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )
+                  })()}
                 </CardContent>
               </Card>
 

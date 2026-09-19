@@ -1,5 +1,5 @@
 import { google } from 'googleapis'
-import { StoredDocument, StoredUser, StoredNotification } from './drive-store'
+import { StoredDocument, StoredUser, StoredNotification, StoredFile } from './drive-store'
 
 const DEFAULT_SERVICE_EMAIL =
   process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL ||
@@ -216,35 +216,68 @@ export async function syncDocumentToGoogleDrive(doc: StoredDocument): Promise<{
     doc.driveFolderId = folderId || undefined
     doc.driveFolderUrl = folderUrl || undefined
 
-    // Upload physical ringkasan_dan_log_dokumen.txt and attached document files via Google Apps Script Webhook
+    // Upload physical ringkasan_dan_log_dokumen.txt as complete audit trail log
     if (folderId) {
       const txtContent = generateDocumentTxtLog(doc)
       uploadFileViaGasWebhook(folderId, 'ringkasan_dan_log_dokumen.txt', txtContent).catch((e) =>
         console.error('[GAS Background Upload Error]', e)
       )
 
+      // Gather all document files: initial document, supporting documents, revision files, final document
+      const filesToSync: StoredFile[] = []
+
+      if (doc.initialDocument) {
+        filesToSync.push(doc.initialDocument)
+      }
+      if (doc.supportingDocuments && doc.supportingDocuments.length > 0) {
+        for (const sf of doc.supportingDocuments) {
+          if (!filesToSync.some((x) => x.originalName === sf.originalName)) {
+            filesToSync.push(sf)
+          }
+        }
+      }
       if (doc.files && doc.files.length > 0) {
         for (const f of doc.files) {
-          const fileName = f.originalName || f.filename
-          if (fileName && fileName !== 'ringkasan_dan_log_dokumen.txt') {
-            const fileInfoContent = `================================================================================
-RIDE — BERKAS DOKUMEN: ${fileName}
-ARSIP: [${doc.docNumber}] ${doc.name}
-================================================================================
-Nama Berkas    : ${fileName}
-Kategori       : ${doc.category}
-Divisi Pemohon : ${doc.division}
-Penanggung Jwb : ${doc.pic} (${doc.picEmail || '-'})
-Status Tahapan : ${doc.statusLabel} (Tahap ${doc.stage}/5)
-Ukuran Berkas  : ${f.size ? (f.size / 1024).toFixed(1) + ' KB' : '-'}
-Tipe Format    : ${f.mimeType || 'Dokumen'}
-Tanggal Unggah : ${f.uploadedAt || doc.createdAt}
-================================================================================
-Tautan Portal  : https://risetrack.id
-`
-            uploadFileViaGasWebhook(folderId, fileName, fileInfoContent).catch((e) =>
-              console.error('[GAS Attachment Sync Error]', e)
+          if (!filesToSync.some((x) => x.originalName === f.originalName)) {
+            filesToSync.push(f)
+          }
+        }
+      }
+      if (doc.finalDocument) {
+        if (!filesToSync.some((x) => x.originalName === doc.finalDocument!.originalName)) {
+          filesToSync.push(doc.finalDocument)
+        }
+      }
+      if (doc.revisionDocuments && doc.revisionDocuments.length > 0) {
+        for (const rev of doc.revisionDocuments) {
+          if (rev.file && !filesToSync.some((x) => x.originalName === rev.file.originalName)) {
+            filesToSync.push(rev.file)
+          }
+        }
+      }
+
+      // Upload actual intact binary file for each file that contains dataUrl
+      for (const f of filesToSync) {
+        const fileName = f.originalName || f.filename
+        if (!fileName || fileName === 'ringkasan_dan_log_dokumen.txt') continue
+
+        if (f.dataUrl && f.dataUrl.includes('base64,')) {
+          try {
+            const base64Data = f.dataUrl.split('base64,')[1]
+            const buffer = Buffer.from(base64Data, 'base64')
+            const uploadResult = await uploadOrUpdateFileInFolder(
+              folderId,
+              fileName,
+              f.mimeType || 'application/octet-stream',
+              buffer
             )
+            if (uploadResult) {
+              f.driveFileId = uploadResult.fileId
+              f.driveViewUrl = uploadResult.webViewLink
+              f.url = uploadResult.webViewLink
+            }
+          } catch (fileErr) {
+            console.error(`[Upload Intact Document Error: ${fileName}]`, fileErr)
           }
         }
       }
@@ -297,56 +330,65 @@ export async function uploadOrUpdateFileInFolder(
   fileName: string,
   mimeType: string,
   buffer: Buffer
-): Promise<string | null> {
+): Promise<{ fileId: string; webViewLink: string } | null> {
+  const gasUrl =
+    process.env.GOOGLE_APPS_SCRIPT_WEBHOOK_URL ||
+    'https://script.google.com/macros/s/AKfycbz_iRTZF_Hul1zUQCkp-jxlX5dWZzOp6xkdDKmkUXSZV4rRpTHXyCTaWHRET9j6WCuJWw/exec'
+
   try {
     const drive = getDriveClient()
+    const sanitizedFileName = fileName.replace(/'/g, "\\'")
+
     const existing = await drive.files.list({
-      q: `'${folderId}' in parents and name = '${fileName.replace(/'/g, "\\'")}' and trashed = false`,
+      q: `'${folderId}' in parents and name = '${sanitizedFileName}' and trashed = false`,
       supportsAllDrives: true,
       includeItemsFromAllDrives: true,
       fields: 'files(id, webViewLink)',
     })
 
+    let fileId: string | undefined = existing.data.files?.[0]?.id || undefined
+
+    if (!fileId) {
+      // Create file in folder via GAS webhook so ownership and quota belong to ridetrackingofficial@gmail.com
+      const res = await fetch(gasUrl, {
+        method: 'POST',
+        body: JSON.stringify({ folderId, fileName, content: 'init' }),
+        redirect: 'follow',
+      })
+      if (res.ok) {
+        const gasData = (await res.json()) as { fileId?: string; status?: string }
+        fileId = gasData?.fileId
+      }
+    }
+
+    if (!fileId) {
+      console.error(`[GDrive Direct Upload] Could not create fileId for ${fileName}`)
+      return null
+    }
+
+    // Stream the real intact binary data directly into the Google Drive file entry
     const stream = new Readable()
     stream.push(buffer)
     stream.push(null)
 
-    if (existing.data.files && existing.data.files.length > 0) {
-      const fileId = existing.data.files[0].id!
-      const updated = await drive.files.update({
-        fileId,
-        media: {
-          mimeType,
-          body: stream,
-        },
-        supportsAllDrives: true,
-        fields: 'id, webViewLink',
-      })
-      return updated.data.webViewLink || `https://drive.google.com/file/d/${fileId}/view`
-    } else {
-      const created = await drive.files.create({
-        requestBody: {
-          name: fileName,
-          parents: [folderId],
-          mimeType,
-        },
-        media: {
-          mimeType,
-          body: stream,
-        },
-        supportsAllDrives: true,
-        fields: 'id, webViewLink',
-      })
-      return created.data.webViewLink || `https://drive.google.com/file/d/${created.data.id}/view`
+    const updated = await drive.files.update({
+      fileId,
+      media: {
+        mimeType: mimeType || 'application/octet-stream',
+        body: stream,
+      },
+      supportsAllDrives: true,
+      fields: 'id, name, mimeType, size, webViewLink',
+    })
+
+    const webViewLink = updated.data.webViewLink || `https://drive.google.com/file/d/${fileId}/view`
+
+    return {
+      fileId,
+      webViewLink,
     }
   } catch (err) {
-    console.error(`[GDrive Direct Upload Error for ${fileName}]`, err)
-    // Fallback to GAS Webhook for text or small base64
-    if (buffer.length < 5 * 1024 * 1024) {
-      uploadFileViaGasWebhook(folderId, fileName, buffer.toString('utf-8')).catch((e) =>
-        console.error('[GAS Upload Fallback Error]', e)
-      )
-    }
+    console.error(`[GDrive Direct Binary Sync Error for ${fileName}]`, err)
     return null
   }
 }

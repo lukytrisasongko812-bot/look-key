@@ -45,6 +45,9 @@ export interface DocumentFile {
   mimeType: string
   url: string
   uploadedAt: string
+  dataUrl?: string
+  driveFileId?: string
+  driveViewUrl?: string
 }
 
 export interface DocumentVersionItem {

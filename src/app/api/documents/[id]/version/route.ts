@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getDriveDocumentById, saveDriveDocument, addDriveNotification } from '@/lib/drive-store'
 import { sendNotificationEmail } from '@/lib/email'
 import { getUserFromRequest } from '@/lib/auth'
+import {
+  generateDocumentTxtLog,
+  syncDocumentToGoogleDrive,
+  uploadFileViaGasWebhook,
+  uploadOrUpdateFileInFolder,
+} from '@/lib/gdrive'
 
 export const dynamic = 'force-dynamic'
 
@@ -28,6 +34,19 @@ export async function POST(
     const actorName = tokenUser?.employeeName || 'Reviewer'
     const now = new Date().toISOString()
 
+    // Ensure Google Drive folder is provisioned
+    if (!doc.driveFolderId) {
+      try {
+        const gdriveResult = await syncDocumentToGoogleDrive(doc)
+        if (gdriveResult.folderId) {
+          doc.driveFolderId = gdriveResult.folderId
+          doc.driveFolderUrl = gdriveResult.folderUrl
+        }
+      } catch (gErr) {
+        console.error('[Google Drive Folder Sync Error]', gErr)
+      }
+    }
+
     if (isFinal) {
       if (userRole !== 'Document Controller' && userRole !== 'Administrator' && userRole !== 'Director / BOD') {
         return NextResponse.json(
@@ -37,13 +56,38 @@ export async function POST(
       }
 
       // 1. Final Document Upload
+      let driveFileId: string | undefined
+      let driveViewUrl: string | undefined
+
+      if (file.dataUrl && file.dataUrl.includes('base64,') && doc.driveFolderId) {
+        try {
+          const base64Data = file.dataUrl.split('base64,')[1]
+          const buffer = Buffer.from(base64Data, 'base64')
+          const uploadRes = await uploadOrUpdateFileInFolder(
+            doc.driveFolderId,
+            file.originalName,
+            file.mimeType || 'application/pdf',
+            buffer
+          )
+          if (uploadRes) {
+            driveFileId = uploadRes.fileId
+            driveViewUrl = uploadRes.webViewLink
+          }
+        } catch (uErr) {
+          console.error('[Final Document GDrive Upload Error]', uErr)
+        }
+      }
+
       const finalDocFile = {
         originalName: file.originalName,
         filename: file.filename || file.originalName,
         size: file.size || 1000000,
         mimeType: file.mimeType || 'application/pdf',
-        url: file.url || '/files/' + file.originalName,
+        url: driveViewUrl || file.dataUrl || file.url || '/files/' + file.originalName,
         uploadedAt: now,
+        dataUrl: file.dataUrl,
+        driveFileId,
+        driveViewUrl,
       }
 
       doc.finalDocument = finalDocFile
@@ -70,6 +114,14 @@ export async function POST(
         versionTag: 'FINAL',
         timestamp: now,
       })
+
+      // Refresh audit trail txt file in Google Drive folder
+      if (doc.driveFolderId) {
+        const txtContent = generateDocumentTxtLog(doc)
+        uploadFileViaGasWebhook(doc.driveFolderId, 'ringkasan_dan_log_dokumen.txt', txtContent).catch((e) =>
+          console.error('[GAS Final Log Refresh Error]', e)
+        )
+      }
 
       await saveDriveDocument(doc)
 
@@ -105,13 +157,38 @@ export async function POST(
       const currentRevCount = (doc.revisionDocuments?.length || 0) + 1
       const tag = versionTag || `Rev.${currentRevCount.toString().padStart(2, '0')}`
 
+      let driveFileId: string | undefined
+      let driveViewUrl: string | undefined
+
+      if (file.dataUrl && file.dataUrl.includes('base64,') && doc.driveFolderId) {
+        try {
+          const base64Data = file.dataUrl.split('base64,')[1]
+          const buffer = Buffer.from(base64Data, 'base64')
+          const uploadRes = await uploadOrUpdateFileInFolder(
+            doc.driveFolderId,
+            file.originalName,
+            file.mimeType || 'application/pdf',
+            buffer
+          )
+          if (uploadRes) {
+            driveFileId = uploadRes.fileId
+            driveViewUrl = uploadRes.webViewLink
+          }
+        } catch (uErr) {
+          console.error('[Revision Document GDrive Upload Error]', uErr)
+        }
+      }
+
       const revDocFile = {
         originalName: file.originalName,
         filename: file.filename || file.originalName,
         size: file.size || 1000000,
         mimeType: file.mimeType || 'application/pdf',
-        url: file.url || '/files/' + file.originalName,
+        url: driveViewUrl || file.dataUrl || file.url || '/files/' + file.originalName,
         uploadedAt: now,
+        dataUrl: file.dataUrl,
+        driveFileId,
+        driveViewUrl,
       }
 
       const versionEntry = {
@@ -138,6 +215,14 @@ export async function POST(
         versionTag: tag,
         timestamp: now,
       })
+
+      // Refresh audit trail txt file in Google Drive folder
+      if (doc.driveFolderId) {
+        const txtContent = generateDocumentTxtLog(doc)
+        uploadFileViaGasWebhook(doc.driveFolderId, 'ringkasan_dan_log_dokumen.txt', txtContent).catch((e) =>
+          console.error('[GAS Revision Log Refresh Error]', e)
+        )
+      }
 
       await saveDriveDocument(doc)
 

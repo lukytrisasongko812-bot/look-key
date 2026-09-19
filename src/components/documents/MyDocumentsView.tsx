@@ -34,6 +34,8 @@ import {
   ShieldCheck,
   CheckCircle2,
   Clock,
+  ExternalLink,
+  Paperclip,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -469,35 +471,102 @@ export function MyDocumentsView() {
                 <div><b>Status:</b> {viewModalDoc.statusLabel || getDocStatusLabel(viewModalDoc)}</div>
               </div>
 
-              <div>
-                <span className="text-xs font-bold text-[#0B2147] block mb-2">
-                  Daftar Versi Berkas:
-                </span>
-                <div className="space-y-2 max-h-56 overflow-y-auto">
-                  {viewModalDoc.versions?.map((ver, i) => (
-                    <div
-                      key={i}
-                      className="flex items-center justify-between p-2.5 rounded-xl border border-[#E2E8F0] bg-white text-xs"
-                    >
-                      <div className="flex items-center gap-2 truncate">
-                        <span className="font-mono text-[10px] font-bold px-1.5 py-0.5 rounded bg-[#163A70] text-white">
-                          {ver.version}
-                        </span>
-                        <span className="truncate font-semibold text-[#0F172A]">
-                          {ver.file.originalName}
-                        </span>
-                      </div>
-                      <a
-                        href={ver.file.url}
-                        download={ver.file.originalName}
-                        className="p-1 text-[#163A70] hover:bg-[#EBF2FF] rounded cursor-pointer"
-                        title="Unduh"
+              <div className="space-y-3">
+                <div>
+                  <span className="text-xs font-bold text-[#0B2147] block mb-2">
+                    Daftar Versi Berkas:
+                  </span>
+                  <div className="space-y-2 max-h-44 overflow-y-auto">
+                    {viewModalDoc.versions?.map((ver, i) => (
+                      <div
+                        key={i}
+                        className="flex items-center justify-between p-2.5 rounded-xl border border-[#E2E8F0] bg-white text-xs"
                       >
-                        <Download className="h-4 w-4" />
-                      </a>
-                    </div>
-                  ))}
+                        <div className="flex items-center gap-2 truncate">
+                          <span className="font-mono text-[10px] font-bold px-1.5 py-0.5 rounded bg-[#163A70] text-white">
+                            {ver.version}
+                          </span>
+                          <span className="truncate font-semibold text-[#0F172A]">
+                            {ver.file.originalName}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <a
+                            href={ver.file.driveViewUrl || ver.file.url || viewModalDoc.driveFolderUrl || '#'}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-1 text-[#163A70] hover:bg-[#EBF2FF] rounded cursor-pointer"
+                            title="Buka di Google Drive"
+                          >
+                            <ExternalLink className="h-4 w-4" />
+                          </a>
+                          <a
+                            href={ver.file.url}
+                            download={ver.file.originalName}
+                            className="p-1 text-[#163A70] hover:bg-[#EBF2FF] rounded cursor-pointer"
+                            title="Unduh"
+                          >
+                            <Download className="h-4 w-4" />
+                          </a>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
+
+                {(() => {
+                  const supportingList =
+                    viewModalDoc.supportingDocuments && viewModalDoc.supportingDocuments.length > 0
+                      ? viewModalDoc.supportingDocuments
+                      : viewModalDoc.files && viewModalDoc.files.length > 1
+                      ? viewModalDoc.files.slice(1)
+                      : []
+
+                  if (supportingList.length === 0) return null
+
+                  return (
+                    <div>
+                      <span className="text-xs font-bold text-[#0B2147] block mb-2 flex items-center gap-1.5">
+                        <Paperclip className="h-3.5 w-3.5 text-[#059669]" />
+                        Dokumen Pendukung ({supportingList.length}):
+                      </span>
+                      <div className="space-y-1.5 max-h-40 overflow-y-auto">
+                        {supportingList.map((f, i) => (
+                          <div
+                            key={i}
+                            className="flex items-center justify-between p-2 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] text-xs"
+                          >
+                            <div className="flex items-center gap-2 truncate">
+                              <FileText className="h-3.5 w-3.5 text-[#059669] shrink-0" />
+                              <span className="truncate font-medium text-[#0F172A]">
+                                {f.originalName || f.filename}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1 shrink-0">
+                              <a
+                                href={f.driveViewUrl || f.url || viewModalDoc.driveFolderUrl || '#'}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="p-1 text-[#059669] hover:bg-[#ECFDF5] rounded cursor-pointer"
+                                title="Lihat Dokumen di Drive"
+                              >
+                                <ExternalLink className="h-3.5 w-3.5" />
+                              </a>
+                              <a
+                                href={f.url || f.driveViewUrl || '#'}
+                                download={f.originalName || f.filename}
+                                className="p-1 text-[#163A70] hover:bg-[#EBF2FF] rounded cursor-pointer"
+                                title="Unduh"
+                              >
+                                <Download className="h-3.5 w-3.5" />
+                              </a>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )
+                })()}
               </div>
             </div>
           )}

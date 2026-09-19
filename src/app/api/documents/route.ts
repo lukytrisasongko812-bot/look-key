@@ -63,9 +63,12 @@ export async function POST(request: NextRequest) {
     const actorName = tokenUser?.employeeName || 'Requester'
     const now = new Date().toISOString()
 
-    const uploadedFilesList = files || []
-    const initialDocFile = uploadedFilesList.length > 0 ? uploadedFilesList[0] : null
-    const supportingFiles = uploadedFilesList.length > 1 ? uploadedFilesList.slice(1) : []
+    const initialDocFile = body.initialDocument || (files && files.length > 0 ? files[0] : null)
+    const supportingFiles = body.supportingDocuments || (files && files.length > 1 ? files.slice(1) : [])
+    const uploadedFilesList = [
+      ...(initialDocFile ? [initialDocFile] : []),
+      ...supportingFiles,
+    ]
 
     const versionsList = []
     if (initialDocFile) {
