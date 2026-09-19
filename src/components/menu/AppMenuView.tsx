@@ -3,18 +3,14 @@
 import React from 'react'
 import { useApp } from '@/context/AppContext'
 import { Card, CardContent } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import {
   FilePlus,
   GitPullRequestDraft,
   Files,
   Clock,
-  FolderOpen,
   ShieldCheck,
   Users,
   Settings,
-  User,
-  KeyRound,
   LogOut,
   ChevronRight,
   Bell,
@@ -54,7 +50,7 @@ export function AppMenuView() {
     },
     {
       id: 'tracking',
-      title: 'Lacak Berkas',
+      title: 'Lacak Alur',
       icon: GitPullRequestDraft,
       badge: reviewCount > 0 ? reviewCount : undefined,
       action: () => setCurrentView('tracking', 'progress'),
@@ -71,16 +67,6 @@ export function AppMenuView() {
       title: 'Jatuh Tempo',
       icon: Clock,
       action: () => setCurrentView('tracking', 'progress'),
-    },
-    {
-      id: 'gdrive',
-      title: 'Google Drive',
-      icon: FolderOpen,
-      action: () => {
-        if (typeof window !== 'undefined') {
-          window.open('https://drive.google.com/drive/folders/1S8ifA-RtvGB0JGFPZSfsaL_IX65Nc16F', '_blank')
-        }
-      },
     },
     ...(!isRequester
       ? [
@@ -108,18 +94,6 @@ export function AppMenuView() {
           },
         ]
       : []),
-    {
-      id: 'profile',
-      title: 'Profil Saya',
-      icon: User,
-      action: () => setCurrentView('myAccount'),
-    },
-    {
-      id: 'security',
-      title: 'Keamanan 2FA',
-      icon: KeyRound,
-      action: () => setCurrentView('myAccount'),
-    },
   ]
 
   return (
@@ -156,20 +130,20 @@ export function AppMenuView() {
       </Card>
 
       {/* App Grid Launcher (Clean Mobile Native App Launcher) */}
-      <div className="bg-white rounded-3xl p-4 sm:p-5 border border-[#E2E8F0] shadow-xs space-y-3.5">
-        <div className="flex items-center justify-between px-1">
+      <div className="bg-white rounded-2xl p-3.5 sm:p-4 border border-[#E2E8F0] shadow-xs space-y-3">
+        <div className="flex items-center justify-between px-0.5">
           <div className="flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-[#163A70]" />
-            <h3 className="text-xs sm:text-sm font-extrabold font-display text-[#0B2147] tracking-tight">
+            <h3 className="text-xs sm:text-sm font-bold font-display text-[#0B2147] tracking-tight">
               Menu Layanan &amp; Fitur
             </h3>
           </div>
-          <span className="text-[11px] font-bold text-[#64748B]">
-            {appGridItems.length} Menu
+          <span className="text-[10.5px] font-semibold text-[#64748B] bg-[#F1F5F9] px-2 py-0.5 rounded-full">
+            {appGridItems.length} Layanan
           </span>
         </div>
 
-        <div className="grid grid-cols-4 gap-y-4 gap-x-2 sm:gap-x-4">
+        <div className="grid grid-cols-4 gap-y-3.5 gap-x-2">
           {appGridItems.map((item) => {
             const Icon = item.icon
             return (
@@ -177,11 +151,11 @@ export function AppMenuView() {
                 key={item.id}
                 type="button"
                 onClick={item.action}
-                className="flex flex-col items-center text-center group cursor-pointer active:scale-90 transition-transform"
+                className="flex flex-col items-center text-center group cursor-pointer active:scale-95 transition-transform"
               >
                 <div className="relative mb-1.5">
-                  <div className="flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-2xl bg-[#F0F4FA] text-[#163A70] border border-[#D9E2EC] shadow-2xs group-hover:bg-[#163A70] group-hover:text-white group-hover:border-[#163A70] group-hover:shadow-md transition-all">
-                    <Icon className="h-5 w-5 sm:h-6 sm:w-6 stroke-[2]" />
+                  <div className="flex h-12 w-12 sm:h-13 sm:w-13 items-center justify-center rounded-2xl bg-[#F8FAFC] text-[#163A70] border border-[#E2E8F0] shadow-2xs group-hover:bg-[#163A70] group-hover:text-white group-hover:border-[#163A70] group-hover:shadow-sm transition-all">
+                    <Icon className="h-5 w-5 stroke-[2]" />
                   </div>
 
                   {item.badge && (
@@ -191,7 +165,7 @@ export function AppMenuView() {
                   )}
                 </div>
 
-                <span className="text-[11px] sm:text-xs font-bold text-[#1E293B] leading-tight text-center break-words w-full px-0.5 group-hover:text-[#163A70] transition-colors">
+                <span className="text-[11px] font-semibold text-[#334155] leading-tight text-center break-words w-full px-0.5 group-hover:text-[#163A70] transition-colors">
                   {item.title}
                 </span>
               </button>

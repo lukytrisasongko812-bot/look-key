@@ -33,12 +33,9 @@ import {
   History,
   Download,
   FileEdit,
-  FolderOpen,
   ShieldCheck,
   Users,
   Settings,
-  User as UserIcon,
-  KeyRound,
   Sparkles,
   FilePlus,
   GitPullRequestDraft,
@@ -193,16 +190,6 @@ export function DashboardView() {
       icon: Clock,
       action: () => setCurrentView('tracking', 'progress'),
     },
-    {
-      id: 'gdrive',
-      title: 'Google Drive',
-      icon: FolderOpen,
-      action: () => {
-        if (typeof window !== 'undefined') {
-          window.open('https://drive.google.com/drive/folders/1S8ifA-RtvGB0JGFPZSfsaL_IX65Nc16F', '_blank')
-        }
-      },
-    },
     ...(!isRequester
       ? [
           {
@@ -229,18 +216,6 @@ export function DashboardView() {
           },
         ]
       : []),
-    {
-      id: 'profile',
-      title: 'Profil Saya',
-      icon: UserIcon,
-      action: () => setCurrentView('myAccount'),
-    },
-    {
-      id: 'security',
-      title: 'Keamanan 2FA',
-      icon: KeyRound,
-      action: () => setCurrentView('myAccount'),
-    },
   ]
 
   return (
@@ -292,20 +267,20 @@ export function DashboardView() {
       </div>
 
       {/* Menu Layanan & Fitur (Khusus Tampilan Mobile — Di Desktop Navigasi Menggunakan Sidebar) */}
-      <div className="md:hidden bg-white rounded-3xl p-4 sm:p-5 border border-[#E2E8F0] shadow-xs space-y-3.5">
-        <div className="flex items-center justify-between px-1">
+      <div className="md:hidden bg-white rounded-2xl p-3.5 sm:p-4 border border-[#E2E8F0] shadow-xs space-y-3">
+        <div className="flex items-center justify-between px-0.5">
           <div className="flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-[#163A70]" />
-            <h2 className="text-xs sm:text-sm font-extrabold font-display text-[#0B2147] tracking-tight">
+            <h2 className="text-xs sm:text-sm font-bold font-display text-[#0B2147] tracking-tight">
               Menu Layanan &amp; Fitur
             </h2>
           </div>
-          <span className="text-[11px] font-bold text-[#64748B]">
-            {quickAppItems.length} Menu
+          <span className="text-[10.5px] font-semibold text-[#64748B] bg-[#F1F5F9] px-2 py-0.5 rounded-full">
+            {quickAppItems.length} Layanan
           </span>
         </div>
 
-        <div className="grid grid-cols-4 gap-y-4 gap-x-2 sm:gap-x-4">
+        <div className="grid grid-cols-4 gap-y-3.5 gap-x-2">
           {quickAppItems.map((item) => {
             const Icon = item.icon
             return (
@@ -313,11 +288,11 @@ export function DashboardView() {
                 key={item.id}
                 type="button"
                 onClick={item.action}
-                className="flex flex-col items-center text-center group cursor-pointer active:scale-90 transition-transform"
+                className="flex flex-col items-center text-center group cursor-pointer active:scale-95 transition-transform"
               >
                 <div className="relative mb-1.5">
-                  <div className="flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-2xl bg-[#F0F4FA] text-[#163A70] border border-[#D9E2EC] shadow-2xs group-hover:bg-[#163A70] group-hover:text-white group-hover:border-[#163A70] group-hover:shadow-md transition-all">
-                    <Icon className="h-5 w-5 sm:h-6 sm:w-6 stroke-[2]" />
+                  <div className="flex h-12 w-12 sm:h-13 sm:w-13 items-center justify-center rounded-2xl bg-[#F8FAFC] text-[#163A70] border border-[#E2E8F0] shadow-2xs group-hover:bg-[#163A70] group-hover:text-white group-hover:border-[#163A70] group-hover:shadow-sm transition-all">
+                    <Icon className="h-5 w-5 stroke-[2]" />
                   </div>
 
                   {item.badge && (
@@ -327,7 +302,7 @@ export function DashboardView() {
                   )}
                 </div>
 
-                <span className="text-[11px] sm:text-xs font-bold text-[#1E293B] leading-tight text-center break-words w-full px-0.5 group-hover:text-[#163A70] transition-colors">
+                <span className="text-[11px] font-semibold text-[#334155] leading-tight text-center break-words w-full px-0.5 group-hover:text-[#163A70] transition-colors">
                   {item.title}
                 </span>
               </button>
