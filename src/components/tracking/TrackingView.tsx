@@ -693,21 +693,31 @@ export function TrackingView() {
                 </div>
 
                 {!uploadedFile ? (
-                  <div className="rounded-2xl border-2 border-dashed border-[#CBD5E1] p-5 text-center hover:border-[#163A70] transition-colors bg-[#F8FAFC]">
-                    <Upload className="mx-auto h-7 w-7 text-[#94A3B8] mb-2" />
+                  <label
+                    htmlFor="main-file-upload"
+                    className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#CBD5E1] p-6 text-center hover:border-[#163A70] hover:bg-[#F8FAFC] transition-all bg-[#F8FAFC]/50 cursor-pointer group"
+                  >
+                    <div className="h-12 w-12 rounded-2xl bg-[#EBF2FF] text-[#163A70] group-hover:bg-[#163A70] group-hover:text-white transition-all flex items-center justify-center mb-2.5">
+                      <Upload className="h-6 w-6" />
+                    </div>
                     <div className="text-xs font-bold text-[#0F172A]">
                       Pilih atau seret berkas dokumen ke sini
                     </div>
-                    <p className="text-[11px] text-[#64748B] mt-0.5">
+                    <p className="text-[11px] text-[#64748B] mt-0.5 mb-3">
                       Ukuran berkas maksimal 20 MB (PDF, Word, Excel, Gambar)
                     </p>
+                    <div className="px-4 py-2 rounded-xl bg-[#163A70] hover:bg-[#0B2147] text-white font-bold text-xs shadow-2xs inline-flex items-center gap-2">
+                      <Upload className="h-3.5 w-3.5" />
+                      <span>Pilih Berkas Dokumen</span>
+                    </div>
                     <input
+                      id="main-file-upload"
                       type="file"
                       accept=".pdf,.doc,.docx,.xlsx,.xls,.jpg,.jpeg,.png"
                       onChange={handleSingleFileUpload}
-                      className="mt-3 block w-full text-xs text-[#64748B] file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-[#163A70] file:text-white hover:file:bg-[#0B2147] cursor-pointer"
+                      className="hidden"
                     />
-                  </div>
+                  </label>
                 ) : (
                   <div className="flex items-center justify-between p-3 rounded-2xl border border-[#A7F3D0] bg-[#ECFDF5] text-xs">
                     <div className="flex items-center gap-2.5 truncate">
@@ -1354,16 +1364,41 @@ export function TrackingView() {
 
           <form onSubmit={handleSubmitRevision} className="space-y-4 pt-2">
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold">Pilih Berkas Revisi (PDF / DOCX)</Label>
-              <input
-                type="file"
-                required
-                onChange={handleRevFileUpload}
-                className="block w-full text-xs text-[#64748B] file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-[#163A70] file:text-white hover:file:bg-[#0B2147] cursor-pointer"
-              />
-              {revFile && (
-                <div className="text-[11px] text-[#059669] font-semibold mt-1">
-                  Berkas dipilih: {revFile.originalName}
+              <Label className="text-xs font-semibold">Pilih Berkas Revisi (PDF / DOCX) <span className="text-[#DC2626]">*</span></Label>
+              {!revFile ? (
+                <label
+                  htmlFor="rev-file-upload"
+                  className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#CBD5E1] p-4 text-center hover:border-[#D97706] hover:bg-[#FFFBEB]/40 transition-all bg-[#F8FAFC] cursor-pointer"
+                >
+                  <FileUp className="h-6 w-6 text-[#D97706] mb-1" />
+                  <span className="text-xs font-bold text-[#0F172A]">Klik untuk Memilih Berkas Revisi</span>
+                  <span className="text-[10px] text-[#64748B]">Maksimal 20 MB</span>
+                  <input
+                    id="rev-file-upload"
+                    type="file"
+                    required
+                    accept=".pdf,.doc,.docx"
+                    onChange={handleRevFileUpload}
+                    className="hidden"
+                  />
+                </label>
+              ) : (
+                <div className="flex items-center justify-between p-2.5 rounded-xl border border-[#FDE68A] bg-[#FFFBEB] text-xs">
+                  <div className="flex items-center gap-2 truncate">
+                    <FileCheck className="h-4 w-4 text-[#D97706] shrink-0" />
+                    <span className="font-bold text-[#92400E] truncate">{revFile.originalName}</span>
+                    <Badge className="text-[9px] bg-[#D97706] text-white">
+                      {(revFile.size / (1024 * 1024)).toFixed(2)} MB
+                    </Badge>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setRevFile(null)}
+                    className="text-[#DC2626] hover:bg-[#FEE2E2] p-1 rounded-lg cursor-pointer"
+                    title="Hapus / Ganti"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
                 </div>
               )}
             </div>
@@ -1411,16 +1446,41 @@ export function TrackingView() {
 
           <form onSubmit={handleSubmitFinal} className="space-y-4 pt-2">
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold">Pilih Berkas Dokumen Final Sah (PDF)</Label>
-              <input
-                type="file"
-                required
-                onChange={handleFinalFileUpload}
-                className="block w-full text-xs text-[#64748B] file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-[#059669] file:text-white hover:file:bg-[#047857] cursor-pointer"
-              />
-              {finalFile && (
-                <div className="text-[11px] text-[#059669] font-semibold mt-1">
-                  Berkas final: {finalFile.originalName}
+              <Label className="text-xs font-semibold">Pilih Berkas Dokumen Final Sah (PDF) <span className="text-[#DC2626]">*</span></Label>
+              {!finalFile ? (
+                <label
+                  htmlFor="final-file-upload"
+                  className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#CBD5E1] p-4 text-center hover:border-[#059669] hover:bg-[#ECFDF5]/40 transition-all bg-[#F8FAFC] cursor-pointer"
+                >
+                  <ShieldCheck className="h-6 w-6 text-[#059669] mb-1" />
+                  <span className="text-xs font-bold text-[#0F172A]">Klik untuk Memilih Berkas Final</span>
+                  <span className="text-[10px] text-[#64748B]">Maksimal 20 MB (PDF)</span>
+                  <input
+                    id="final-file-upload"
+                    type="file"
+                    required
+                    accept=".pdf"
+                    onChange={handleFinalFileUpload}
+                    className="hidden"
+                  />
+                </label>
+              ) : (
+                <div className="flex items-center justify-between p-2.5 rounded-xl border border-[#A7F3D0] bg-[#ECFDF5] text-xs">
+                  <div className="flex items-center gap-2 truncate">
+                    <FileCheck className="h-4 w-4 text-[#059669] shrink-0" />
+                    <span className="font-bold text-[#065F46] truncate">{finalFile.originalName}</span>
+                    <Badge className="text-[9px] bg-[#059669] text-white">
+                      {(finalFile.size / (1024 * 1024)).toFixed(2)} MB
+                    </Badge>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setFinalFile(null)}
+                    className="text-[#DC2626] hover:bg-[#FEE2E2] p-1 rounded-lg cursor-pointer"
+                    title="Hapus / Ganti"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
                 </div>
               )}
             </div>
