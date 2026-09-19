@@ -142,7 +142,7 @@ function generateOtpHtml(userName: string, otpCode: string, expiresInMinutes: nu
 <body>
   <div class="container">
     <div class="header">
-      <img src="https://risetrack.id/images/ride-icon.png" alt="RIDE Logo" width="64" height="64" class="header-logo-icon" style="width: 64px; height: 64px; border-radius: 16px; display: block; margin: 0 auto 10px auto; background: #FFFFFF; padding: 4px; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);" />
+      <img src="https://risetrack.id/images/ride-icon-3kaki.png" alt="RIDE Logo" width="64" height="64" class="header-logo-icon" style="width: 64px; height: 64px; border-radius: 16px; display: block; margin: 0 auto 10px auto; background: #FFFFFF; padding: 4px; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);" />
       <div class="header-title">RIDE</div>
       <div class="header-sub">Request Integrated Document Ecosystem · Otentikasi Keamanan 2FA</div>
     </div>
@@ -243,7 +243,7 @@ function generateInviteHtml(opts: SendInviteEmailOptions): string {
 <body>
   <div class="container">
     <div class="header">
-      <img src="https://risetrack.id/images/ride-icon.png" alt="RIDE Logo" width="64" height="64" class="header-logo-icon" style="width: 64px; height: 64px; border-radius: 16px; display: block; margin: 0 auto 10px auto; background: #FFFFFF; padding: 4px; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);" />
+      <img src="https://risetrack.id/images/ride-icon-3kaki.png" alt="RIDE Logo" width="64" height="64" class="header-logo-icon" style="width: 64px; height: 64px; border-radius: 16px; display: block; margin: 0 auto 10px auto; background: #FFFFFF; padding: 4px; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);" />
       <div class="header-title">RIDE</div>
       <div class="header-sub">Request Integrated Document Ecosystem · Undangan Akses Akun Resmi</div>
     </div>
@@ -358,7 +358,7 @@ function generateNotificationHtml(opts: SendNotificationEmailOptions): string {
 <body>
   <div class="container">
     <div class="header">
-      <img src="https://risetrack.id/images/ride-icon.png" alt="RIDE Logo" width="64" height="64" class="header-logo-icon" style="width: 64px; height: 64px; border-radius: 16px; display: block; margin: 0 auto 10px auto; background: #FFFFFF; padding: 4px; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);" />
+      <img src="https://risetrack.id/images/ride-icon-3kaki.png" alt="RIDE Logo" width="64" height="64" class="header-logo-icon" style="width: 64px; height: 64px; border-radius: 16px; display: block; margin: 0 auto 10px auto; background: #FFFFFF; padding: 4px; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);" />
       <div class="header-title">RIDE</div>
       <div class="header-sub">Request Integrated Document Ecosystem · Notifikasi Alur Kerja</div>
     </div>
@@ -448,7 +448,7 @@ function generateContractReminderHtml(opts: SendContractReminderEmailOptions): s
 <body>
   <div class="container">
     <div class="header">
-      <img src="https://risetrack.id/images/ride-icon.png" alt="RIDE Logo" width="64" height="64" class="header-logo-icon" style="width: 64px; height: 64px; border-radius: 16px; display: block; margin: 0 auto 10px auto; background: #FFFFFF; padding: 4px; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);" />
+      <img src="https://risetrack.id/images/ride-icon-3kaki.png" alt="RIDE Logo" width="64" height="64" class="header-logo-icon" style="width: 64px; height: 64px; border-radius: 16px; display: block; margin: 0 auto 10px auto; background: #FFFFFF; padding: 4px; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);" />
       <div class="header-title">RIDE</div>
       <div class="header-sub">Request Integrated Document Ecosystem · Pengingat Jatuh Tempo Kontrak</div>
     </div>
