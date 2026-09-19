@@ -91,7 +91,7 @@ export function AuthorityMatrixView() {
       bullets: [
         'Melihat status berkas publik',
         'Pratinjau berkas terbatas',
-        'Tanpa wewenang telaah atau persetujuan',
+        'Tanpa kewenangan kajian legal atau persetujuan',
       ],
       permissions: {
         createDoc: false,

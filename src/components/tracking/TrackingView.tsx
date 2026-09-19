@@ -1732,7 +1732,7 @@ export function TrackingView() {
               <Textarea
                 value={revNotes}
                 onChange={(e) => setRevNotes(e.target.value)}
-                placeholder="misal: Penyesuaian klausul denda keterlambatan Pasal 12 dan durasi sewa..."
+                placeholder="Contoh: Penyesuaian klausul denda keterlambatan Pasal 12 dan durasi sewa..."
                 rows={3}
                 required
                 className="text-xs rounded-xl"

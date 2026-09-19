@@ -404,9 +404,9 @@ export interface SendContractReminderEmailOptions {
 
 function generateContractReminderHtml(opts: SendContractReminderEmailOptions): string {
   const milestoneTitles: Record<string, { badge: string; color: string; desc: string }> = {
-    h60: { badge: 'H-60 · Pra-Evaluasi', color: '#475569', desc: 'Kontrak akan berakhir dalam 60 hari. Mulai lakukan pra-evaluasi dan telaah kebutuhan operasional.' },
-    h30: { badge: 'H-30 · Evaluasi & Telaah', color: '#2563EB', desc: 'Kontrak akan berakhir dalam 30 hari. Segera susun justifikasi perpanjangan, adendum, atau terminasi.' },
-    h15: { badge: 'H-15 · Peringatan Proses', color: '#D97706', desc: 'Kontrak akan berakhir dalam 15 hari. Pastikan berkas draf dan telaah hukum telah siap diajukan.' },
+    h60: { badge: 'H-60 · Pra-Evaluasi', color: '#475569', desc: 'Kontrak akan berakhir dalam 60 hari. Mulai lakukan pra-evaluasi dan kajian kebutuhan operasional.' },
+    h30: { badge: 'H-30 · Evaluasi & Kajian Legal', color: '#2563EB', desc: 'Kontrak akan berakhir dalam 30 hari. Segera susun justifikasi perpanjangan, adendum, atau terminasi.' },
+    h15: { badge: 'H-15 · Peringatan Proses', color: '#D97706', desc: 'Kontrak akan berakhir dalam 15 hari. Pastikan berkas draf dan kajian hukum telah siap diajukan.' },
     h7: { badge: 'H-7 · Peringatan Kritis', color: '#DC2626', desc: 'Kontrak akan berakhir dalam 7 hari (1 minggu). Dibutuhkan keputusan dan persetujuan segera!' },
     h1: { badge: 'H-1 · Batas Akhir Final', color: '#DC2626', desc: 'Kontrak berakhir BESOK. Harap segera tuntaskan administrasi atau tandatangani adendum/perpanjangan.' },
     expired: { badge: 'JATUH TEMPO / KADALUWARSA', color: '#991B1B', desc: 'Masa berlaku kontrak ini telah melewati batas jatuh tempo.' },
@@ -489,7 +489,7 @@ function generateContractReminderHtml(opts: SendContractReminderEmailOptions): s
       </div>
 
       <div style="background: #FFFBEB; border-left: 4px solid #F59E0B; padding: 12px 16px; border-radius: 4px; font-size: 12px; color: #92400E; line-height: 1.5;">
-        <strong>Tindakan yang Disarankan:</strong> Masuk ke portal RIDE untuk memilih rekomendasi tindakan (Perpanjangan, Adendum Klausul, atau Terminasi) serta mengisi telaah pertimbangan resmi.
+        <strong>Tindakan yang Disarankan:</strong> Masuk ke portal RIDE untuk memilih rekomendasi tindakan (Perpanjangan, Adendum Klausul, atau Terminasi) serta mengisi kajian pertimbangan resmi.
       </div>
     </div>
     <div class="footer">
