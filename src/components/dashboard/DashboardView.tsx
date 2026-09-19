@@ -43,6 +43,7 @@ import {
   CloudLightning,
   CloudSnow,
   Thermometer,
+  Sparkles,
 } from 'lucide-react'
 
 function getWeatherIcon(code: number | null) {
@@ -186,6 +187,82 @@ const CONSIDERATION_OPTIONS = [
   'Klausul kontrak memerlukan adendum atau penyesuaian harga/jangka waktu',
 ]
 
+export interface MoodOption {
+  id: string
+  emoji: string
+  label: string
+  desc: string
+  animation: string
+  color: string
+}
+
+const MOOD_OPTIONS: MoodOption[] = [
+  {
+    id: 'semangat',
+    emoji: '🔥',
+    label: 'Semangat',
+    desc: 'Siap menuntaskan target & pengajuan!',
+    animation: 'animate-mood-bounce',
+    color: 'bg-orange-500/20 text-orange-200 border-orange-400/40',
+  },
+  {
+    id: 'fokus',
+    emoji: '🎯',
+    label: 'Fokus',
+    desc: 'Konsentrasi tinggi & mode hening',
+    animation: 'animate-mood-float',
+    color: 'bg-blue-500/20 text-blue-200 border-blue-400/40',
+  },
+  {
+    id: 'kopi',
+    emoji: '☕',
+    label: 'Butuh Kopi',
+    desc: 'Perlu kafein biar segar kembali',
+    animation: 'animate-mood-float',
+    color: 'bg-amber-600/20 text-amber-200 border-amber-500/40',
+  },
+  {
+    id: 'bahagia',
+    emoji: '😊',
+    label: 'Bahagia',
+    desc: 'Hari menyenangkan & penuh senyum',
+    animation: 'animate-mood-bounce',
+    color: 'bg-emerald-500/20 text-emerald-200 border-emerald-400/40',
+  },
+  {
+    id: 'santai',
+    emoji: '😎',
+    label: 'Santai',
+    desc: 'Semua terkendali & tenang',
+    animation: 'animate-mood-float',
+    color: 'bg-cyan-500/20 text-cyan-200 border-cyan-400/40',
+  },
+  {
+    id: 'gaspol',
+    emoji: '🚀',
+    label: 'Gaspol',
+    desc: 'Kecepatan penuh tuntaskan berkas!',
+    animation: 'animate-mood-bounce',
+    color: 'bg-purple-500/20 text-purple-200 border-purple-400/40',
+  },
+  {
+    id: 'ide',
+    emoji: '💡',
+    label: 'Kreatif',
+    desc: 'Banyak ide segar bermunculan',
+    animation: 'animate-mood-float',
+    color: 'bg-yellow-500/20 text-yellow-200 border-yellow-400/40',
+  },
+  {
+    id: 'lelah',
+    emoji: '😴',
+    label: 'Lelah',
+    desc: 'Baterai tipis, butuh jeda istirahat',
+    animation: 'animate-mood-float',
+    color: 'bg-slate-500/20 text-slate-200 border-slate-400/40',
+  },
+]
+
 export function DashboardView() {
   const {
     user,
@@ -196,6 +273,30 @@ export function DashboardView() {
   } = useApp()
 
   const canManageExpiry = user?.role !== 'Requester' && user?.role !== 'User'
+
+  // Mood state
+  const [isMoodModalOpen, setIsMoodModalOpen] = useState(false)
+  const userMoodKey = `ride_user_mood_${user?.id || user?.email || 'default'}`
+  const [currentMood, setCurrentMood] = useState<MoodOption>(MOOD_OPTIONS[0])
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(userMoodKey)
+      if (saved) {
+        const found = MOOD_OPTIONS.find((m) => m.id === saved)
+        if (found) setCurrentMood(found)
+      }
+    } catch {}
+  }, [userMoodKey])
+
+  const handleSelectMood = (mood: MoodOption) => {
+    setCurrentMood(mood)
+    try {
+      localStorage.setItem(userMoodKey, mood.id)
+    } catch {}
+    setIsMoodModalOpen(false)
+    toast.success(`Suasana hati diperbarui: ${mood.emoji} ${mood.label}`)
+  }
 
   // State for Decision Modal
   const [decisionDoc, setDecisionDoc] = useState<DocumentItem | null>(null)
@@ -400,13 +501,23 @@ export function DashboardView() {
         <div className="flex items-center justify-between gap-2.5 pb-2.5 mb-2.5 border-b border-white/10">
           {/* Sisi Kiri: RIDE & Divisi/Direktorat di Bawahnya */}
           <div className="space-y-0.5 min-w-0 pr-2">
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 flex-wrap">
               <span className="font-black text-base font-display tracking-wider text-white">
                 RIDE
               </span>
               <span className="rounded bg-[#60A5FA]/20 px-1.5 py-0.2 text-[8.5px] font-bold text-[#93C5FD] tracking-wide uppercase border border-[#60A5FA]/30">
                 Platform
               </span>
+              <button
+                type="button"
+                onClick={() => setIsMoodModalOpen(true)}
+                className="inline-flex items-center gap-1 rounded-full bg-white/15 hover:bg-white/25 active:scale-95 transition-all px-2 py-0.5 border border-white/25 text-white cursor-pointer shadow-2xs"
+                title="Pilih Suasana Hati Anda Hari Ini"
+              >
+                <span className={`text-sm ${currentMood.animation}`}>{currentMood.emoji}</span>
+                <span className="text-[9.5px] font-medium text-white/95">{currentMood.label}</span>
+                <Sparkles className="h-2 w-2 text-amber-300 shrink-0 opacity-80" />
+              </button>
             </div>
             <div className="text-[10.5px] font-medium text-white/80 truncate">
               {user?.division || 'Direktorat Legal & Compliance'}
@@ -465,6 +576,16 @@ export function DashboardView() {
               <span className="rounded-md bg-[#60A5FA]/20 px-1.5 py-0.5 text-[9.5px] font-bold text-[#93C5FD] tracking-wide uppercase border border-[#60A5FA]/30">
                 Platform
               </span>
+              <button
+                type="button"
+                onClick={() => setIsMoodModalOpen(true)}
+                className="inline-flex items-center gap-1.5 rounded-full bg-white/15 hover:bg-white/25 hover:border-white/35 active:scale-95 transition-all px-2.5 py-0.5 border border-white/25 text-white cursor-pointer shadow-2xs group ml-1"
+                title="Klik untuk memilih suasana hati Anda hari ini"
+              >
+                <span className={`text-base ${currentMood.animation}`}>{currentMood.emoji}</span>
+                <span className="text-[10.5px] font-medium text-white/95 group-hover:text-white">{currentMood.label}</span>
+                <Sparkles className="h-2.5 w-2.5 text-amber-300 shrink-0 opacity-80 group-hover:opacity-100 transition-opacity" />
+              </button>
             </div>
             <div className="text-xs font-semibold text-white/85 tracking-tight truncate">
               {user?.division || 'Direktorat Legal & Compliance'}
@@ -987,6 +1108,67 @@ export function DashboardView() {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Mood Selector Modal / Dialog */}
+      <Dialog open={isMoodModalOpen} onOpenChange={setIsMoodModalOpen}>
+        <DialogContent className="max-w-lg rounded-2xl sm:rounded-3xl p-5 sm:p-6 bg-white shadow-2xl border border-slate-100">
+          <DialogHeader className="space-y-1.5 text-left">
+            <div className="flex items-center gap-2">
+              <span className="text-2xl animate-mood-bounce inline-block">✨</span>
+              <DialogTitle className="text-base sm:text-lg font-bold text-[#0B2147] font-display">
+                Suasana Hati Anda Hari Ini
+              </DialogTitle>
+            </div>
+            <DialogDescription className="text-xs text-slate-500">
+              Pilih ekspresi yang menggambarkan kondisi hati Anda hari ini. Emoji akan ditampilkan dengan animasi di kolom RIDE Anda.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 py-3">
+            {MOOD_OPTIONS.map((mood) => {
+              const isSelected = currentMood.id === mood.id
+              return (
+                <button
+                  key={mood.id}
+                  type="button"
+                  onClick={() => handleSelectMood(mood)}
+                  className={`flex flex-col items-center justify-center text-center p-3 rounded-2xl border transition-all cursor-pointer relative group ${
+                    isSelected
+                      ? 'border-[#163A70] bg-[#163A70]/8 ring-2 ring-[#163A70]/25 shadow-sm'
+                      : 'border-slate-200 bg-slate-50/70 hover:bg-slate-100 hover:border-slate-300'
+                  }`}
+                >
+                  {isSelected && (
+                    <span className="absolute top-1.5 right-1.5 h-4 w-4 rounded-full bg-[#163A70] text-white flex items-center justify-center text-[10px]">
+                      ✓
+                    </span>
+                  )}
+                  <span className={`text-3xl sm:text-4xl mb-1.5 ${mood.animation}`}>
+                    {mood.emoji}
+                  </span>
+                  <span className="font-bold text-xs text-[#0B2147] group-hover:text-[#163A70]">
+                    {mood.label}
+                  </span>
+                  <span className="text-[10px] text-slate-500 line-clamp-2 mt-0.5 leading-tight">
+                    {mood.desc}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+
+          <DialogFooter className="pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsMoodModalOpen(false)}
+              className="w-full sm:w-auto text-xs rounded-xl"
+            >
+              Tutup
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

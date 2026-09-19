@@ -145,3 +145,39 @@ h1, h2, h3, h4, .font-display {
   animation: shimmerBar 1.8s ease-in-out infinite;
 }
 
+@keyframes moodFloat {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg) scale(1);
+  }
+  25% {
+    transform: translateY(-4px) rotate(-6deg) scale(1.08);
+  }
+  75% {
+    transform: translateY(1.5px) rotate(5deg) scale(0.96);
+  }
+}
+
+.animate-mood-float {
+  display: inline-block;
+  animation: moodFloat 2.2s ease-in-out infinite;
+  transform-origin: center bottom;
+}
+
+@keyframes moodBounce {
+  0%, 100% {
+    transform: translateY(0) scale(1);
+  }
+  40% {
+    transform: translateY(-6px) scale(1.12);
+  }
+  60% {
+    transform: translateY(1px) scale(0.96);
+  }
+}
+
+.animate-mood-bounce {
+  display: inline-block;
+  animation: moodBounce 1.6s cubic-bezier(0.28, 0.84, 0.42, 1) infinite;
+  transform-origin: center bottom;
+}
+
