@@ -33,13 +33,6 @@ import {
   History,
   Download,
   FileEdit,
-  ShieldCheck,
-  Users,
-  Settings,
-  Sparkles,
-  FilePlus,
-  GitPullRequestDraft,
-  Files,
 } from 'lucide-react'
 import {
   Dialog,
@@ -158,73 +151,37 @@ export function DashboardView() {
     )
   }
 
-  const isAdmin = user?.role === 'Administrator' || user?.role === 'Director / BOD'
-  const isRequester = user?.role === 'Requester' || user?.role === 'User'
-  const reviewBadgeCount = documents.filter((d) => d.stage === 0 || d.stage === 1 || d.revisionRequested).length
-  const myDocsBadgeCount = documents.filter((d) => !user || d.pic === user.employeeName || d.picEmail === user.email || d.createdBy === user.email).length
-
-  const quickAppItems = [
-    {
-      id: 'new_doc',
-      title: 'Ajukan',
-      icon: FilePlus,
-      action: () => setCurrentView('tracking', 'new'),
-    },
-    {
-      id: 'tracking',
-      title: 'Lacak Alur',
-      icon: GitPullRequestDraft,
-      badge: reviewBadgeCount > 0 ? `${reviewBadgeCount}` : undefined,
-      action: () => setCurrentView('tracking', 'progress'),
-    },
-    {
-      id: 'myDocuments',
-      title: 'Dokumen',
-      icon: Files,
-      badge: myDocsBadgeCount > 0 ? `${myDocsBadgeCount}` : undefined,
-      action: () => setCurrentView('myDocuments'),
-    },
-    {
-      id: 'reminders',
-      title: 'Jatuh Tempo',
-      icon: Clock,
-      action: () => setCurrentView('tracking', 'progress'),
-    },
-    ...(!isRequester
-      ? [
-          {
-            id: 'matrix',
-            title: 'Matriks SOP',
-            icon: ShieldCheck,
-            action: () => setCurrentView('matrix'),
-          },
-        ]
-      : []),
-    ...(isAdmin
-      ? [
-          {
-            id: 'users',
-            title: 'Pengguna',
-            icon: Users,
-            action: () => setCurrentView('users'),
-          },
-          {
-            id: 'settings',
-            title: 'Pengaturan',
-            icon: Settings,
-            action: () => setCurrentView('settings'),
-          },
-        ]
-      : []),
-  ]
-
   return (
     <div className="space-y-3.5 sm:space-y-5 max-w-7xl mx-auto pb-12 animate-in fade-in duration-300">
-      {/* Top Hero Banner */}
-      <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-r from-[#0B2147] via-[#163A70] to-[#1E4D94] p-4 sm:p-7 text-white shadow-md">
+      {/* Top Hero Banner — Responsive (Mode HP Ringkas & Elegan, Mode Desktop Lengkap) */}
+      {/* Mobile View (HP) */}
+      <div className="sm:hidden relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#0B2147] via-[#163A70] to-[#1E4D94] p-4 text-white shadow-sm">
+        <div className="flex items-center justify-between gap-3">
+          <div className="space-y-1 min-w-0">
+            <div className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-0.5 text-[10.5px] font-medium backdrop-blur-md border border-white/15 text-white/90">
+              <span className="flex h-1.5 w-1.5 rounded-full bg-[#10B981] animate-pulse" />
+              <span>RIDE Online</span>
+              <span className="text-white/40">•</span>
+              <span className="truncate">{user?.division || 'MIND ID'}</span>
+            </div>
+            <h1 className="text-base font-bold font-display text-white tracking-tight truncate">
+              Halo, {user?.employeeName || 'Pengguna'} 👋
+            </h1>
+            <p className="text-[11px] text-white/70 truncate">
+              Peran: <span className="font-semibold text-white/90">{user?.role || 'Karyawan'}</span>
+            </p>
+          </div>
+
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 shadow-xs shrink-0">
+            <img src="/icon.svg" alt="RIDE" className="h-6.5 w-6.5 object-contain" />
+          </div>
+        </div>
+      </div>
+
+      {/* Desktop / Tablet View */}
+      <div className="hidden sm:block relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#0B2147] via-[#163A70] to-[#1E4D94] p-6 md:p-7 text-white shadow-md">
         <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-5">
           <div className="space-y-3.5">
-            {/* RIDE Title & Kepanjangan */}
             <div className="space-y-1">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="font-black text-2xl sm:text-3xl font-display tracking-wider text-white">
@@ -239,13 +196,11 @@ export function DashboardView() {
                 </span>
               </div>
 
-              {/* Tulisan RIDE dibawahnya dijelaskan kepanjangannya */}
               <div className="text-xs sm:text-sm font-semibold text-white/90 tracking-tight">
                 Request Integrated Document Ecosystem
               </div>
             </div>
 
-            {/* Greeting & Subtext */}
             <div className="pt-1">
               <h1 className="text-base sm:text-lg font-bold font-display tracking-tight text-white/95">
                 Selamat Datang, {user?.employeeName || 'Pengguna'}
@@ -263,51 +218,6 @@ export function DashboardView() {
             <Plus className="h-4 w-4 text-[#163A70]" />
             <span>Ajukan Dokumen</span>
           </Button>
-        </div>
-      </div>
-
-      {/* Menu Layanan & Fitur (Khusus Tampilan Mobile — Di Desktop Navigasi Menggunakan Sidebar) */}
-      <div className="md:hidden bg-white rounded-2xl p-3.5 sm:p-4 border border-[#E2E8F0] shadow-xs space-y-3">
-        <div className="flex items-center justify-between px-0.5">
-          <div className="flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-[#163A70]" />
-            <h2 className="text-xs sm:text-sm font-bold font-display text-[#0B2147] tracking-tight">
-              Menu Layanan &amp; Fitur
-            </h2>
-          </div>
-          <span className="text-[10.5px] font-semibold text-[#64748B] bg-[#F1F5F9] px-2 py-0.5 rounded-full">
-            {quickAppItems.length} Layanan
-          </span>
-        </div>
-
-        <div className="grid grid-cols-4 gap-y-3.5 gap-x-2">
-          {quickAppItems.map((item) => {
-            const Icon = item.icon
-            return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={item.action}
-                className="flex flex-col items-center text-center group cursor-pointer active:scale-95 transition-transform"
-              >
-                <div className="relative mb-1.5">
-                  <div className="flex h-12 w-12 sm:h-13 sm:w-13 items-center justify-center rounded-2xl bg-[#F8FAFC] text-[#163A70] border border-[#E2E8F0] shadow-2xs group-hover:bg-[#163A70] group-hover:text-white group-hover:border-[#163A70] group-hover:shadow-sm transition-all">
-                    <Icon className="h-5 w-5 stroke-[2]" />
-                  </div>
-
-                  {item.badge && (
-                    <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#EF4444] px-1 text-[9px] font-black text-white shadow-xs ring-2 ring-white">
-                      {item.badge}
-                    </span>
-                  )}
-                </div>
-
-                <span className="text-[11px] font-semibold text-[#334155] leading-tight text-center break-words w-full px-0.5 group-hover:text-[#163A70] transition-colors">
-                  {item.title}
-                </span>
-              </button>
-            )
-          })}
         </div>
       </div>
 
@@ -534,7 +444,7 @@ export function DashboardView() {
             <select
               value={trackerDocNo}
               onChange={(e) => setTrackerDocNo(e.target.value)}
-              className="h-10 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-3 text-xs font-semibold text-[#0F172A] max-w-xs truncate focus:border-[#163A70] focus:outline-none"
+              className="h-10 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-3 text-xs font-semibold text-[#0F172A] w-full sm:w-auto sm:max-w-xs truncate focus:border-[#163A70] focus:outline-none"
             >
               {documents.map((d) => (
                 <option key={d.docNumber} value={d.docNumber}>
@@ -545,9 +455,9 @@ export function DashboardView() {
           </div>
 
           {activeTrackerDoc && (
-            <div className="space-y-6">
+            <div className="space-y-4 sm:space-y-6">
               {/* Document Overview Header */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0]">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 sm:p-4 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0]">
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="font-mono text-xs font-bold text-[#163A70]">
@@ -562,7 +472,9 @@ export function DashboardView() {
                       </span>
                     )}
                   </div>
-                  <div className="font-bold text-sm text-[#0F172A] mt-1">{activeTrackerDoc.name}</div>
+                  <div className="font-bold text-xs sm:text-sm text-[#0F172A] mt-1 line-clamp-2">
+                    {activeTrackerDoc.name}
+                  </div>
                 </div>
 
                 <Button
@@ -571,15 +483,88 @@ export function DashboardView() {
                     setSelectedDocNumber(activeTrackerDoc.docNumber)
                     setCurrentView('tracking', 'progress')
                   }}
-                  className="h-9 text-xs bg-[#163A70] hover:bg-[#0B2147] text-white font-bold rounded-xl gap-1.5"
+                  className="h-8.5 sm:h-9 text-xs bg-[#163A70] hover:bg-[#0B2147] text-white font-bold rounded-xl gap-1.5 w-full sm:w-auto justify-center cursor-pointer"
                 >
                   <History className="h-3.5 w-3.5" />
                   Lihat Riwayat &amp; Versi Lengkap
                 </Button>
               </div>
 
-              {/* 7 Stage Visual Pipeline */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+              {/* 7 Stage Pipeline */}
+              {/* Tampilan Mobile (HP): Stepper Linear Ringkas & Progress Bar */}
+              <div className="sm:hidden space-y-3">
+                <div className="p-3.5 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10.5px] font-bold text-[#163A70] uppercase tracking-wider">
+                      Tahap Saat Ini
+                    </span>
+                    <span
+                      className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${
+                        activeTrackerDoc.revisionRequested
+                          ? 'bg-[#FFFBEB] text-[#D97706] border border-[#FDE68A]'
+                          : activeTrackerDoc.stage >= 5
+                          ? 'bg-[#ECFDF5] text-[#059669] border border-[#A7F3D0]'
+                          : 'bg-[#EBF2FF] text-[#163A70] border border-[#BFDBFE]'
+                      }`}
+                    >
+                      {activeTrackerDoc.revisionRequested
+                        ? 'Perlu Revisi'
+                        : activeTrackerDoc.stage >= 5
+                        ? 'Dokumen Sah'
+                        : `Tahap ${activeTrackerDoc.stage + 1} dari 7`}
+                    </span>
+                  </div>
+
+                  <div className="text-xs font-extrabold text-[#0B2147]">
+                    {STAGES[activeTrackerDoc.stage]?.label || 'Proses'}
+                  </div>
+
+                  {/* Progress Bar */}
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-[10px] text-[#64748B] font-semibold">
+                      <span>Kelengkapan Alur</span>
+                      <span>{Math.round(((activeTrackerDoc.stage + 1) / 7) * 100)}%</span>
+                    </div>
+                    <div className="h-2 w-full bg-[#E2E8F0] rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-[#163A70] to-[#2563EB] rounded-full transition-all duration-500"
+                        style={{ width: `${Math.round(((activeTrackerDoc.stage + 1) / 7) * 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Horizontal stage pills */}
+                <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none snap-x">
+                  {STAGES.map((st, idx) => {
+                    const isPast = activeTrackerDoc.stage > idx
+                    const isCurrent = activeTrackerDoc.stage === idx
+                    const isRevision = isCurrent && activeTrackerDoc.revisionRequested
+                    return (
+                      <div
+                        key={st.key}
+                        className={`shrink-0 flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-[10.5px] font-bold snap-start ${
+                          isRevision
+                            ? 'bg-[#FFFBEB] border-[#FDE68A] text-[#D97706]'
+                            : isCurrent
+                            ? 'bg-[#163A70] border-[#163A70] text-white shadow-xs'
+                            : isPast
+                            ? 'bg-[#ECFDF5] border-[#A7F3D0] text-[#059669]'
+                            : 'bg-[#F8FAFC] border-[#E2E8F0] text-[#94A3B8]'
+                        }`}
+                      >
+                        <span className="flex h-4 w-4 items-center justify-center rounded-full bg-white/20 text-[9px] font-extrabold">
+                          {isPast ? '✓' : idx + 1}
+                        </span>
+                        <span className="whitespace-nowrap">{st.label}</span>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* Tampilan Tablet / Desktop: 7 Kolom Grid */}
+              <div className="hidden sm:grid sm:grid-cols-4 lg:grid-cols-7 gap-2">
                 {STAGES.map((st, idx) => {
                   const Icon = st.icon
                   const isPast = activeTrackerDoc.stage > idx
