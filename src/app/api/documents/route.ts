@@ -3,6 +3,7 @@ import { getDriveDocuments, saveDriveDocument, StoredDocument } from '@/lib/driv
 import { sendNotificationEmail } from '@/lib/email'
 import { generateDocumentTxtLog, syncDocumentToGoogleDrive } from '@/lib/gdrive'
 import { getUserFromRequest } from '@/lib/auth'
+import { canUserAccessDocument, isDocumentOwnerOrPic } from '@/lib/roles'
 
 export const dynamic = 'force-dynamic'
 
@@ -17,18 +18,16 @@ export async function GET(request: NextRequest) {
 
     let docs = await getDriveDocuments(query, status, category)
 
-    // Sesuai Matriks Kewenangan (RBAC Matrix): Pemohon (Requester) berwenang melihat dan mengunduh berkas.
-    // Jika parameter ?mine=true diberikan, saring hanya dokumen miliknya.
-    if (onlyMine && tokenUser && (tokenUser.role === 'Requester' || tokenUser.role === 'User' || tokenUser.role === 'Guest')) {
-      const userEmail = tokenUser.email.toLowerCase()
-      const userId = tokenUser.userId
-      const userName = tokenUser.employeeName?.toLowerCase() || ''
-      docs = docs.filter(
-        (d) =>
-          d.createdBy === userId ||
-          (d.picEmail && d.picEmail.toLowerCase() === userEmail) ||
-          (d.pic && d.pic.toLowerCase() === userName)
-      )
+    // Terapkan Matriks Hak Akses Kewenangan & Kepemilikan Dokumen (RBAC & Ownership Security)
+    if (tokenUser) {
+      if (onlyMine) {
+        docs = docs.filter((d) => isDocumentOwnerOrPic(tokenUser, d))
+      } else {
+        docs = docs.filter((d) => canUserAccessDocument(tokenUser, d))
+      }
+    } else {
+      // Jika request tanpa token otentikasi, jangan bocorkan dokumen privat/konfidensial
+      docs = docs.filter((d) => d.confidentiality === 'Internal' && d.stage >= 5)
     }
 
     return NextResponse.json(docs)

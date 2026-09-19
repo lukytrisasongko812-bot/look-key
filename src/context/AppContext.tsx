@@ -433,13 +433,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, [fetchDocuments])
 
-  // Refetch notifications & users on token change
+  // Refetch notifications, users, and scoped documents on token change
   useEffect(() => {
     if (token) {
       fetchNotifications()
       fetchAllUsers()
+      fetchDocuments()
     }
-  }, [token, fetchNotifications, fetchAllUsers])
+  }, [token, fetchNotifications, fetchAllUsers, fetchDocuments])
 
   const login = async (email: string, pass: string) => {
     try {
@@ -583,6 +584,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     localStorage.removeItem('rise_user')
     setUser(null)
     setToken(null)
+    setDocuments([])
     setCurrentView('dashboard')
   }
 

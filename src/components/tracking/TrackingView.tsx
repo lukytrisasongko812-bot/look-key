@@ -858,16 +858,36 @@ export function TrackingView() {
 
       {/* TAB 2: PROGRESS & DOCUMENT HISTORY */}
       {trackSubTab === 'progress' && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5 sm:gap-6">
-          {/* Left Column: Document Selector & Overview */}
-          <div className="lg:col-span-4 space-y-3">
-            <div className="bg-white rounded-2xl border border-[#E2E8F0] p-3 sm:p-4 shadow-xs space-y-2.5">
-              <div className="flex items-center justify-between pb-2 border-b border-[#F1F5F9]">
-                <span className="text-xs font-bold text-[#0B2147]">Daftar Pengajuan</span>
-                <span className="text-[10px] font-bold font-mono px-2 py-0.5 rounded-full bg-[#EBF2FF] text-[#163A70]">
-                  {documents.length} Dokumen
-                </span>
-              </div>
+        documents.length === 0 ? (
+          <Card className="max-w-2xl mx-auto border-[#E2E8F0] shadow-xs rounded-3xl p-8 sm:p-12 text-center bg-white my-4">
+            <div className="h-16 w-16 mx-auto rounded-2xl bg-[#EFF6FF] text-[#163A70] flex items-center justify-center mb-4">
+              <FileText className="h-8 w-8" />
+            </div>
+            <h3 className="text-base sm:text-lg font-bold font-display text-[#0B2147] mb-1">
+              Belum Ada Pengajuan Dokumen
+            </h3>
+            <p className="text-xs sm:text-sm text-[#64748B] max-w-md mx-auto mb-6">
+              Akun Anda belum memiliki riwayat pengajuan dokumen. Klik tombol di bawah untuk membuat draf pengajuan dokumen baru.
+            </p>
+            <Button
+              onClick={() => setTrackSubTab('new')}
+              className="bg-[#163A70] hover:bg-[#0B2147] text-white font-bold text-xs rounded-xl h-10 px-5 gap-2 cursor-pointer shadow-xs"
+            >
+              <Plus className="h-4 w-4" />
+              <span>Buat Pengajuan Baru</span>
+            </Button>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5 sm:gap-6">
+            {/* Left Column: Document Selector & Overview */}
+            <div className="lg:col-span-4 space-y-3">
+              <div className="bg-white rounded-2xl border border-[#E2E8F0] p-3 sm:p-4 shadow-xs space-y-2.5">
+                <div className="flex items-center justify-between pb-2 border-b border-[#F1F5F9]">
+                  <span className="text-xs font-bold text-[#0B2147]">Daftar Pengajuan</span>
+                  <span className="text-[10px] font-bold font-mono px-2 py-0.5 rounded-full bg-[#EBF2FF] text-[#163A70]">
+                    {documents.length} Dokumen
+                  </span>
+                </div>
 
               <div className="space-y-1.5 max-h-[580px] overflow-y-auto pr-0.5">
                 {documents.map((doc) => {
@@ -1422,7 +1442,7 @@ export function TrackingView() {
             </div>
           )}
         </div>
-      )}
+      ))}
 
       {/* Upload Revision Modal */}
       <Dialog open={isRevModalOpen} onOpenChange={setIsRevModalOpen}>

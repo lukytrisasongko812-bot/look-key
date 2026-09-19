@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getDriveDocumentById, getDriveDocuments, StoredDocument, StoredFile } from '@/lib/drive-store'
 import { downloadFileFromGoogleDrive } from '@/lib/gdrive'
 import { getUserFromRequest, verifyToken } from '@/lib/auth'
+import { canUserAccessDocument } from '@/lib/roles'
 import fs from 'fs'
 import path from 'path'
 
@@ -107,6 +108,14 @@ export async function GET(
     if (!doc) {
       const allDocs = await getDriveDocuments()
       doc = allDocs.find((d) => d.docNumber === id || d._id === id) || null
+    }
+
+    // Validasi kewenangan akses mengunduh
+    if (user && doc && !canUserAccessDocument(user, doc)) {
+      return NextResponse.json(
+        { error: 'Akses ditolak: Anda tidak memiliki kewenangan untuk mengunduh berkas ini.' },
+        { status: 403 }
+      )
     }
 
     // Collect all candidate files from doc

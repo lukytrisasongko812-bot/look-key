@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react'
 import { useApp, DocumentItem, DocumentFile } from '@/context/AppContext'
+import { normalizeRole, isDocumentOwnerOrPic, isStandardUser, isGuest } from '@/lib/roles'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -36,11 +37,13 @@ import {
   Clock,
   ExternalLink,
   Paperclip,
+  UserCheck,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
 export function MyDocumentsView() {
   const {
+    user,
     documents,
     searchQuery,
     setSearchQuery,
@@ -51,10 +54,14 @@ export function MyDocumentsView() {
   } = useApp()
 
   const [statusFilter, setStatusFilter] = useState('')
+  const [scopeFilter, setScopeFilter] = useState<'all' | 'mine'>('all')
   const [viewModalDoc, setViewModalDoc] = useState<DocumentItem | null>(null)
   const [editModalDoc, setEditModalDoc] = useState<DocumentItem | null>(null)
   const [editName, setEditName] = useState('')
   const [editPic, setEditPic] = useState('')
+
+  const userRole = normalizeRole(user?.role)
+  const isPrivileged = userRole !== 'User' && userRole !== 'Guest'
 
   const getDocStatusLabel = (doc: DocumentItem) => {
     if (doc.rejected) return 'Ditolak'
@@ -65,6 +72,11 @@ export function MyDocumentsView() {
   }
 
   const filteredDocs = documents.filter((doc) => {
+    // Ownership scope filter for privileged roles
+    if (isPrivileged && scopeFilter === 'mine') {
+      if (!isDocumentOwnerOrPic(user, doc)) return false
+    }
+
     const q = searchQuery.toLowerCase()
     const matchesQuery =
       !q ||
@@ -80,9 +92,13 @@ export function MyDocumentsView() {
   })
 
   // Summary Metrics
-  const inProgressCount = documents.filter((d) => !d.rejected && d.stage < 5 && !d.revisionRequested).length
-  const revisionCount = documents.filter((d) => d.revisionRequested && !d.rejected).length
-  const finalCount = documents.filter((d) => d.stage >= 5 || d.stageStatus === 'completed').length
+  const scopedList = isPrivileged && scopeFilter === 'mine'
+    ? documents.filter((d) => isDocumentOwnerOrPic(user, d))
+    : documents
+
+  const inProgressCount = scopedList.filter((d) => !d.rejected && d.stage < 5 && !d.revisionRequested).length
+  const revisionCount = scopedList.filter((d) => d.revisionRequested && !d.rejected).length
+  const finalCount = scopedList.filter((d) => d.stage >= 5 || d.stageStatus === 'completed').length
 
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -145,10 +161,12 @@ export function MyDocumentsView() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold font-display text-[#0B2147] tracking-tight">
-            Dokumen Saya
+            {isPrivileged ? 'Arsip Dokumen' : 'Dokumen Saya'}
           </h1>
           <p className="text-xs text-[#64748B] mt-0.5">
-            Arsip berkas, inspeksi versi draf, dan pelacakan dokumen RIDE Anda.
+            {isPrivileged
+              ? `Manajemen dan pelacakan dokumen sesuai matriks kewenangan peran ${userRole}.`
+              : `Arsip berkas dan pelacakan dokumen pengajuan resmi Anda (PIC: ${user?.employeeName || 'Inisiator'}).`}
           </p>
         </div>
 
@@ -160,6 +178,40 @@ export function MyDocumentsView() {
           <span>Ajukan Dokumen Baru</span>
         </Button>
       </div>
+
+      {/* Scope Filter for Privileged Roles (Kewenangan vs Dokumen Saya) */}
+      {isPrivileged && (
+        <div className="flex bg-[#F1F5F9] p-1 rounded-2xl gap-1 max-w-sm sm:max-w-md">
+          <button
+            onClick={() => setScopeFilter('all')}
+            className={`flex-1 py-1.5 sm:py-2 px-3 text-xs font-bold transition-all rounded-xl cursor-pointer flex items-center justify-center gap-1.5 ${
+              scopeFilter === 'all'
+                ? 'bg-white text-[#163A70] shadow-xs'
+                : 'text-[#64748B] hover:text-[#0F172A]'
+            }`}
+          >
+            <span>Semua Dokumen</span>
+            <span className="rounded-full bg-[#EBF2FF] px-1.5 py-0.2 text-[9.5px] font-bold text-[#163A70]">
+              {documents.length}
+            </span>
+          </button>
+
+          <button
+            onClick={() => setScopeFilter('mine')}
+            className={`flex-1 py-1.5 sm:py-2 px-3 text-xs font-bold transition-all rounded-xl cursor-pointer flex items-center justify-center gap-1.5 ${
+              scopeFilter === 'mine'
+                ? 'bg-white text-[#163A70] shadow-xs'
+                : 'text-[#64748B] hover:text-[#0F172A]'
+            }`}
+          >
+            <UserCheck className="h-3.5 w-3.5" />
+            <span>Dokumen Saya</span>
+            <span className="rounded-full bg-[#EBF2FF] px-1.5 py-0.2 text-[9.5px] font-bold text-[#163A70]">
+              {documents.filter((d) => isDocumentOwnerOrPic(user, d)).length}
+            </span>
+          </button>
+        </div>
+      )}
 
       {/* 3 Overview Metric Badges (3-Kolom Rapi di Mobile & Desktop) */}
       <div className="grid grid-cols-3 gap-2 sm:gap-4">
@@ -225,7 +277,7 @@ export function MyDocumentsView() {
                     : 'bg-[#F1F5F9] text-[#475569] hover:bg-[#E2E8F0]'
                 }`}
               >
-                {st === '' ? 'Semua Dokumen' : st}
+                {st === '' ? 'Semua Status' : st}
               </button>
             ))}
           </div>

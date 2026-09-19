@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getDriveDocumentById, saveDriveDocument, deleteDriveDocument } from '@/lib/drive-store'
 import { getUserFromRequest } from '@/lib/auth'
+import { canUserAccessDocument, isDocumentOwnerOrPic, isSystemAdmin } from '@/lib/roles'
 
 export const dynamic = 'force-dynamic'
 
@@ -16,8 +17,14 @@ export async function GET(
       return NextResponse.json({ error: 'Dokumen tidak ditemukan' }, { status: 404 })
     }
 
-    // Sesuai Matriks Kewenangan (RBAC Matrix): Seluruh pengguna terdaftar (User / Requester / Verifikator)
-    // berwenang melihat berkas dokumen.
+    // Periksa kewenangan akses berdasarkan Role & PIC Pemohon
+    if (tokenUser && !canUserAccessDocument(tokenUser, doc)) {
+      return NextResponse.json(
+        { error: 'Akses ditolak: Anda tidak memiliki kewenangan untuk melihat dokumen ini.' },
+        { status: 403 }
+      )
+    }
+
     return NextResponse.json(doc)
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Error fetching document'
@@ -37,6 +44,13 @@ export async function PATCH(
     const doc = await getDriveDocumentById(id)
     if (!doc) {
       return NextResponse.json({ error: 'Dokumen tidak ditemukan' }, { status: 404 })
+    }
+
+    if (tokenUser && !canUserAccessDocument(tokenUser, doc)) {
+      return NextResponse.json(
+        { error: 'Akses ditolak: Anda tidak memiliki kewenangan untuk memperbarui dokumen ini.' },
+        { status: 403 }
+      )
     }
 
     const updated = {
@@ -59,6 +73,19 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params
+    const tokenUser = getUserFromRequest(request)
+    const doc = await getDriveDocumentById(id)
+    if (!doc) {
+      return NextResponse.json({ error: 'Dokumen tidak ditemukan' }, { status: 404 })
+    }
+
+    if (tokenUser && !isSystemAdmin(tokenUser.role) && !isDocumentOwnerOrPic(tokenUser, doc)) {
+      return NextResponse.json(
+        { error: 'Akses ditolak: Hanya Administrator atau Pemilik Pengajuan yang dapat menghapus dokumen ini.' },
+        { status: 403 }
+      )
+    }
+
     const ok = await deleteDriveDocument(id)
     if (!ok) {
       return NextResponse.json({ error: 'Dokumen tidak ditemukan' }, { status: 404 })

@@ -25,9 +25,18 @@ export function verifyToken(token: string): TokenPayload | null {
 
 export function getUserFromRequest(request: NextRequest): TokenPayload | null {
   const authHeader = request.headers.get('authorization')
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return null
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const token = authHeader.substring(7)
+    const verified = verifyToken(token)
+    if (verified) return verified
   }
-  const token = authHeader.substring(7)
-  return verifyToken(token)
+  const tokenParam = request.nextUrl.searchParams.get('token')
+  if (tokenParam) {
+    return verifyToken(tokenParam)
+  }
+  const cookieToken = request.cookies.get('ride_token')?.value || request.cookies.get('rise_token')?.value
+  if (cookieToken) {
+    return verifyToken(cookieToken)
+  }
+  return null
 }
