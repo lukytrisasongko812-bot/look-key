@@ -27,6 +27,7 @@ export interface IUser extends MongooseDocument {
   twoFactorEnabled: boolean
   twoFactorCode?: string | null
   twoFactorExpires?: Date | null
+  isActive?: boolean
   createdAt: Date
   updatedAt: Date
   comparePassword(candidate: string): Promise<boolean>
@@ -62,6 +63,7 @@ const UserSchema = new Schema<IUser>(
     twoFactorEnabled: { type: Boolean, default: true },
     twoFactorCode: { type: String, default: null },
     twoFactorExpires: { type: Date, default: null },
+    isActive: { type: Boolean, default: true },
   },
   { timestamps: true }
 )

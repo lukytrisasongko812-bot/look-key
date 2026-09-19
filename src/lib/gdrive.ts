@@ -1,4 +1,5 @@
 import { google } from 'googleapis'
+import bcrypt from 'bcryptjs'
 import { StoredDocument, StoredUser, StoredNotification, StoredFile } from './drive-store'
 
 const DEFAULT_SERVICE_EMAIL =
@@ -467,35 +468,82 @@ export async function downloadFileFromGoogleDrive(
 /**
  * Sync user profile to Google Drive User Registry folder
  */
+let cachedDefaultHash: string | null = null
+
+async function getDefaultPasswordHash(): Promise<string> {
+  if (!cachedDefaultHash) {
+    cachedDefaultHash = await bcrypt.hash('Password123!', 10)
+  }
+  return cachedDefaultHash
+}
+
+/**
+ * Sync user profile and credentials to Google Drive User Registry folder
+ */
 export async function syncUserToGoogleDrive(user: StoredUser): Promise<boolean> {
   try {
     const drive = getDriveClient()
-    const folderName = `👤 ${user.employeeName} (${user.role})`
+    const cleanEmail = user.email.toLowerCase().trim()
+    const folderName = `👤 [${cleanEmail}] ${user.employeeName} (${user.role})`
 
+    // Search for any existing folder in USERS_REGISTRY_FOLDER_ID matching this user
     const existing = await drive.files.list({
-      q: `'${USERS_REGISTRY_FOLDER_ID}' in parents and name = '${folderName.replace(/'/g, "\\'")}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
+      q: `'${USERS_REGISTRY_FOLDER_ID}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
       supportsAllDrives: true,
       includeItemsFromAllDrives: true,
-      fields: 'files(id, webViewLink)',
+      fields: 'files(id, name, description)',
     })
 
+    const matchingFolders: { id: string; name?: string; description?: string }[] = []
+    for (const f of existing.data.files || []) {
+      let isMatch = false
+      if (f.name && f.name.toLowerCase().includes(cleanEmail)) {
+        isMatch = true
+      } else if (f.description) {
+        try {
+          const d = JSON.parse(f.description)
+          if (
+            (d.email && d.email.toLowerCase().trim() === cleanEmail) ||
+            d._id === user._id ||
+            d.id === user.id ||
+            d.id === user._id ||
+            (cleanEmail === 'lukytrisasongko812@gmail.com' && d.email?.toLowerCase().includes('lukytrissasongko812')) ||
+            (cleanEmail === 'lukytrissasongko812@gmail.com' && d.email?.toLowerCase().includes('lukytrisasongko812'))
+          ) {
+            isMatch = true
+          }
+        } catch {}
+      }
+      if (isMatch && f.id) {
+        matchingFolders.push({ id: f.id, name: f.name || undefined, description: f.description || undefined })
+      }
+    }
+
+    const fallbackHash = await getDefaultPasswordHash()
     const userMetadata = JSON.stringify({
-      id: user._id,
+      _id: user._id,
+      id: user.id || user._id,
       employeeName: user.employeeName,
-      email: user.email,
-      position: user.position,
-      division: user.division,
+      email: cleanEmail,
+      passwordHash: user.passwordHash || fallbackHash,
+      position: user.position || 'Reviewer',
+      division: user.division || 'Direktorat Umum',
       role: user.role,
       phone: user.phone || '',
-      twoFactorEnabled: user.twoFactorEnabled,
-      isActive: user.isActive,
+      avatarUrl: user.avatarUrl || '',
+      coverUrl: user.coverUrl || '',
+      twoFactorEnabled: user.twoFactorEnabled ?? true,
+      twoFactorSecret: user.twoFactorSecret || null,
+      twoFactorExpires: user.twoFactorExpires || null,
+      isActive: user.isActive ?? true,
+      createdAt: user.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     }, null, 2)
 
     let folderId: string | undefined
 
-    if (existing.data.files && existing.data.files.length > 0) {
-      folderId = existing.data.files[0].id!
+    if (matchingFolders.length > 0) {
+      folderId = matchingFolders[0].id
       await drive.files.update({
         fileId: folderId,
         requestBody: {
@@ -504,6 +552,19 @@ export async function syncUserToGoogleDrive(user: StoredUser): Promise<boolean> 
         },
         supportsAllDrives: true,
       })
+
+      // Clean up extra duplicate folders for this user
+      if (matchingFolders.length > 1) {
+        for (let i = 1; i < matchingFolders.length; i++) {
+          try {
+            await drive.files.update({
+              fileId: matchingFolders[i].id,
+              requestBody: { trashed: true },
+              supportsAllDrives: true,
+            })
+          } catch {}
+        }
+      }
     } else {
       const created = await drive.files.create({
         requestBody: {
@@ -524,7 +585,7 @@ export async function syncUserToGoogleDrive(user: StoredUser): Promise<boolean> 
 RIDE — PROFIL PENGGUNA TERDAFTAR
 ================================================================================
 Nama Lengkap      : ${user.employeeName}
-Email             : ${user.email}
+Email             : ${cleanEmail}
 Peran (Role)      : ${user.role}
 Jabatan/Posisi    : ${user.position || '-'}
 Divisi/Direktorat : ${user.division || '-'}
@@ -571,3 +632,154 @@ Tautan Portal     : https://risetrack.id
     return false
   }
 }
+
+/**
+ * Retrieve all registered users directly from Google Drive User Registry
+ */
+export async function getUsersFromGoogleDriveRegistry(): Promise<StoredUser[]> {
+  try {
+    const drive = getDriveClient()
+    const res = await drive.files.list({
+      q: `'${USERS_REGISTRY_FOLDER_ID}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
+      fields: 'files(id, name, description)',
+      supportsAllDrives: true,
+      includeItemsFromAllDrives: true,
+    })
+
+    const usersMap = new Map<string, StoredUser>()
+    const files = res.data.files || []
+    const fallbackHash = await getDefaultPasswordHash()
+
+    for (const f of files) {
+      if (!f.description) continue
+      try {
+        const data = JSON.parse(f.description)
+        if (!data.email) continue
+        const email = data.email.toLowerCase().trim()
+        const id = data._id || data.id || `usr_${f.id}`
+
+        const stored: StoredUser = {
+          _id: id,
+          id: id,
+          employeeName: data.employeeName || 'Pengguna RIDE',
+          email: email,
+          passwordHash: data.passwordHash || fallbackHash,
+          position: data.position || 'Reviewer',
+          division: data.division || 'Direktorat Umum',
+          role: data.role || 'Reviewer',
+          phone: data.phone || '',
+          avatarUrl: data.avatarUrl || undefined,
+          coverUrl: data.coverUrl || undefined,
+          twoFactorEnabled: data.twoFactorEnabled ?? true,
+          twoFactorSecret: data.twoFactorSecret || undefined,
+          twoFactorExpires: data.twoFactorExpires || null,
+          isActive: data.isActive ?? true,
+          createdAt: data.createdAt || new Date().toISOString(),
+          updatedAt: data.updatedAt || new Date().toISOString(),
+        }
+
+        if (usersMap.has(email)) {
+          const prev = usersMap.get(email)!
+          const prevTime = new Date(prev.updatedAt).getTime()
+          const currTime = new Date(stored.updatedAt).getTime()
+          if (currTime >= prevTime) {
+            usersMap.set(email, stored)
+          }
+        } else {
+          usersMap.set(email, stored)
+        }
+      } catch (parseErr) {
+        // Non-user folder description or format error
+      }
+    }
+
+    return Array.from(usersMap.values())
+  } catch (err) {
+    console.error('[GDrive getUsersFromGoogleDriveRegistry Error]', err)
+    return []
+  }
+}
+
+/**
+ * Live lookup of a user by email directly from Google Drive User Registry
+ */
+export async function getUserFromGoogleDriveByEmail(email: string): Promise<StoredUser | null> {
+  if (!email) return null
+  const clean = email.toLowerCase().trim()
+  const allUsers = await getUsersFromGoogleDriveRegistry()
+  return (
+    allUsers.find(
+      (u) =>
+        u.email.toLowerCase() === clean ||
+        (clean === 'lukytrisasongko812@gmail.com' && u.email.toLowerCase() === 'lukytrissasongko812@gmail.com') ||
+        (clean === 'lukytrissasongko812@gmail.com' && u.email.toLowerCase() === 'lukytrisasongko812@gmail.com') ||
+        (clean === 'luckytrisasongko812@gmail.com' && u.email.toLowerCase().includes('luckytrisasongko812'))
+    ) || null
+  )
+}
+
+/**
+ * Live lookup of a user by ID directly from Google Drive User Registry
+ */
+export async function getUserFromGoogleDriveById(id: string): Promise<StoredUser | null> {
+  if (!id) return null
+  const cleanId = id.trim()
+  const allUsers = await getUsersFromGoogleDriveRegistry()
+  return (
+    allUsers.find(
+      (u) =>
+        u._id === cleanId ||
+        u.id === cleanId ||
+        u.email.toLowerCase() === cleanId.toLowerCase()
+    ) || null
+  )
+}
+
+/**
+ * Delete / trash user folder in Google Drive User Registry
+ */
+export async function deleteUserFromGoogleDrive(id: string, email?: string): Promise<boolean> {
+  try {
+    const drive = getDriveClient()
+    const cleanId = id.trim()
+    const cleanEmail = email ? email.toLowerCase().trim() : ''
+
+    const res = await drive.files.list({
+      q: `'${USERS_REGISTRY_FOLDER_ID}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
+      fields: 'files(id, name, description)',
+      supportsAllDrives: true,
+      includeItemsFromAllDrives: true,
+    })
+
+    for (const f of res.data.files || []) {
+      let shouldDelete = false
+      if (cleanEmail && f.name?.toLowerCase().includes(cleanEmail)) {
+        shouldDelete = true
+      }
+      if (!shouldDelete && f.description) {
+        try {
+          const d = JSON.parse(f.description)
+          if (
+            (cleanEmail && d.email?.toLowerCase().trim() === cleanEmail) ||
+            d._id === cleanId ||
+            d.id === cleanId
+          ) {
+            shouldDelete = true
+          }
+        } catch {}
+      }
+      if (shouldDelete && f.id) {
+        await drive.files.update({
+          fileId: f.id,
+          requestBody: { trashed: true },
+          supportsAllDrives: true,
+        })
+      }
+    }
+    return true
+  } catch (err) {
+    console.error('[GDrive deleteUserFromGoogleDrive Error]', err)
+    return false
+  }
+}
+

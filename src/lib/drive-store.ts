@@ -1,9 +1,43 @@
 import bcrypt from 'bcryptjs'
+import fs from 'fs'
+import path from 'path'
 import { UserRole } from '@/context/AppContext'
-import { syncUserToGoogleDrive, syncDocumentToGoogleDrive } from './gdrive'
+import {
+  syncUserToGoogleDrive,
+  syncDocumentToGoogleDrive,
+  getUsersFromGoogleDriveRegistry,
+  getUserFromGoogleDriveByEmail,
+  getUserFromGoogleDriveById,
+  deleteUserFromGoogleDrive,
+} from './gdrive'
 import { connectToDatabase } from './db'
 import { User } from '@/models/User'
 import { DocumentModel } from '@/models/Document'
+
+const LOCAL_USERS_CACHE_FILE = '/tmp/ride_users_persistent_cache.json'
+
+function readLocalUsersCache(): StoredUser[] | null {
+  try {
+    if (fs.existsSync(LOCAL_USERS_CACHE_FILE)) {
+      const data = fs.readFileSync(LOCAL_USERS_CACHE_FILE, 'utf-8')
+      const parsed = JSON.parse(data)
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed
+      }
+    }
+  } catch (e) {
+    // Ignore read errors
+  }
+  return null
+}
+
+function writeLocalUsersCache(users: StoredUser[]) {
+  try {
+    fs.writeFileSync(LOCAL_USERS_CACHE_FILE, JSON.stringify(users), 'utf-8')
+  } catch (e) {
+    // Ignore write errors
+  }
+}
 
 export interface StoredFile {
   originalName: string
@@ -201,50 +235,87 @@ export async function initAndSeedDriveStore() {
     },
   ]
 
+  // Initialize store.users with seed users if currently empty
+  if (store.users.length === 0) {
+    store.users = [...seedUsers]
+  }
+
+  // 2. Load from local disk cache (/tmp)
+  const cachedUsers = readLocalUsersCache()
+  if (cachedUsers && cachedUsers.length > 0) {
+    for (const cu of cachedUsers) {
+      const idx = store.users.findIndex(
+        (u) => u.email.toLowerCase() === cu.email.toLowerCase() || u._id === cu._id
+      )
+      if (idx >= 0) {
+        store.users[idx] = { ...store.users[idx], ...cu }
+      } else {
+        store.users.push(cu)
+      }
+    }
+  }
+
+  // 3. Cloud Source of Truth: Google Drive User Registry
+  try {
+    const driveUsers = await getUsersFromGoogleDriveRegistry()
+    if (driveUsers && driveUsers.length > 0) {
+      for (const du of driveUsers) {
+        const idx = store.users.findIndex(
+          (u) =>
+            u.email.toLowerCase() === du.email.toLowerCase() ||
+            u._id === du._id ||
+            u.id === du.id ||
+            (du.email.toLowerCase() === 'luckytrisasongko812@gmail.com' && u.email.toLowerCase() === 'luckytrisasongko812@gmail.com')
+        )
+        if (idx >= 0) {
+          store.users[idx] = { ...store.users[idx], ...du }
+        } else {
+          store.users.push(du)
+        }
+      }
+      writeLocalUsersCache(store.users)
+    }
+  } catch (driveErr) {
+    console.warn('[GDrive initAndSeed restore warning]', driveErr)
+  }
+
+  // 4. Try MongoDB in try/catch (graceful fallback)
   try {
     await connectToDatabase()
     const dbUsers = await User.find({}).lean()
-    if (!dbUsers || dbUsers.length === 0) {
-      for (const su of seedUsers) {
-        await User.create({
-          employeeName: su.employeeName,
-          email: su.email.toLowerCase(),
-          passwordHash: su.passwordHash,
-          position: su.position,
-          division: su.division,
-          role: su.role,
-          phone: su.phone,
-          twoFactorEnabled: su.twoFactorEnabled,
-          avatarUrl: su.avatarUrl || '',
-          coverUrl: su.coverUrl || '',
-        })
+    if (dbUsers && dbUsers.length > 0) {
+      for (const u of dbUsers) {
+        const mappedUser: StoredUser = {
+          _id: u._id.toString(),
+          id: u._id.toString(),
+          employeeName: u.employeeName,
+          email: u.email,
+          passwordHash: u.passwordHash,
+          position: u.position || 'Reviewer',
+          division: u.division || 'Direktorat Umum',
+          role: (u.role || 'Reviewer') as UserRole,
+          phone: u.phone,
+          avatarUrl: u.avatarUrl || undefined,
+          coverUrl: u.coverUrl || undefined,
+          twoFactorEnabled: u.twoFactorEnabled ?? true,
+          isActive: u.isActive ?? true,
+          createdAt: u.createdAt ? new Date(u.createdAt).toISOString() : now,
+          updatedAt: u.updatedAt ? new Date(u.updatedAt).toISOString() : now,
+        }
+        const idx = store.users.findIndex((x) => x.email.toLowerCase() === mappedUser.email.toLowerCase())
+        if (idx >= 0) {
+          store.users[idx] = { ...store.users[idx], ...mappedUser }
+        } else {
+          store.users.push(mappedUser)
+        }
       }
-      store.users = seedUsers
-    } else {
-      store.users = dbUsers.map((u: any) => ({
-        _id: u._id.toString(),
-        id: u._id.toString(),
-        employeeName: u.employeeName,
-        email: u.email,
-        passwordHash: u.passwordHash,
-        position: u.position || 'Reviewer',
-        division: u.division || 'Direktorat Umum',
-        role: (u.role || 'Reviewer') as UserRole,
-        phone: u.phone,
-        avatarUrl: u.avatarUrl || undefined,
-        coverUrl: u.coverUrl || undefined,
-        twoFactorEnabled: u.twoFactorEnabled ?? true,
-        isActive: u.isActive ?? true,
-        createdAt: u.createdAt ? new Date(u.createdAt).toISOString() : now,
-        updatedAt: u.updatedAt ? new Date(u.updatedAt).toISOString() : now,
-      }))
+      writeLocalUsersCache(store.users)
     }
   } catch (err) {
-    console.error('[MongoDB initAndSeed error, fallback to memory]', err)
-    if (store.users.length === 0) {
-      store.users = seedUsers
-    }
+    // MongoDB auth issues gracefully ignored; Google Drive is our primary cloud source of truth
   }
+
+  writeLocalUsersCache(store.users)
 
   // 2. Official Corporate Documents seeded directly with Google Drive Folder IDs & Versions
   store.documents = [
@@ -1086,39 +1157,117 @@ export async function deleteDriveDocument(id: string) {
 // ----------------------------------------------------
 
 export async function getDriveUsers() {
+  await initAndSeedDriveStore()
+  const store = getStore()
+
+  // If store only has the base seed users, trigger a fast refresh from Google Drive
+  if (store.users.length <= 3) {
+    try {
+      const driveUsers = await getUsersFromGoogleDriveRegistry()
+      if (driveUsers && driveUsers.length > 0) {
+        for (const du of driveUsers) {
+          const idx = store.users.findIndex((u) => u.email.toLowerCase() === du.email.toLowerCase())
+          if (idx >= 0) {
+            store.users[idx] = { ...store.users[idx], ...du }
+          } else {
+            store.users.push(du)
+          }
+        }
+        writeLocalUsersCache(store.users)
+      }
+    } catch {}
+  }
+
+  // Also check MongoDB if available
   try {
     await connectToDatabase()
     const dbUsers = await User.find({}).lean()
     if (dbUsers && dbUsers.length > 0) {
-      return dbUsers.map((u: any) => ({
-        _id: u._id.toString(),
-        id: u._id.toString(),
-        employeeName: u.employeeName,
-        email: u.email,
-        position: u.position || 'Reviewer',
-        division: u.division || 'Direktorat Umum',
-        role: (u.role || 'Reviewer') as UserRole,
-        phone: u.phone,
-        avatarUrl: u.avatarUrl || undefined,
-        coverUrl: u.coverUrl || undefined,
-        twoFactorEnabled: u.twoFactorEnabled ?? true,
-        isActive: u.isActive ?? true,
-        createdAt: u.createdAt ? new Date(u.createdAt).toISOString() : new Date().toISOString(),
-        updatedAt: u.updatedAt ? new Date(u.updatedAt).toISOString() : new Date().toISOString(),
-      }))
+      for (const u of dbUsers) {
+        const mappedUser: StoredUser = {
+          _id: u._id.toString(),
+          id: u._id.toString(),
+          employeeName: u.employeeName,
+          email: u.email,
+          passwordHash: u.passwordHash,
+          position: u.position || 'Reviewer',
+          division: u.division || 'Direktorat Umum',
+          role: (u.role || 'Reviewer') as UserRole,
+          phone: u.phone,
+          avatarUrl: u.avatarUrl || undefined,
+          coverUrl: u.coverUrl || undefined,
+          twoFactorEnabled: u.twoFactorEnabled ?? true,
+          isActive: u.isActive ?? true,
+          createdAt: u.createdAt ? new Date(u.createdAt).toISOString() : new Date().toISOString(),
+          updatedAt: u.updatedAt ? new Date(u.updatedAt).toISOString() : new Date().toISOString(),
+        }
+        const idx = store.users.findIndex((x) => x.email.toLowerCase() === mappedUser.email.toLowerCase())
+        if (idx >= 0) {
+          store.users[idx] = { ...store.users[idx], ...mappedUser }
+        } else {
+          store.users.push(mappedUser)
+        }
+      }
+      writeLocalUsersCache(store.users)
     }
   } catch (err) {
-    console.error('[MongoDB getDriveUsers Error]', err)
+    // MongoDB failure ignored safely
   }
 
-  await initAndSeedDriveStore()
-  const store = getStore()
   return store.users.map(({ passwordHash, twoFactorSecret, ...safe }) => safe)
 }
 
 export async function getDriveUserByEmail(email: string) {
   if (!email) return null
   const clean = email.toLowerCase().trim()
+  const store = getStore()
+
+  // 1. In-memory lookup
+  let user = store.users.find(
+    (u) =>
+      u.email.toLowerCase() === clean ||
+      (clean === 'lukytrisasongko812@gmail.com' && u.email.toLowerCase() === 'lukytrissasongko812@gmail.com') ||
+      (clean === 'lukytrissasongko812@gmail.com' && u.email.toLowerCase() === 'lukytrisasongko812@gmail.com') ||
+      (clean === 'luckytrisasongko812@gmail.com' && u.email.toLowerCase().includes('luckytrisasongko812'))
+  )
+  if (user) return user
+
+  // 2. Local disk cache lookup
+  const cachedUsers = readLocalUsersCache()
+  if (cachedUsers && cachedUsers.length > 0) {
+    user = cachedUsers.find(
+      (u) =>
+        u.email.toLowerCase() === clean ||
+        (clean === 'lukytrisasongko812@gmail.com' && u.email.toLowerCase() === 'lukytrissasongko812@gmail.com') ||
+        (clean === 'lukytrissasongko812@gmail.com' && u.email.toLowerCase() === 'lukytrisasongko812@gmail.com') ||
+        (clean === 'luckytrisasongko812@gmail.com' && u.email.toLowerCase().includes('luckytrisasongko812'))
+    )
+    if (user) {
+      if (!store.users.some((u) => u.email.toLowerCase() === user!.email.toLowerCase())) {
+        store.users.push(user)
+      }
+      return user
+    }
+  }
+
+  // 3. Live Google Drive query
+  try {
+    const driveUser = await getUserFromGoogleDriveByEmail(clean)
+    if (driveUser) {
+      const idx = store.users.findIndex((u) => u.email.toLowerCase() === driveUser.email.toLowerCase())
+      if (idx >= 0) {
+        store.users[idx] = driveUser
+      } else {
+        store.users.push(driveUser)
+      }
+      writeLocalUsersCache(store.users)
+      return driveUser
+    }
+  } catch (driveErr) {
+    console.warn('[GDrive live getDriveUserByEmail warning]', driveErr)
+  }
+
+  // 4. Try MongoDB
   try {
     await connectToDatabase()
     const dbUser: any = await User.findOne({
@@ -1126,10 +1275,11 @@ export async function getDriveUserByEmail(email: string) {
         { email: clean },
         { email: clean === 'lukytrisasongko812@gmail.com' ? 'lukytrissasongko812@gmail.com' : clean },
         { email: clean === 'lukytrissasongko812@gmail.com' ? 'lukytrisasongko812@gmail.com' : clean },
+        { email: clean === 'luckytrisasongko812@gmail.com' ? 'luckytrisasongko812@gmail.com' : clean },
       ]
     }).lean()
     if (dbUser) {
-      return {
+      const u: StoredUser = {
         _id: dbUser._id.toString(),
         id: dbUser._id.toString(),
         employeeName: dbUser.employeeName,
@@ -1148,19 +1298,27 @@ export async function getDriveUserByEmail(email: string) {
         createdAt: dbUser.createdAt ? new Date(dbUser.createdAt).toISOString() : new Date().toISOString(),
         updatedAt: dbUser.updatedAt ? new Date(dbUser.updatedAt).toISOString() : new Date().toISOString(),
       }
+      const idx = store.users.findIndex((x) => x.email.toLowerCase() === u.email.toLowerCase())
+      if (idx >= 0) {
+        store.users[idx] = u
+      } else {
+        store.users.push(u)
+      }
+      writeLocalUsersCache(store.users)
+      return u
     }
   } catch (err) {
-    console.error('[MongoDB getDriveUserByEmail Error]', err)
+    // ignore
   }
 
   await initAndSeedDriveStore()
-  const store = getStore()
   return (
     store.users.find(
       (u) =>
         u.email.toLowerCase() === clean ||
-        (clean === 'lukytrisasongko812@gmail.com' && u.email === 'lukytrissasongko812@gmail.com') ||
-        (clean === 'lukytrissasongko812@gmail.com' && u.email === 'lukytrisasongko812@gmail.com')
+        (clean === 'lukytrisasongko812@gmail.com' && u.email.toLowerCase() === 'lukytrissasongko812@gmail.com') ||
+        (clean === 'lukytrissasongko812@gmail.com' && u.email.toLowerCase() === 'lukytrisasongko812@gmail.com') ||
+        (clean === 'luckytrisasongko812@gmail.com' && u.email.toLowerCase().includes('luckytrisasongko812'))
     ) || null
   )
 }
@@ -1168,6 +1326,46 @@ export async function getDriveUserByEmail(email: string) {
 export async function getDriveUserById(id: string) {
   if (!id) return null
   const cleanId = id.trim()
+  const store = getStore()
+
+  // 1. In-memory check
+  let user = store.users.find(
+    (u) => u._id === cleanId || u.id === cleanId || u.email.toLowerCase() === cleanId.toLowerCase()
+  )
+  if (user) return user
+
+  // 2. Local disk cache check
+  const cachedUsers = readLocalUsersCache()
+  if (cachedUsers && cachedUsers.length > 0) {
+    user = cachedUsers.find(
+      (u) => u._id === cleanId || u.id === cleanId || u.email.toLowerCase() === cleanId.toLowerCase()
+    )
+    if (user) {
+      if (!store.users.some((u) => u._id === user!._id)) {
+        store.users.push(user)
+      }
+      return user
+    }
+  }
+
+  // 3. Live Google Drive query
+  try {
+    const driveUser = await getUserFromGoogleDriveById(cleanId)
+    if (driveUser) {
+      const idx = store.users.findIndex((u) => u._id === driveUser._id || u.email.toLowerCase() === driveUser.email.toLowerCase())
+      if (idx >= 0) {
+        store.users[idx] = driveUser
+      } else {
+        store.users.push(driveUser)
+      }
+      writeLocalUsersCache(store.users)
+      return driveUser
+    }
+  } catch (driveErr) {
+    console.warn('[GDrive live getDriveUserById warning]', driveErr)
+  }
+
+  // 4. Try MongoDB
   try {
     await connectToDatabase()
     let dbUser: any = null
@@ -1182,17 +1380,12 @@ export async function getDriveUserById(id: string) {
         $or: [
           { email: cleanId.toLowerCase() },
           { email: cleanId.toLowerCase() === 'lukytrisasongko812@gmail.com' ? 'lukytrissasongko812@gmail.com' : cleanId.toLowerCase() },
+          { email: cleanId.toLowerCase() === 'luckytrisasongko812@gmail.com' ? 'luckytrisasongko812@gmail.com' : cleanId.toLowerCase() },
         ]
       }).lean()
     }
-    if (!dbUser) {
-      const inMem = getStore().users.find((u) => u._id === cleanId || u.id === cleanId)
-      if (inMem && inMem.email) {
-        dbUser = await User.findOne({ email: inMem.email.toLowerCase() }).lean()
-      }
-    }
     if (dbUser) {
-      return {
+      const u: StoredUser = {
         _id: dbUser._id.toString(),
         id: dbUser._id.toString(),
         employeeName: dbUser.employeeName,
@@ -1211,13 +1404,20 @@ export async function getDriveUserById(id: string) {
         createdAt: dbUser.createdAt ? new Date(dbUser.createdAt).toISOString() : new Date().toISOString(),
         updatedAt: dbUser.updatedAt ? new Date(dbUser.updatedAt).toISOString() : new Date().toISOString(),
       }
+      const idx = store.users.findIndex((x) => x._id === u._id)
+      if (idx >= 0) {
+        store.users[idx] = u
+      } else {
+        store.users.push(u)
+      }
+      writeLocalUsersCache(store.users)
+      return u
     }
   } catch (err) {
-    console.error('[MongoDB getDriveUserById Error]', err)
+    // ignore
   }
 
   await initAndSeedDriveStore()
-  const store = getStore()
   return store.users.find((u) => u._id === cleanId || u.id === cleanId || u.email.toLowerCase() === cleanId.toLowerCase()) || null
 }
 
@@ -1238,6 +1438,17 @@ export async function saveDriveUser(user: StoredUser) {
     store.users.push(user)
   }
 
+  // 1. Immediately persist to local disk cache (/tmp)
+  writeLocalUsersCache(store.users)
+
+  // 2. Synchronously persist to Google Drive User Registry (Cloud source of truth)
+  try {
+    await syncUserToGoogleDrive(user)
+  } catch (e) {
+    console.error('[GDrive Sync User Exception]', e)
+  }
+
+  // 3. Attempt MongoDB update (graceful fallback)
   try {
     await connectToDatabase()
     const updateFields: any = {
@@ -1267,14 +1478,32 @@ export async function saveDriveUser(user: StoredUser) {
       { upsert: true, new: true }
     )
   } catch (err) {
-    console.error('[MongoDB saveDriveUser Error]', err)
+    // ignore
   }
 
-  syncUserToGoogleDrive(user).catch((e) => console.error('[Background GDrive Sync User Error]', e))
   return user
 }
 
 export async function deleteDriveUser(id: string) {
+  await initAndSeedDriveStore()
+  const store = getStore()
+  const idx = store.users.findIndex(
+    (u) => u._id === id || u.id === id || u.email.toLowerCase() === id.toLowerCase()
+  )
+  let removedUser: StoredUser | null = null
+  if (idx >= 0) {
+    removedUser = store.users.splice(idx, 1)[0]
+    writeLocalUsersCache(store.users)
+  }
+
+  // 1. Delete from Google Drive User Registry
+  try {
+    await deleteUserFromGoogleDrive(id, removedUser?.email)
+  } catch (e) {
+    console.error('[GDrive Delete User Exception]', e)
+  }
+
+  // 2. Try MongoDB delete
   try {
     await connectToDatabase()
     try {
@@ -1284,19 +1513,10 @@ export async function deleteDriveUser(id: string) {
     await User.deleteOne({ id: id })
     await User.deleteOne({ email: id.toLowerCase() })
   } catch (err) {
-    console.error('[MongoDB deleteDriveUser Error]', err)
+    // ignore
   }
 
-  await initAndSeedDriveStore()
-  const store = getStore()
-  const idx = store.users.findIndex(
-    (u) => u._id === id || u.id === id || u.email.toLowerCase() === id.toLowerCase()
-  )
-  if (idx >= 0) {
-    store.users.splice(idx, 1)
-    return true
-  }
-  return false
+  return true
 }
 
 // ----------------------------------------------------
