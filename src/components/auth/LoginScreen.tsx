@@ -27,13 +27,17 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 
-export function LoginScreen() {
+export function LoginScreen({ skipIntro = false }: { skipIntro?: boolean } = {}) {
   const { login, verifyOtp } = useApp()
 
-  const [showIntro, setShowIntro] = useState(true)
+  const [showIntro, setShowIntro] = useState(!skipIntro)
   const [introFading, setIntroFading] = useState(false)
 
   useEffect(() => {
+    if (skipIntro) {
+      setShowIntro(false)
+      return
+    }
     const t1 = setTimeout(() => {
       setIntroFading(true)
     }, 1000)
@@ -46,7 +50,7 @@ export function LoginScreen() {
       clearTimeout(t1)
       clearTimeout(t2)
     }
-  }, [])
+  }, [skipIntro])
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
