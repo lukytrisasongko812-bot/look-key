@@ -108,7 +108,7 @@ export function TrackingView() {
   const [reqEnd, setReqEnd] = useState('')
   const [reqNoDuration, setReqNoDuration] = useState(false)
   const [reqNotes, setReqNotes] = useState('')
-  const [uploadedFiles, setUploadedFiles] = useState<DocumentFile[]>([])
+  const [uploadedFile, setUploadedFile] = useState<DocumentFile | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   // Upload Revision Modal State
@@ -127,10 +127,6 @@ export function TrackingView() {
   const [isRequestRevOpen, setIsRequestRevOpen] = useState(false)
   const [requestRevReason, setRequestRevReason] = useState('')
 
-  // New Request Separate File States (Draf Utama & Dokumen Pendukung)
-  const [mainDraftFile, setMainDraftFile] = useState<DocumentFile | null>(null)
-  const [supportingFilesList, setSupportingFilesList] = useState<DocumentFile[]>([])
-
   // Active Doc Selection
   const activeDoc: DocumentItem | undefined =
     documents.find((d) => d.docNumber === selectedDocNumber) || documents[0]
@@ -145,12 +141,13 @@ export function TrackingView() {
     })
   }
 
-  // Upload Handlers for New Submission
-  const handleMainDraftUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Single File Upload Handler for New Submission (Max 20 MB)
+  const handleSingleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
     if (file.size > 20 * 1024 * 1024) {
-      toast.error(`Berkas "${file.name}" melebihi batas ukuran maksimal 20 MB.`)
+      toast.error(`Ukuran berkas "${file.name}" melebihi batas maksimal 20 MB.`)
+      e.target.value = ''
       return
     }
     try {
@@ -164,72 +161,11 @@ export function TrackingView() {
         dataUrl,
         uploadedAt: new Date().toISOString(),
       }
-      setMainDraftFile(docFile)
-      toast.success(`Draf dokumen utama "${file.name}" siap diajukan.`)
+      setUploadedFile(docFile)
+      toast.success(`Berkas "${file.name}" (${(file.size / (1024 * 1024)).toFixed(2)} MB) siap diajukan.`)
     } catch (err) {
-      toast.error('Gagal membaca berkas draf utama.')
+      toast.error('Gagal membaca berkas dokumen.')
     }
-  }
-
-  const handleSupportingFilesUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const fileList = e.target.files
-    if (!fileList || fileList.length === 0) return
-
-    const newDocs: DocumentFile[] = []
-    for (const file of Array.from(fileList)) {
-      if (file.size > 20 * 1024 * 1024) {
-        toast.error(`Berkas "${file.name}" melebihi batas maksimal 20 MB.`)
-        continue
-      }
-      try {
-        const dataUrl = await readFileAsDataUrl(file)
-        newDocs.push({
-          originalName: file.name,
-          filename: file.name.toLowerCase().replace(/\s+/g, '_'),
-          size: file.size,
-          mimeType: file.type || 'application/pdf',
-          url: dataUrl,
-          dataUrl,
-          uploadedAt: new Date().toISOString(),
-        })
-      } catch (err) {
-        console.error('Error reading supporting file:', file.name, err)
-      }
-    }
-
-    setSupportingFilesList((prev) => [...prev, ...newDocs])
-    toast.success(`${newDocs.length} dokumen pendukung berhasil ditambahkan.`)
-  }
-
-  // Combined fallback uploader
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const fileList = e.target.files
-    if (!fileList || fileList.length === 0) return
-
-    const newFiles: DocumentFile[] = []
-    for (const f of Array.from(fileList)) {
-      if (f.size > 20 * 1024 * 1024) {
-        toast.error(`Berkas "${f.name}" melebihi batas maksimal 20 MB.`)
-        continue
-      }
-      try {
-        const dataUrl = await readFileAsDataUrl(f)
-        newFiles.push({
-          originalName: f.name,
-          filename: f.name.toLowerCase().replace(/\s+/g, '_'),
-          size: f.size,
-          mimeType: f.type || 'application/pdf',
-          url: dataUrl,
-          dataUrl,
-          uploadedAt: new Date().toISOString(),
-        })
-      } catch (err) {
-        console.error('Error reading file:', f.name, err)
-      }
-    }
-
-    setUploadedFiles((prev) => [...prev, ...newFiles])
-    toast.success(`${newFiles.length} berkas berhasil ditambahkan ke formulir pengajuan.`)
   }
 
   const handleRevFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -320,15 +256,7 @@ export function TrackingView() {
       return
     }
 
-    const effectiveInitial = mainDraftFile || (uploadedFiles.length > 0 ? uploadedFiles[0] : null)
-    const effectiveSupporting = [
-      ...supportingFilesList,
-      ...(uploadedFiles.length > 1 ? uploadedFiles.slice(1) : []),
-    ]
-    const allFiles = [
-      ...(effectiveInitial ? [effectiveInitial] : []),
-      ...effectiveSupporting,
-    ]
+    const allFiles = uploadedFile ? [uploadedFile] : []
 
     setIsSubmitting(true)
     const newDoc = await createDocument({
@@ -341,8 +269,8 @@ export function TrackingView() {
       contractEnd: reqNoDuration ? null : reqEnd || null,
       noDuration: reqNoDuration,
       notes: reqNotes,
-      initialDocument: effectiveInitial,
-      supportingDocuments: effectiveSupporting,
+      initialDocument: uploadedFile,
+      supportingDocuments: [],
       files: allFiles,
     } as any)
     setIsSubmitting(false)
@@ -354,9 +282,7 @@ export function TrackingView() {
       // Reset
       setReqName('')
       setReqNotes('')
-      setUploadedFiles([])
-      setMainDraftFile(null)
-      setSupportingFilesList([])
+      setUploadedFile(null)
     }
   }
 
@@ -754,90 +680,59 @@ export function TrackingView() {
                 />
               </div>
 
-              {/* Upload Main Draft File (V0) */}
+              {/* Single File Upload Box (Max 20 MB) */}
               <div className="space-y-1.5 pt-1">
-                <Label className="text-xs font-semibold text-[#0B2147] flex items-center gap-1.5">
-                  <FileText className="h-3.5 w-3.5 text-[#163A70]" />
-                  Draf Dokumen Utama (V0) <span className="text-[#DC2626]">*</span>
-                </Label>
-                <div className="rounded-2xl border-2 border-dashed border-[#CBD5E1] p-3.5 text-center hover:border-[#163A70] transition-colors bg-[#F8FAFC]">
-                  <Upload className="mx-auto h-5 w-5 text-[#94A3B8] mb-1" />
-                  <div className="text-xs font-semibold text-[#0F172A]">
-                    Pilih Berkas Draf Utama (PDF / Word DOCX)
-                  </div>
-                  <input
-                    type="file"
-                    accept=".pdf,.doc,.docx"
-                    onChange={handleMainDraftUpload}
-                    className="mt-2 block w-full text-xs text-[#64748B] file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-[#163A70] file:text-white hover:file:bg-[#0B2147] cursor-pointer"
-                  />
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-semibold text-[#0B2147] flex items-center gap-1.5">
+                    <FileText className="h-4 w-4 text-[#163A70]" />
+                    Unggah Berkas Dokumen <span className="text-[#DC2626]">*</span>
+                  </Label>
+                  <span className="text-[11px] font-medium text-[#64748B]">
+                    PDF, DOCX, XLSX, JPG, PNG (Maks. 20 MB)
+                  </span>
                 </div>
 
-                {mainDraftFile && (
-                  <div className="flex items-center justify-between p-2.5 rounded-xl border border-[#A7F3D0] bg-[#ECFDF5] text-xs">
-                    <div className="flex items-center gap-2 truncate">
-                      <FileCheck className="h-4 w-4 text-[#059669] shrink-0" />
-                      <span className="font-bold text-[#065F46] truncate">{mainDraftFile.originalName}</span>
-                      <Badge className="text-[9px] bg-[#059669] text-white">
-                        Draf Utama (V0) • {(mainDraftFile.size / 1024).toFixed(1)} KB
-                      </Badge>
+                {!uploadedFile ? (
+                  <div className="rounded-2xl border-2 border-dashed border-[#CBD5E1] p-5 text-center hover:border-[#163A70] transition-colors bg-[#F8FAFC]">
+                    <Upload className="mx-auto h-7 w-7 text-[#94A3B8] mb-2" />
+                    <div className="text-xs font-bold text-[#0F172A]">
+                      Pilih atau seret berkas dokumen ke sini
+                    </div>
+                    <p className="text-[11px] text-[#64748B] mt-0.5">
+                      Ukuran berkas maksimal 20 MB (PDF, Word, Excel, Gambar)
+                    </p>
+                    <input
+                      type="file"
+                      accept=".pdf,.doc,.docx,.xlsx,.xls,.jpg,.jpeg,.png"
+                      onChange={handleSingleFileUpload}
+                      className="mt-3 block w-full text-xs text-[#64748B] file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-[#163A70] file:text-white hover:file:bg-[#0B2147] cursor-pointer"
+                    />
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between p-3 rounded-2xl border border-[#A7F3D0] bg-[#ECFDF5] text-xs">
+                    <div className="flex items-center gap-2.5 truncate">
+                      <div className="h-9 w-9 rounded-xl bg-[#059669] text-white flex items-center justify-center shrink-0">
+                        <FileCheck className="h-5 w-5" />
+                      </div>
+                      <div className="truncate">
+                        <div className="font-bold text-[#065F46] truncate">{uploadedFile.originalName}</div>
+                        <div className="text-[10.5px] text-[#047857] flex items-center gap-1.5 mt-0.5">
+                          <span>{(uploadedFile.size / (1024 * 1024)).toFixed(2)} MB</span>
+                          <span>•</span>
+                          <span className="font-semibold uppercase">{uploadedFile.originalName.split('.').pop()}</span>
+                          <span>•</span>
+                          <span className="text-[#059669] font-bold">Siap Diajukan</span>
+                        </div>
+                      </div>
                     </div>
                     <button
                       type="button"
-                      onClick={() => setMainDraftFile(null)}
-                      className="text-[#DC2626] hover:bg-[#FEE2E2] p-1 rounded-lg cursor-pointer"
+                      onClick={() => setUploadedFile(null)}
+                      className="text-[#DC2626] hover:bg-[#FEE2E2] p-2 rounded-xl transition-colors cursor-pointer shrink-0 ml-2"
+                      title="Hapus / Ganti Berkas"
                     >
-                      <Trash2 className="h-3.5 w-3.5" />
+                      <Trash2 className="h-4 w-4" />
                     </button>
-                  </div>
-                )}
-              </div>
-
-              {/* Upload Supporting Documents (Lampiran Pengajuan) */}
-              <div className="space-y-1.5 pt-2">
-                <div className="flex items-center justify-between">
-                  <Label className="text-xs font-semibold text-[#0B2147] flex items-center gap-1.5">
-                    <Paperclip className="h-3.5 w-3.5 text-[#059669]" />
-                    Dokumen Pendukung / Lampiran Pengajuan (Opsional)
-                  </Label>
-                  <span className="text-[11px] text-[#64748B]">PDF, DOCX, XLSX, JPG, PNG (Maks 20MB)</span>
-                </div>
-                <div className="rounded-2xl border-2 border-dashed border-[#CBD5E1] p-3.5 text-center hover:border-[#059669] transition-colors bg-[#F8FAFC]">
-                  <Upload className="mx-auto h-5 w-5 text-[#94A3B8] mb-1" />
-                  <div className="text-xs font-semibold text-[#0F172A]">
-                    Pilih satu atau beberapa berkas pendukung (KTP, NPWP, Memo, Spesifikasi, Penawaran)
-                  </div>
-                  <input
-                    type="file"
-                    multiple
-                    onChange={handleSupportingFilesUpload}
-                    className="mt-2 block w-full text-xs text-[#64748B] file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-[#059669] file:text-white hover:file:bg-[#047857] cursor-pointer"
-                  />
-                </div>
-
-                {supportingFilesList.length > 0 && (
-                  <div className="mt-2 space-y-1.5">
-                    {supportingFilesList.map((f, i) => (
-                      <div
-                        key={i}
-                        className="flex items-center justify-between p-2 rounded-xl border border-[#E2E8F0] bg-white text-xs"
-                      >
-                        <div className="flex items-center gap-2 truncate">
-                          <Paperclip className="h-3.5 w-3.5 text-[#059669] shrink-0" />
-                          <span className="font-semibold text-[#0F172A] truncate">{f.originalName}</span>
-                          <Badge variant="outline" className="text-[9.5px] font-mono text-[#059669] border-[#A7F3D0]">
-                            Lampiran • {(f.size / 1024).toFixed(1)} KB
-                          </Badge>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => setSupportingFilesList((prev) => prev.filter((_, idx) => idx !== i))}
-                          className="text-[#DC2626] hover:bg-[#FEF2F2] p-1 rounded-lg cursor-pointer"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    ))}
                   </div>
                 )}
               </div>
