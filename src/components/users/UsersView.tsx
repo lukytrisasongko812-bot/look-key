@@ -180,11 +180,11 @@ export function UsersView() {
   }
 
   const rolesList: { id: UserRole; title: string; color: string }[] = [
-    { id: 'Requester', title: 'Pemohon (Requester)', color: 'bg-[#EFF6FF] text-[#2563EB] border-[#BFDBFE]' },
-    { id: 'Reviewer', title: 'Peninjau (Reviewer)', color: 'bg-[#FFFBEB] text-[#D97706] border-[#FDE68A]' },
-    { id: 'Approver', title: 'Penyetuju (Approver)', color: 'bg-[#F0FDF4] text-[#16A34A] border-[#BBF7D0]' },
-    { id: 'Document Controller', title: 'Pengendali Dokumen', color: 'bg-[#F5F3FF] text-[#7C3AED] border-[#DDD6FE]' },
-    { id: 'Administrator', title: 'Administrator', color: 'bg-[#FEF2F2] text-[#DC2626] border-[#FCA5A5]' },
+    { id: 'Requester', title: 'Business Initiator (Requester)', color: 'bg-[#EFF6FF] text-[#1D4ED8] border-[#BFDBFE]' },
+    { id: 'Reviewer', title: 'Legal & Compliance (Reviewer)', color: 'bg-[#FFFBEB] text-[#B45309] border-[#FDE68A]' },
+    { id: 'Approver', title: 'Executive Approver (Direksi)', color: 'bg-[#ECFDF5] text-[#047857] border-[#A7F3D0]' },
+    { id: 'Document Controller', title: 'Document Controller (Arsip)', color: 'bg-[#F5F3FF] text-[#6D28D9] border-[#DDD6FE]' },
+    { id: 'Administrator', title: 'System Administrator (Sistem)', color: 'bg-[#FEF2F2] text-[#B91C1C] border-[#FECACA]' },
   ]
 
   const filteredUsers = allUsers.filter((u) => {
@@ -345,11 +345,11 @@ export function UsersView() {
                             onChange={(e) => handleRoleChange(u.id, e.target.value as UserRole)}
                             className="h-8 rounded-lg border border-[#CBD5E1] bg-[#F8FAFC] px-2 text-xs font-bold text-[#0B2147] focus:border-[#163A70] focus:outline-none cursor-pointer"
                           >
-                            <option value="Requester">Pemohon (Requester)</option>
-                            <option value="Reviewer">Peninjau (Reviewer)</option>
-                            <option value="Approver">Penyetuju (Approver)</option>
-                            <option value="Document Controller">Pengendali Dokumen</option>
-                            <option value="Administrator">Administrator Sistem</option>
+                            <option value="Requester">Requester — Inisiator Dokumen</option>
+                            <option value="Reviewer">Reviewer — Legal &amp; Compliance</option>
+                            <option value="Approver">Approver — Direksi &amp; Otorisasi</option>
+                            <option value="Document Controller">Document Controller — Tata Kelola Arsip</option>
+                            <option value="Administrator">Administrator — Sistem &amp; Keamanan</option>
                           </select>
                         </td>
                         <td className="py-3.5 px-4 text-right">
@@ -453,11 +453,11 @@ export function UsersView() {
                 onChange={(e) => setInviteRole(e.target.value as UserRole)}
                 className="w-full h-10 rounded-xl border border-[#CBD5E1] bg-[#F8FAFC] px-3 text-xs font-bold text-[#0B2147] focus:border-[#163A70] focus:outline-none"
               >
-                <option value="Requester">Requester (Pembuat Pengajuan)</option>
-                <option value="Reviewer">Reviewer (Pemeriksa &amp; Koreksi Dokumen)</option>
-                <option value="Approver">Approver (Pemberi Otorisasi / Direksi)</option>
-                <option value="Document Controller">Document Controller (Verifikator Final)</option>
-                <option value="Administrator">Administrator (Kontrol Penuh Sistem)</option>
+                <option value="Requester">Requester — Inisiator Dokumen</option>
+                <option value="Reviewer">Reviewer — Legal &amp; Compliance</option>
+                <option value="Approver">Approver — Direksi &amp; Otorisasi</option>
+                <option value="Document Controller">Document Controller — Tata Kelola Arsip</option>
+                <option value="Administrator">Administrator — Sistem &amp; Keamanan</option>
               </select>
             </div>
 
