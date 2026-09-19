@@ -216,8 +216,22 @@ export async function syncDocumentToGoogleDrive(doc: StoredDocument): Promise<{
     doc.driveFolderId = folderId || undefined
     doc.driveFolderUrl = folderUrl || undefined
 
-    // Upload physical ringkasan_dan_log_dokumen.txt as complete audit trail log
+    // Set anyone reader permissions on the document folder so it can be viewed by all authorized company users
     if (folderId) {
+      try {
+        await drive.permissions.create({
+          fileId: folderId,
+          requestBody: {
+            role: 'reader',
+            type: 'anyone',
+          },
+          supportsAllDrives: true,
+        })
+      } catch (permErr) {
+        console.warn('[GDrive Folder Permission Warning]', permErr)
+      }
+
+      // Upload physical ringkasan_dan_log_dokumen.txt as complete audit trail log
       const txtContent = generateDocumentTxtLog(doc)
       uploadFileViaGasWebhook(folderId, 'ringkasan_dan_log_dokumen.txt', txtContent).catch((e) =>
         console.error('[GAS Background Upload Error]', e)
@@ -261,6 +275,9 @@ export async function syncDocumentToGoogleDrive(doc: StoredDocument): Promise<{
         const fileName = f.originalName || f.filename
         if (!fileName || fileName === 'ringkasan_dan_log_dokumen.txt') continue
 
+        // Always ensure url points to the reliable application download route
+        const appDownloadUrl = `/api/documents/${doc.docNumber}/download?name=${encodeURIComponent(fileName)}`
+
         if (f.dataUrl && f.dataUrl.includes('base64,')) {
           try {
             const base64Data = f.dataUrl.split('base64,')[1]
@@ -274,11 +291,16 @@ export async function syncDocumentToGoogleDrive(doc: StoredDocument): Promise<{
             if (uploadResult) {
               f.driveFileId = uploadResult.fileId
               f.driveViewUrl = uploadResult.webViewLink
-              f.url = uploadResult.webViewLink
+              f.url = appDownloadUrl
+            } else {
+              f.url = appDownloadUrl
             }
           } catch (fileErr) {
             console.error(`[Upload Intact Document Error: ${fileName}]`, fileErr)
+            f.url = appDownloadUrl
           }
+        } else {
+          f.url = appDownloadUrl
         }
       }
     }
@@ -383,12 +405,61 @@ export async function uploadOrUpdateFileInFolder(
 
     const webViewLink = updated.data.webViewLink || `https://drive.google.com/file/d/${fileId}/view`
 
+    // Set permission to anyone reader so it can be previewed without Google account barrier
+    try {
+      await drive.permissions.create({
+        fileId,
+        requestBody: {
+          role: 'reader',
+          type: 'anyone',
+        },
+        supportsAllDrives: true,
+      })
+    } catch (permErr) {
+      console.warn(`[GDrive Permission Anyone Warning for ${fileName}]`, permErr)
+    }
+
     return {
       fileId,
       webViewLink,
     }
   } catch (err) {
     console.error(`[GDrive Direct Binary Sync Error for ${fileName}]`, err)
+    return null
+  }
+}
+
+/**
+ * Download file binary stream from Google Drive
+ */
+export async function downloadFileFromGoogleDrive(
+  fileId: string
+): Promise<{ buffer: Buffer; mimeType: string; fileName: string } | null> {
+  try {
+    const drive = getDriveClient()
+    const meta = await drive.files.get({
+      fileId,
+      supportsAllDrives: true,
+      fields: 'id, name, mimeType, size',
+    })
+
+    const response = await drive.files.get(
+      {
+        fileId,
+        alt: 'media',
+        supportsAllDrives: true,
+      },
+      { responseType: 'arraybuffer' }
+    )
+
+    const buffer = Buffer.from(response.data as ArrayBuffer)
+    return {
+      buffer,
+      mimeType: meta.data.mimeType || 'application/octet-stream',
+      fileName: meta.data.name || 'document',
+    }
+  } catch (err) {
+    console.error(`[GDrive Download Error for fileId ${fileId}]`, err)
     return null
   }
 }

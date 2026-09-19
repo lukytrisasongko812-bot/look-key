@@ -61,7 +61,6 @@ export function Sidebar() {
       id: 'matrix',
       label: 'Matriks Kewenangan',
       icon: <ShieldCheck className="h-4 w-4 shrink-0" />,
-      hideForRequester: true,
     },
     {
       id: 'myAccount',

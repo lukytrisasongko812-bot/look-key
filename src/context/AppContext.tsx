@@ -233,20 +233,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const res = await fetch(`/api/documents?${params.toString()}`, { headers })
         if (res.ok) {
           const data: DocumentItem[] = await res.json()
-          const currentUser = userRef.current
-          if (currentUser && currentUser.role === 'Requester') {
-            const userEmail = currentUser.email.toLowerCase()
-            const userName = currentUser.employeeName?.toLowerCase() || ''
-            const filtered = data.filter(
-              (d) =>
-                d.createdBy === currentUser.id ||
-                (d.picEmail && d.picEmail.toLowerCase() === userEmail) ||
-                (d.pic && d.pic.toLowerCase() === userName)
-            )
-            setDocuments(filtered)
-          } else {
-            setDocuments(data)
-          }
+          setDocuments(data)
         }
       } catch (e) {
         console.error('Failed to fetch documents', e)

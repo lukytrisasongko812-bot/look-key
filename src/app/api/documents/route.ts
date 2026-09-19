@@ -13,11 +13,13 @@ export async function GET(request: NextRequest) {
     const query = searchParams.get('q') || ''
     const status = searchParams.get('status') || ''
     const category = searchParams.get('category') || ''
+    const onlyMine = searchParams.get('mine') === 'true'
 
     let docs = await getDriveDocuments(query, status, category)
 
-    // Role-based access control: Requester can strictly only view their own documents
-    if (tokenUser && tokenUser.role === 'Requester') {
+    // Sesuai Matriks Kewenangan (RBAC Matrix): Pemohon (Requester) berwenang melihat dan mengunduh berkas.
+    // Jika parameter ?mine=true diberikan, saring hanya dokumen miliknya.
+    if (onlyMine && tokenUser && tokenUser.role === 'Requester') {
       const userEmail = tokenUser.email.toLowerCase()
       const userId = tokenUser.userId
       const userName = tokenUser.employeeName?.toLowerCase() || ''

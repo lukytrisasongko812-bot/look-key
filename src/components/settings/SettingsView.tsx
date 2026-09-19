@@ -16,6 +16,7 @@ import {
   Mail,
   Smartphone,
   Layers,
+  Database,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -196,6 +197,54 @@ export function SettingsView() {
                 Kelola Pengguna &amp; Undangan
               </Button>
             )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 4. Basis Data (Database) Engine — Khusus Administrator */}
+      <Card className="border-[#E2E8F0] shadow-sm">
+        <CardContent className="p-6 space-y-4">
+          <div className="flex items-center justify-between pb-3 border-b border-[#F1F5F9]">
+            <div className="flex items-center gap-2">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#F0F9FF] text-[#0284C7]">
+                <Database className="h-5 w-5" />
+              </div>
+              <div>
+                <h2 className="text-sm font-bold text-[#0B2147]">
+                  Tata Kelola Basis Data (Database Engine)
+                </h2>
+                <p className="text-[11px] text-[#64748B]">
+                  Penyimpanan relasi dokumen, user registry, dan sinkronisasi berkas digital.
+                </p>
+              </div>
+            </div>
+
+            <Badge variant="outline" className="bg-[#EFF6FF] text-[#1D4ED8] border-[#BFDBFE] text-xs font-bold px-2.5 py-1">
+              Khusus Administrator
+            </Badge>
+          </div>
+
+          <div className="p-4 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] space-y-3">
+            <div className="text-xs text-[#334155] leading-relaxed">
+              <span className="font-bold">Restriksi Akses Sesuai Matriks:</span> Sesuai Matriks Kewenangan (RBAC Matrix), akses langsung terhadap basis data, cadangan data (backup), serta konfigurasi skema master hanya diperkenankan bagi <b>Administrator</b>. Peran <b>Pemohon (Requester)</b> dan peninjau lainnya berhak mengakses dan mengunduh berkas dokumen melalui antarmuka resmi RIDE.
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 text-xs">
+              <div className="p-3 rounded-lg bg-white border border-[#E2E8F0] space-y-1">
+                <div className="text-[11px] text-[#64748B] font-medium">Engine Utama Basis Data</div>
+                <div className="font-bold text-[#0F172A] flex items-center gap-1.5">
+                  <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                  MongoDB Atlas + Google Drive Store
+                </div>
+              </div>
+              <div className="p-3 rounded-lg bg-white border border-[#E2E8F0] space-y-1">
+                <div className="text-[11px] text-[#64748B] font-medium">Status Keamanan Akses</div>
+                <div className="font-bold text-[#0F172A] flex items-center gap-1.5">
+                  <ShieldCheck className="h-3.5 w-3.5 text-[#163A70]" />
+                  Terkunci Sesuai Matriks Kewenangan
+                </div>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>

@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState } from 'react'
-import { useApp, DocumentItem } from '@/context/AppContext'
+import { useApp, DocumentItem, DocumentFile } from '@/context/AppContext'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -103,6 +103,40 @@ export function MyDocumentsView() {
         toast.success(`Pengajuan ${doc.docNumber} berhasil dihapus.`)
       }
     }
+  }
+
+  // Reliable file download & view handlers (Anti-404)
+  const handleDownloadFile = (doc: DocumentItem, file: DocumentFile) => {
+    const fileName = file.originalName || file.filename || 'dokumen'
+    if (file.dataUrl && file.dataUrl.startsWith('data:')) {
+      const a = document.createElement('a')
+      a.href = file.dataUrl
+      a.download = fileName
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      return
+    }
+    const downloadUrl = `/api/documents/${doc.docNumber || doc._id}/download?name=${encodeURIComponent(fileName)}`
+    const a = document.createElement('a')
+    a.href = downloadUrl
+    a.download = fileName
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+  }
+
+  const handleViewFile = (doc: DocumentItem, file: DocumentFile) => {
+    if (file.driveViewUrl && file.driveViewUrl.startsWith('https://')) {
+      window.open(file.driveViewUrl, '_blank', 'noopener,noreferrer')
+      return
+    }
+    if (file.dataUrl && file.dataUrl.startsWith('data:')) {
+      window.open(file.dataUrl, '_blank')
+      return
+    }
+    const fileName = file.originalName || file.filename || 'dokumen'
+    window.open(`/api/documents/${doc.docNumber || doc._id}/view?name=${encodeURIComponent(fileName)}`, '_blank')
   }
 
   return (
@@ -491,23 +525,22 @@ export function MyDocumentsView() {
                           </span>
                         </div>
                         <div className="flex items-center gap-1 shrink-0">
-                          <a
-                            href={ver.file.driveViewUrl || ver.file.url || viewModalDoc.driveFolderUrl || '#'}
-                            target="_blank"
-                            rel="noopener noreferrer"
+                          <button
+                            type="button"
+                            onClick={() => handleViewFile(viewModalDoc, ver.file)}
                             className="p-1 text-[#163A70] hover:bg-[#EBF2FF] rounded cursor-pointer"
-                            title="Buka di Google Drive"
+                            title="Lihat / Buka Dokumen"
                           >
                             <ExternalLink className="h-4 w-4" />
-                          </a>
-                          <a
-                            href={ver.file.url}
-                            download={ver.file.originalName}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDownloadFile(viewModalDoc, ver.file)}
                             className="p-1 text-[#163A70] hover:bg-[#EBF2FF] rounded cursor-pointer"
-                            title="Unduh"
+                            title="Unduh Berkas"
                           >
                             <Download className="h-4 w-4" />
-                          </a>
+                          </button>
                         </div>
                       </div>
                     ))}
@@ -543,23 +576,22 @@ export function MyDocumentsView() {
                               </span>
                             </div>
                             <div className="flex items-center gap-1 shrink-0">
-                              <a
-                                href={f.driveViewUrl || f.url || viewModalDoc.driveFolderUrl || '#'}
-                                target="_blank"
-                                rel="noopener noreferrer"
+                              <button
+                                type="button"
+                                onClick={() => handleViewFile(viewModalDoc, f)}
                                 className="p-1 text-[#059669] hover:bg-[#ECFDF5] rounded cursor-pointer"
-                                title="Lihat Dokumen di Drive"
+                                title="Lihat / Buka Lampiran"
                               >
                                 <ExternalLink className="h-3.5 w-3.5" />
-                              </a>
-                              <a
-                                href={f.url || f.driveViewUrl || '#'}
-                                download={f.originalName || f.filename}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDownloadFile(viewModalDoc, f)}
                                 className="p-1 text-[#163A70] hover:bg-[#EBF2FF] rounded cursor-pointer"
-                                title="Unduh"
+                                title="Unduh Lampiran"
                               >
                                 <Download className="h-3.5 w-3.5" />
-                              </a>
+                              </button>
                             </div>
                           </div>
                         ))}

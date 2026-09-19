@@ -50,35 +50,13 @@ export function AuthorityMatrixView() {
     }
   }, [fetchAllUsers, isAdmin])
 
-  if (isRequester) {
-    return (
-      <div className="max-w-md mx-auto py-16 text-center space-y-4 animate-in fade-in duration-300">
-        <div className="h-16 w-16 mx-auto rounded-2xl bg-[#FEF2F2] text-[#DC2626] flex items-center justify-center">
-          <ShieldAlert className="h-8 w-8" />
-        </div>
-        <h2 className="text-lg font-bold font-display text-[#0B2147]">Akses Terbatas</h2>
-        <p className="text-xs text-[#64748B] leading-relaxed">
-          Halaman Matriks Kewenangan (RBAC Matrix) hanya diperuntukkan bagi peran Reviewer, Approver, Document Controller, dan Administrator.
-        </p>
-        <div className="pt-2">
-          <Button
-            onClick={() => setCurrentView('dashboard')}
-            className="bg-[#163A70] hover:bg-[#0B2147] text-white text-xs font-bold rounded-xl px-5 h-10 shadow-xs cursor-pointer"
-          >
-            Kembali ke Beranda
-          </Button>
-        </div>
-      </div>
-    )
-  }
-
   const roles = [
     {
       id: 'Requester',
       title: 'Pemohon',
       badgeColor: 'bg-[#EFF6FF] text-[#2563EB] border-[#BFDBFE]',
       desc: 'Pengaju pengajuan dokumen dari unit kerja / divisi pemohon.',
-      jobdesk: 'Membuat draf pengajuan awal (V0), melampirkan berkas pendukung, dan mengunggah perbaikan jika diminta revisi.',
+      jobdesk: 'Membuat draf pengajuan awal (V0), melampirkan berkas pendukung, melihat & mengunduh seluruh dokumen, dan mengunggah perbaikan jika diminta revisi.',
       permissions: {
         createDoc: true,
         viewDocs: true,
@@ -91,6 +69,7 @@ export function AuthorityMatrixView() {
         manageExpiry: false,
         manageUsers: false,
         deleteMembership: false,
+        manageDatabase: false,
       },
     },
     {
@@ -111,6 +90,7 @@ export function AuthorityMatrixView() {
         manageExpiry: true,
         manageUsers: false,
         deleteMembership: false,
+        manageDatabase: false,
       },
     },
     {
@@ -131,6 +111,7 @@ export function AuthorityMatrixView() {
         manageExpiry: true,
         manageUsers: false,
         deleteMembership: false,
+        manageDatabase: false,
       },
     },
     {
@@ -151,6 +132,7 @@ export function AuthorityMatrixView() {
         manageExpiry: true,
         manageUsers: false,
         deleteMembership: false,
+        manageDatabase: false,
       },
     },
     {
@@ -158,7 +140,7 @@ export function AuthorityMatrixView() {
       title: 'Administrator Sistem',
       badgeColor: 'bg-[#FEF2F2] text-[#DC2626] border-[#FCA5A5]',
       desc: 'Pengelola sistem, arsitektur data, keamanan akses, dan manajemen pengguna.',
-      jobdesk: 'Mengelola hak akses peran, menerbitkan link undangan pengguna ke Gmail, menghapus keanggotaan pengguna, mengontrol master data sistem, dan mengawasi operasional.',
+      jobdesk: 'Mengelola hak akses peran, menerbitkan link undangan pengguna ke Gmail, menghapus keanggotaan pengguna, mengontrol master data sistem, pemeliharaan basis data, dan mengawasi operasional.',
       permissions: {
         createDoc: true,
         viewDocs: true,
@@ -171,13 +153,14 @@ export function AuthorityMatrixView() {
         manageExpiry: true,
         manageUsers: true,
         deleteMembership: true,
+        manageDatabase: true,
       },
     },
   ]
 
   const operationalActions = [
     { key: 'createDoc', label: 'Ajukan Dokumen Baru (V0)', desc: 'Membuat nomor tiket dan unggah draf awal' },
-    { key: 'viewDocs', label: 'Lihat & Unduh Dokumen', desc: 'Membaca dan mengunduh berkas versi aktif' },
+    { key: 'viewDocs', label: 'Lihat & Unduh Dokumen', desc: 'Membaca dan mengunduh berkas versi aktif dan lampiran pendukung' },
     { key: 'addReviewNotes', label: 'Beri Catatan Revisi', desc: 'Menambahkan poin feedback per pasal/klausul' },
     { key: 'requestRevision', label: 'Minta Revisi Dokumen', desc: 'Mengembalikan status pengajuan untuk diperbaiki' },
     { key: 'uploadRevision', label: 'Unggah Revisi (Rev.01+)', desc: 'Mengunggah draf perbaikan versi baru' },
@@ -187,6 +170,7 @@ export function AuthorityMatrixView() {
     { key: 'manageExpiry', label: 'Keputusan Jatuh Tempo', desc: 'Menetapkan perpanjangan atau terminasi kontrak' },
     { key: 'manageUsers', label: 'Kelola Pengguna & Hak Akses', desc: 'Undang akun, ubah peran, dan konfigurasi master sistem' },
     { key: 'deleteMembership', label: 'Hapus Keanggotaan Matriks', desc: 'Mencabut dan menghapus hak akses keanggotaan pengguna dari sistem' },
+    { key: 'manageDatabase', label: 'Akses & Manajemen Basis Data (Database)', desc: 'Pengelolaan MongoDB, Google Drive store, pencadangan data, reset, dan skema (Hanya Administrator)' },
   ]
 
   const handleRoleChange = async (userId: string, newRole: UserRole) => {
@@ -243,6 +227,18 @@ export function AuthorityMatrixView() {
               <span>Undang Anggota Baru</span>
             </Button>
           )}
+        </div>
+      </div>
+
+      {/* Authority Matrix Clarification Banner */}
+      <div className={`p-4 rounded-2xl border text-xs flex items-start sm:items-center gap-3 ${
+        isRequester
+          ? 'bg-[#EFF6FF] border-[#BFDBFE] text-[#1E40AF]'
+          : 'bg-[#F8FAFC] border-[#E2E8F0] text-[#334155]'
+      }`}>
+        <ShieldCheck className={`h-5 w-5 shrink-0 mt-0.5 sm:mt-0 ${isRequester ? 'text-[#2563EB]' : 'text-[#163A70]'}`} />
+        <div className="leading-relaxed">
+          <span className="font-bold">Ketentuan Matriks Kewenangan:</span> Seluruh dokumen dan berkas pengajuan dapat diakses, dilihat, dan diunduh oleh <b>Pemohon (Requester)</b> serta peran peninjau terkait. Akses langsung terhadap pengelolaan <b>Basis Data (Database)</b> dan konfigurasi master data sistem <b>dibatasi ketat hanya untuk Administrator</b>.
         </div>
       </div>
 

@@ -1,10 +1,19 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { initAndSeedDriveStore, getDriveDocuments, getDriveUsers } from '@/lib/drive-store'
+import { getUserFromRequest } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const user = getUserFromRequest(request)
+    if (!user || (user.role !== 'Administrator' && user.role !== 'Director / BOD')) {
+      return NextResponse.json(
+        { error: 'Akses ditolak. Pengelolaan basis data hanya diperuntukkan bagi Administrator sesuai matriks kewenangan.' },
+        { status: 403 }
+      )
+    }
+
     // Reset and seed fresh
     if (globalThis.__rideDriveStore) {
       globalThis.__rideDriveStore.isInitialized = false

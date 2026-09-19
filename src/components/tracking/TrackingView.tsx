@@ -277,6 +277,40 @@ export function TrackingView() {
     }
   }
 
+  // Reliable file download & view handlers (Anti-404)
+  const handleDownloadFile = (doc: DocumentItem, file: DocumentFile) => {
+    const fileName = file.originalName || file.filename || 'dokumen'
+    if (file.dataUrl && file.dataUrl.startsWith('data:')) {
+      const a = document.createElement('a')
+      a.href = file.dataUrl
+      a.download = fileName
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      return
+    }
+    const downloadUrl = `/api/documents/${doc.docNumber || doc._id}/download?name=${encodeURIComponent(fileName)}`
+    const a = document.createElement('a')
+    a.href = downloadUrl
+    a.download = fileName
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+  }
+
+  const handleViewFile = (doc: DocumentItem, file: DocumentFile) => {
+    if (file.driveViewUrl && file.driveViewUrl.startsWith('https://')) {
+      window.open(file.driveViewUrl, '_blank', 'noopener,noreferrer')
+      return
+    }
+    if (file.dataUrl && file.dataUrl.startsWith('data:')) {
+      window.open(file.dataUrl, '_blank')
+      return
+    }
+    const fileName = file.originalName || file.filename || 'dokumen'
+    window.open(`/api/documents/${doc.docNumber || doc._id}/view?name=${encodeURIComponent(fileName)}`, '_blank')
+  }
+
   // Create Request Submit
   const handleNewRequestSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -1210,23 +1244,24 @@ export function TrackingView() {
                               )}
                             </div>
                             <div className="flex items-center gap-1.5 shrink-0">
-                              <a
-                                href={ver.file.driveViewUrl || ver.file.url || activeDoc.driveFolderUrl || '#'}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg text-[11px] font-bold bg-[#163A70] text-white hover:bg-[#0B2147] shadow-2xs"
+                              <button
+                                type="button"
+                                onClick={() => handleViewFile(activeDoc, ver.file)}
+                                className="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg text-[11px] font-bold bg-[#163A70] text-white hover:bg-[#0B2147] shadow-2xs cursor-pointer"
+                                title="Lihat / Buka Dokumen"
                               >
                                 <ExternalLink className="h-3 w-3" />
-                                Buka di Drive
-                              </a>
-                              <a
-                                href={ver.file.url}
-                                download={ver.file.originalName}
-                                className="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg text-[11px] font-bold bg-white text-[#163A70] border border-[#CBD5E1] shadow-2xs hover:bg-[#F8FAFC]"
+                                {ver.file.driveViewUrl ? 'Buka di Drive' : 'Lihat'}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDownloadFile(activeDoc, ver.file)}
+                                className="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg text-[11px] font-bold bg-white text-[#163A70] border border-[#CBD5E1] shadow-2xs hover:bg-[#F8FAFC] cursor-pointer"
+                                title="Unduh Berkas Utuh"
                               >
                                 <Download className="h-3 w-3" />
                                 Unduh
-                              </a>
+                              </button>
                             </div>
                           </div>
                         )
@@ -1292,23 +1327,24 @@ export function TrackingView() {
                               </div>
 
                               <div className="flex items-center gap-1.5 shrink-0">
-                                <a
-                                  href={f.driveViewUrl || f.url || activeDoc.driveFolderUrl || '#'}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg text-[11px] font-bold bg-[#059669] text-white hover:bg-[#047857] shadow-2xs"
+                                <button
+                                  type="button"
+                                  onClick={() => handleViewFile(activeDoc, f)}
+                                  className="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg text-[11px] font-bold bg-[#059669] text-white hover:bg-[#047857] shadow-2xs cursor-pointer"
+                                  title="Lihat / Buka Lampiran"
                                 >
                                   <ExternalLink className="h-3 w-3" />
-                                  Lihat di Drive
-                                </a>
-                                <a
-                                  href={f.url || f.driveViewUrl || '#'}
-                                  download={f.originalName || f.filename}
-                                  className="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg text-[11px] font-bold bg-white text-[#163A70] border border-[#CBD5E1] shadow-2xs hover:bg-[#F8FAFC]"
+                                  {f.driveViewUrl ? 'Lihat di Drive' : 'Lihat'}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDownloadFile(activeDoc, f)}
+                                  className="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg text-[11px] font-bold bg-white text-[#163A70] border border-[#CBD5E1] shadow-2xs hover:bg-[#F8FAFC] cursor-pointer"
+                                  title="Unduh Lampiran Utuh"
                                 >
                                   <Download className="h-3 w-3" />
                                   Unduh
-                                </a>
+                                </button>
                               </div>
                             </div>
                           ))}
