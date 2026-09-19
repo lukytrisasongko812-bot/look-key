@@ -73,7 +73,7 @@ function getWeatherCondition(code: number | null): string {
   return 'Cerah Berawan'
 }
 
-function AnalogClock({ date, className = 'h-16 w-16' }: { date: Date | null; className?: string }) {
+function AnalogClock({ date, className = 'h-10 w-10' }: { date: Date | null; className?: string }) {
   const d = date || new Date()
   const seconds = d.getSeconds()
   const minutes = d.getMinutes()
@@ -85,24 +85,15 @@ function AnalogClock({ date, className = 'h-16 w-16' }: { date: Date | null; cla
 
   return (
     <div className={`relative flex items-center justify-center shrink-0 ${className}`}>
-      <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-md">
+      <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-sm">
         {/* Outer Dial Circle */}
         <circle
           cx="50"
           cy="50"
-          r="47"
-          fill="rgba(255, 255, 255, 0.08)"
-          stroke="rgba(255, 255, 255, 0.28)"
+          r="46"
+          fill="rgba(255, 255, 255, 0.12)"
+          stroke="rgba(255, 255, 255, 0.35)"
           strokeWidth="2.5"
-        />
-        {/* Inner subtle track */}
-        <circle
-          cx="50"
-          cy="50"
-          r="41"
-          fill="none"
-          stroke="rgba(255, 255, 255, 0.12)"
-          strokeWidth="1"
         />
 
         {/* 12 Hour Ticks */}
@@ -110,10 +101,10 @@ function AnalogClock({ date, className = 'h-16 w-16' }: { date: Date | null; cla
           <line
             key={deg}
             x1="50"
-            y1={deg % 90 === 0 ? '11' : '13'}
+            y1={deg % 90 === 0 ? '9' : '11'}
             x2="50"
-            y2={deg % 90 === 0 ? '17' : '15'}
-            stroke="rgba(255, 255, 255, 0.85)"
+            y2={deg % 90 === 0 ? '16' : '14'}
+            stroke="rgba(255, 255, 255, 0.9)"
             strokeWidth={deg % 90 === 0 ? '2.5' : '1.5'}
             strokeLinecap="round"
             transform={`rotate(${deg} 50 50)`}
@@ -125,7 +116,7 @@ function AnalogClock({ date, className = 'h-16 w-16' }: { date: Date | null; cla
           x1="50"
           y1="50"
           x2="50"
-          y2="26"
+          y2="25"
           stroke="#FFFFFF"
           strokeWidth="3.2"
           strokeLinecap="round"
@@ -137,7 +128,7 @@ function AnalogClock({ date, className = 'h-16 w-16' }: { date: Date | null; cla
           x1="50"
           y1="50"
           x2="50"
-          y2="17"
+          y2="16"
           stroke="#93C5FD"
           strokeWidth="2.2"
           strokeLinecap="round"
@@ -149,7 +140,7 @@ function AnalogClock({ date, className = 'h-16 w-16' }: { date: Date | null; cla
           x1="50"
           y1="58"
           x2="50"
-          y2="13"
+          y2="12"
           stroke="#F87171"
           strokeWidth="1.4"
           strokeLinecap="round"
@@ -158,7 +149,7 @@ function AnalogClock({ date, className = 'h-16 w-16' }: { date: Date | null; cla
 
         {/* Center Pivot Pin */}
         <circle cx="50" cy="50" r="3" fill="#F87171" />
-        <circle cx="50" cy="50" r="1.3" fill="#FFFFFF" />
+        <circle cx="50" cy="50" r="1.2" fill="#FFFFFF" />
       </svg>
     </div>
   )
@@ -403,39 +394,55 @@ export function DashboardView() {
   return (
     <div className="space-y-3.5 sm:space-y-5 max-w-7xl mx-auto pb-12 animate-in fade-in duration-300">
       {/* Top Hero Banner — Responsive (Mode HP Ringkas & Elegan, Mode Desktop Lengkap) */}
-      {/* Mobile View (HP) — Simpel, Elegan & Proporsional */}
+      {/* Mobile View (HP) — Simpel di Pojok Kanan Atas */}
       <div className="sm:hidden relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#0B2147] via-[#163A70] to-[#1E4D94] p-4 text-white shadow-sm">
-        <div className="flex items-center justify-between gap-3">
-          {/* Sisi Kiri: Sapaan, Divisi, dan Lokasi & Suhu */}
-          <div className="space-y-1.5 min-w-0 flex-1">
-            {/* Lokasi & Suhu Ringkas */}
-            <div className="inline-flex items-center gap-1.5 text-[10.5px] font-medium text-white/80">
-              <span className="flex h-1.5 w-1.5 rounded-full bg-[#10B981] animate-pulse shrink-0" />
-              <MapPin className="h-3 w-3 text-[#F87171] shrink-0" />
-              <span className="truncate">{weatherData.location}</span>
-              <span className="text-white/30">•</span>
-              <span className="font-bold text-white">
-                {weatherData.temperature !== null ? `${weatherData.temperature}°C` : '--°C'}
-              </span>
-              <span className="truncate text-white/70">{weatherData.condition}</span>
-            </div>
-
-            <div>
-              <div className="text-xs text-white/75 font-medium">Selamat Datang,</div>
-              <h1 className="text-base font-bold font-display text-white tracking-tight truncate">
-                {user?.employeeName || 'Pengguna'} 👋
-              </h1>
-            </div>
-
+        <div className="flex items-start justify-between gap-3">
+          {/* Sisi Kiri: Sapaan & Identitas Pengguna */}
+          <div className="space-y-0.5 min-w-0 flex-1 pt-0.5">
+            <div className="text-[11px] text-white/75 font-medium">Selamat Datang,</div>
+            <h1 className="text-base font-bold font-display text-white tracking-tight truncate">
+              {user?.employeeName || 'Pengguna'} 👋
+            </h1>
             <p className="text-[10.5px] text-white/70 truncate">
               {user?.role || 'Karyawan'} • {user?.division || 'MIND ID'}
             </p>
           </div>
 
-          {/* Sisi Kanan: Jam Bundar (Analog Clock) yang Proporsional & Presisi */}
-          <div className="flex flex-col items-center shrink-0 pl-1">
-            <AnalogClock date={currentTime} className="h-15 w-15" />
-            <div className="font-mono text-[10px] font-bold text-white/90 mt-1 tracking-wider">
+          {/* Pojok Kanan Atas: Jam Bundar & Cuaca Simpel */}
+          <div className="flex items-center gap-2 rounded-xl bg-white/10 backdrop-blur-md px-2.5 py-1.5 border border-white/15 shrink-0 self-start shadow-xs">
+            <AnalogClock date={currentTime} className="h-9 w-9 shrink-0" />
+            <div className="text-right leading-tight">
+              <div className="font-mono text-xs font-bold text-white tracking-wider">
+                {currentTime
+                  ? currentTime.toLocaleTimeString('id-ID', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      second: '2-digit',
+                      hour12: false,
+                    })
+                  : '--:--:--'}
+              </div>
+              <div className="text-[9.5px] text-white/80 mt-0.5 flex items-center justify-end gap-1">
+                <MapPin className="h-2.5 w-2.5 text-[#F87171] shrink-0" />
+                <span className="truncate max-w-[55px]">{weatherData.location.split(',')[0]}</span>
+                <span className="text-white/40">•</span>
+                <span className="font-semibold text-white">
+                  {weatherData.temperature !== null ? `${weatherData.temperature}°` : '--'}
+                </span>
+                <WeatherIcon className="h-2.5 w-2.5 text-[#FBBF24] shrink-0" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Desktop / Tablet View — Widget Jam Bundar & Cuaca di Pojok Kanan Atas */}
+      <div className="hidden sm:block relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#0B2147] via-[#163A70] to-[#1E4D94] p-6 md:p-8 text-white shadow-md">
+        {/* Pojok Kanan Atas: Jam Bundar & Cuaca Simpel */}
+        <div className="absolute top-5 right-6 md:top-6 md:right-8 z-10 flex items-center gap-3 rounded-2xl bg-white/10 backdrop-blur-md px-3.5 py-2 border border-white/15 shadow-sm">
+          <AnalogClock date={currentTime} className="h-11 w-11 shrink-0" />
+          <div className="text-right leading-tight">
+            <div className="font-mono text-sm font-bold text-white tracking-wider">
               {currentTime
                 ? currentTime.toLocaleTimeString('id-ID', {
                     hour: '2-digit',
@@ -444,93 +451,55 @@ export function DashboardView() {
                     hour12: false,
                   })
                 : '--:--:--'}
+              <span className="text-[10px] text-[#93C5FD] ml-1 font-sans font-semibold">WIB</span>
+            </div>
+            <div className="text-[11px] text-white/80 mt-1 flex items-center justify-end gap-1.5">
+              <MapPin className="h-3 w-3 text-[#F87171] shrink-0" />
+              <span>{weatherData.location}</span>
+              <span className="text-white/40">•</span>
+              <WeatherIcon className="h-3.5 w-3.5 text-[#FBBF24] shrink-0" />
+              <span className="font-bold text-white">
+                {weatherData.temperature !== null ? `${weatherData.temperature}°C` : '--°C'}
+              </span>
+              <span className="text-white/70">{weatherData.condition}</span>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Desktop / Tablet View */}
-      <div className="hidden sm:block relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#0B2147] via-[#163A70] to-[#1E4D94] p-6 md:p-7 text-white shadow-md">
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-          {/* Sisi Kiri: Identitas Platform & Sapaan */}
-          <div className="space-y-3 max-w-xl">
-            <div className="space-y-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="font-black text-2xl sm:text-3xl font-display tracking-wider text-white">
-                  RIDE
-                </span>
-                <span className="rounded-md bg-[#60A5FA]/20 px-2 py-0.5 text-[10px] font-bold text-[#93C5FD] tracking-wide uppercase border border-[#60A5FA]/30">
-                  Platform
-                </span>
-                <span className="text-white/40">•</span>
-                <span className="text-xs text-white/80 font-medium">
-                  {user?.division || 'Direktorat Legal & Governance'}
-                </span>
-              </div>
-
-              <div className="text-xs sm:text-sm font-semibold text-white/90 tracking-tight">
-                Request Integrated Document Ecosystem
-              </div>
-            </div>
-
-            <div className="pt-1">
-              <h1 className="text-xl sm:text-2xl font-bold font-display tracking-tight text-white">
-                Selamat Datang, {user?.employeeName || 'Pengguna'}
-              </h1>
-              <p className="text-xs text-white/75 mt-0.5 max-w-xl leading-relaxed">
-                Pantau pengajuan berkas, tracking persetujuan, dan jatuh tempo kontrak Anda dalam satu ekosistem terpadu.
-              </p>
-            </div>
-
-            {/* Indikator Lokasi & Suhu Simpel & Elegan */}
-            <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-medium backdrop-blur-md border border-white/15 text-white/90 shadow-2xs">
-              <MapPin className="h-3.5 w-3.5 text-[#F87171] shrink-0" />
-              <span>{weatherData.location}</span>
-              <span className="text-white/30">•</span>
-              <WeatherIcon className="h-3.5 w-3.5 text-[#FBBF24] shrink-0" />
-              <span className="font-bold">
-                {weatherData.temperature !== null ? `${weatherData.temperature}°C` : '--°C'}
+        {/* Konten Utama Banner */}
+        <div className="relative z-0 space-y-3 max-w-xl pr-12">
+          <div className="space-y-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-black text-2xl sm:text-3xl font-display tracking-wider text-white">
+                RIDE
               </span>
-              <span className="text-white/75">{weatherData.condition}</span>
+              <span className="rounded-md bg-[#60A5FA]/20 px-2 py-0.5 text-[10px] font-bold text-[#93C5FD] tracking-wide uppercase border border-[#60A5FA]/30">
+                Platform
+              </span>
+              <span className="text-white/40">•</span>
+              <span className="text-xs text-white/80 font-medium">
+                {user?.division || 'Direktorat Legal & Governance'}
+              </span>
+            </div>
+
+            <div className="text-xs sm:text-sm font-semibold text-white/90 tracking-tight">
+              Request Integrated Document Ecosystem
             </div>
           </div>
 
-          {/* Sisi Kanan: Jam Bundar Proporsional & Tombol Aksi */}
-          <div className="flex items-center gap-4.5 shrink-0 self-start md:self-auto">
-            {/* Widget Jam Bundar (Analog Clock Card) */}
-            <div className="flex items-center gap-3.5 rounded-2xl bg-white/10 backdrop-blur-md border border-white/15 p-3 pr-4 shadow-inner">
-              <AnalogClock date={currentTime} className="h-16 w-16 lg:h-17 lg:w-17" />
-              <div className="text-left">
-                <div className="font-mono text-sm lg:text-base font-extrabold text-white tracking-wider">
-                  {currentTime
-                    ? currentTime.toLocaleTimeString('id-ID', {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        second: '2-digit',
-                        hour12: false,
-                      })
-                    : '--:--:--'}
-                </div>
-                <div className="text-[9.5px] text-[#93C5FD] font-bold uppercase tracking-widest mt-0.5">
-                  Waktu Indonesia Barat (WIB)
-                </div>
-                <div className="text-[11px] text-white/75 mt-0.5">
-                  {currentTime
-                    ? currentTime.toLocaleDateString('id-ID', {
-                        weekday: 'short',
-                        day: 'numeric',
-                        month: 'short',
-                        year: 'numeric',
-                      })
-                    : ''}
-                </div>
-              </div>
-            </div>
+          <div className="pt-1">
+            <h1 className="text-xl sm:text-2xl font-bold font-display tracking-tight text-white">
+              Selamat Datang, {user?.employeeName || 'Pengguna'} 👋
+            </h1>
+            <p className="text-xs text-white/75 mt-1 max-w-lg leading-relaxed">
+              Pantau pengajuan berkas, tracking persetujuan, dan jatuh tempo kontrak Anda dalam satu ekosistem terpadu.
+            </p>
+          </div>
 
-            {/* Tombol Ajukan Dokumen */}
+          <div className="pt-2">
             <Button
               onClick={() => setCurrentView('tracking', 'new')}
-              className="h-10 sm:h-11 bg-white text-[#163A70] hover:bg-[#EBF2FF] font-bold text-xs shadow-md border-0 shrink-0 cursor-pointer rounded-xl gap-2 px-4.5 transition-transform active:scale-95"
+              className="h-10 bg-white text-[#163A70] hover:bg-[#EBF2FF] font-bold text-xs shadow-md border-0 shrink-0 cursor-pointer rounded-xl gap-2 px-4 transition-transform active:scale-95"
             >
               <Plus className="h-4 w-4 text-[#163A70]" />
               <span>Ajukan Dokumen</span>
