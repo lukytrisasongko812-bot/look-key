@@ -319,6 +319,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (savedToken) {
       setToken(savedToken)
       tokenRef.current = savedToken
+      if (savedUserStr) {
+        setAuthLoading(false)
+        fetchDocuments()
+      }
       fetch('/api/auth/me', {
         headers: { Authorization: `Bearer ${savedToken}` },
       })

@@ -29,13 +29,14 @@ export default function HomePage() {
 
   React.useEffect(() => {
     if (mounted && !authLoading) {
+      // Transisi cepat: 300ms tampil, 200ms memudar (total 500ms kilat)
       const t1 = setTimeout(() => {
         setSplashFading(true)
-      }, 1000)
+      }, 300)
 
       const t2 = setTimeout(() => {
         setShowSplash(false)
-      }, 1300)
+      }, 500)
 
       return () => {
         clearTimeout(t1)
