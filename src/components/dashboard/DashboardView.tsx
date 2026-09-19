@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { useApp, DocumentItem } from '@/context/AppContext'
+import { normalizeRole, isLegalManagement, isSystemAdmin, isBoardOfDirectors } from '@/lib/roles'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -272,7 +273,7 @@ export function DashboardView() {
     submitDecision,
   } = useApp()
 
-  const canManageExpiry = user?.role !== 'Requester' && user?.role !== 'User'
+  const canManageExpiry = isLegalManagement(user?.role) || isSystemAdmin(user?.role) || isBoardOfDirectors(user?.role)
 
   // Mood state
   const [isMoodModalOpen, setIsMoodModalOpen] = useState(false)
@@ -558,7 +559,7 @@ export function DashboardView() {
             {user?.employeeName || 'Pengguna'} 👋
           </h1>
           <p className="text-[10px] text-white/70">
-            {user?.role || 'Karyawan'} • Request Integrated Document Ecosystem
+            {normalizeRole(user?.role)} • Request Integrated Document Ecosystem
           </p>
         </div>
       </div>

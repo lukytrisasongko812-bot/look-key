@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react'
 import { useApp } from '@/context/AppContext'
+import { normalizeRole } from '@/lib/roles'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -360,7 +361,7 @@ export function MyAccountView() {
                 {name || user?.employeeName || 'Pengguna'}
               </h2>
               <Badge className="bg-[#163A70] text-white text-[11px] font-bold px-2.5 py-0.5 rounded-full">
-                {user?.role || 'Reviewer'}
+                {normalizeRole(user?.role)}
               </Badge>
               <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-[#059669] bg-[#ECFDF5] px-2.5 py-0.5 rounded-full border border-[#A7F3D0]">
                 <span className="h-1.5 w-1.5 rounded-full bg-[#10B981]" />
@@ -397,15 +398,13 @@ export function MyAccountView() {
               <Shield className="h-3.5 w-3.5" />
               <span>Keamanan &amp; 2FA</span>
             </TabsTrigger>
-            {!(user?.role === 'Requester' || user?.role === 'User') && (
-              <TabsTrigger
-                value="authority"
-                className="px-4 py-2 rounded-xl text-xs font-bold text-[#64748B] data-[state=active]:bg-white data-[state=active]:text-[#163A70] data-[state=active]:shadow-xs transition-all flex items-center gap-1.5"
-              >
-                <ShieldCheck className="h-3.5 w-3.5" />
-                <span>Peran &amp; Matriks</span>
-              </TabsTrigger>
-            )}
+            <TabsTrigger
+              value="authority"
+              className="px-4 py-2 rounded-xl text-xs font-bold text-[#64748B] data-[state=active]:bg-white data-[state=active]:text-[#163A70] data-[state=active]:shadow-xs transition-all flex items-center gap-1.5"
+            >
+              <ShieldCheck className="h-3.5 w-3.5" />
+              <span>Peran &amp; Matriks</span>
+            </TabsTrigger>
           </TabsList>
         </div>
 
@@ -549,19 +548,18 @@ export function MyAccountView() {
         </TabsContent>
 
         {/* Tab 3: Authority & Roles */}
-        {!(user?.role === 'Requester' || user?.role === 'User') && (
-          <TabsContent value="authority" className="focus-visible:outline-none">
-            <Card className="border-[#E2E8F0] shadow-sm rounded-2xl sm:rounded-3xl bg-white overflow-hidden">
-              <CardContent className="p-3.5 sm:p-6 space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#F1F5F9]">
-                  <div>
-                    <h3 className="text-sm font-bold text-[#0B2147]">
-                      Peran Pengguna Anda: <span className="text-[#163A70] font-black">{user?.role}</span>
-                    </h3>
-                    <p className="text-xs text-[#64748B] mt-0.5">
-                      Tingkat kewenangan menentukan wewenang operasional Anda dalam siklus alur 7 tahap dokumen.
-                    </p>
-                  </div>
+        <TabsContent value="authority" className="focus-visible:outline-none">
+          <Card className="border-[#E2E8F0] shadow-sm rounded-2xl sm:rounded-3xl bg-white overflow-hidden">
+            <CardContent className="p-3.5 sm:p-6 space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#F1F5F9]">
+                <div>
+                  <h3 className="text-sm font-bold text-[#0B2147]">
+                    Peran Pengguna Anda: <span className="text-[#163A70] font-black">{normalizeRole(user?.role)}</span>
+                  </h3>
+                  <p className="text-xs text-[#64748B] mt-0.5">
+                    Tingkat kewenangan menentukan wewenang operasional Anda dalam siklus alur 7 tahap dokumen.
+                  </p>
+                </div>
                   <Button
                     size="sm"
                     type="button"
@@ -588,7 +586,6 @@ export function MyAccountView() {
               </CardContent>
             </Card>
           </TabsContent>
-        )}
       </Tabs>
 
       {/* Password Change Dialog */}

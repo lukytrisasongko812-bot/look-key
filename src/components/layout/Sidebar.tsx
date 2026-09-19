@@ -13,22 +13,24 @@ import {
   LogOut,
 } from 'lucide-react'
 import { RideLogo } from '@/components/common/RideLogo'
+import { normalizeRole, isSystemAdmin, isBoardOfDirectors } from '@/lib/roles'
 
 export function Sidebar() {
   const {
-    user,
     currentView,
     setCurrentView,
     isSidebarCollapsed,
+    setIsSidebarCollapsed,
     isMobileSidebarOpen,
     setIsMobileSidebarOpen,
+    user,
     documents,
     allUsers,
     logout,
   } = useApp()
 
   const reviewCount = documents.filter((d) => d.stage === 0 || d.stage === 1 || d.revisionRequested).length
-  const isAdmin = user?.role === 'Administrator' || user?.role === 'Director / BOD'
+  const isAdmin = isSystemAdmin(user?.role) || isBoardOfDirectors(user?.role)
 
   const allNavItems: {
     id: ViewType
@@ -82,7 +84,7 @@ export function Sidebar() {
     },
   ]
 
-  const isRequester = user?.role === 'Requester' || user?.role === 'User'
+  const isRequester = normalizeRole(user?.role) === 'User' || normalizeRole(user?.role) === 'Guest'
   const navItems = allNavItems.filter((item) => (!item.adminOnly || isAdmin) && (!item.hideForRequester || !isRequester))
 
   return (

@@ -16,24 +16,8 @@ export async function GET(
       return NextResponse.json({ error: 'Dokumen tidak ditemukan' }, { status: 404 })
     }
 
-    // Role-based access control: Requester can strictly only view their own document
-    if (tokenUser && tokenUser.role === 'Requester') {
-      const userEmail = tokenUser.email.toLowerCase()
-      const userId = tokenUser.userId
-      const userName = tokenUser.employeeName?.toLowerCase() || ''
-      const isOwner =
-        doc.createdBy === userId ||
-        (doc.picEmail && doc.picEmail.toLowerCase() === userEmail) ||
-        (doc.pic && doc.pic.toLowerCase() === userName)
-
-      if (!isOwner) {
-        return NextResponse.json(
-          { error: 'Akses ditolak. Sebagai Requester Anda hanya dapat melihat dokumen milik Anda sendiri.' },
-          { status: 403 }
-        )
-      }
-    }
-
+    // Sesuai Matriks Kewenangan (RBAC Matrix): Seluruh pengguna terdaftar (User / Requester / Verifikator)
+    // berwenang melihat berkas dokumen.
     return NextResponse.json(doc)
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Error fetching document'

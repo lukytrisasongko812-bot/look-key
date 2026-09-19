@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { useApp, UserRole } from '@/context/AppContext'
+import { isSystemAdmin, isBoardOfDirectors } from '@/lib/roles'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
@@ -183,10 +184,10 @@ export function SettingsView() {
 
           <div className="p-4 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="text-xs text-[#475569]">
-              Struktur 5 level wewenang: Requester, Reviewer, Approver, Document Controller, Administrator.
+              Struktur 6 level wewenang: Guest, User, Legal Officer, Legal Management, Board of Directors, System Administrator.
             </div>
 
-            {(user?.role === 'Administrator' || user?.role === 'Director / BOD') && (
+            {(isSystemAdmin(user?.role) || isBoardOfDirectors(user?.role)) && (
               <Button
                 size="sm"
                 variant="outline"

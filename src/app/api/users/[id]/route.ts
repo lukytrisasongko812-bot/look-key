@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getDriveUserById, saveDriveUser, deleteDriveUser } from '@/lib/drive-store'
 import { getUserFromRequest } from '@/lib/auth'
+import { isSystemAdmin, isBoardOfDirectors, normalizeRole } from '@/lib/roles'
 
 export const dynamic = 'force-dynamic'
 
@@ -12,7 +13,7 @@ export async function PATCH(
     const { id } = await params
     const tokenUser = getUserFromRequest(request)
 
-    if (tokenUser?.role !== 'Administrator' && tokenUser?.role !== 'Director / BOD') {
+    if (!isSystemAdmin(tokenUser?.role) && !isBoardOfDirectors(tokenUser?.role)) {
       return NextResponse.json(
         { error: 'Hanya Administrator yang berhak mengubah wewenang atau peran pengguna.' },
         { status: 403 }
@@ -62,7 +63,7 @@ export async function DELETE(
     const { id } = await params
     const tokenUser = getUserFromRequest(request)
 
-    if (tokenUser?.role !== 'Administrator' && tokenUser?.role !== 'Director / BOD') {
+    if (!isSystemAdmin(tokenUser?.role) && !isBoardOfDirectors(tokenUser?.role)) {
       return NextResponse.json(
         { error: 'Hanya Administrator atau Superadmin yang berhak menghapus keanggotaan pengguna.' },
         { status: 403 }

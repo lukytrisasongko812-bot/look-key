@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react'
 import { useApp } from '@/context/AppContext'
+import { normalizeRole, isSystemAdmin, isBoardOfDirectors } from '@/lib/roles'
 import { RideLogo } from '@/components/common/RideLogo'
 import {
   Menu,
@@ -100,7 +101,7 @@ export function Header() {
         {/* User Role Badge */}
         <div className="hidden lg:flex items-center gap-1.5 rounded-full bg-[#EBF2FF] px-2.5 py-1 text-[11px] font-bold text-[#163A70] border border-[#BFDBFE]">
           <Shield className="h-3 w-3" />
-          <span>Peran: {user?.role || 'Peninjau'}</span>
+          <span>Peran: {normalizeRole(user?.role)}</span>
         </div>
 
         {/* Notification Bell */}
@@ -145,7 +146,7 @@ export function Header() {
                 {user?.employeeName || 'Pengguna'}
               </div>
               <div className="text-[10px] text-[#64748B]">
-                {user?.role || 'Reviewer'}
+                {normalizeRole(user?.role)}
               </div>
             </div>
             <ChevronDown className="h-3.5 w-3.5 text-[#94A3B8] ml-0.5" />
@@ -167,7 +168,7 @@ export function Header() {
                   </div>
                   <div className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-[#EBF2FF] px-2.5 py-0.5 text-[10.5px] font-bold text-[#163A70] border border-[#BFDBFE]">
                     <Shield className="h-3 w-3" />
-                    <span>{user?.role || 'Reviewer'}</span>
+                    <span>{normalizeRole(user?.role)}</span>
                   </div>
                 </div>
 
@@ -189,26 +190,24 @@ export function Header() {
                     <span className="truncate">Profil &amp; Keamanan Akun</span>
                   </button>
 
-                  {!(user?.role === 'Requester' || user?.role === 'User') && (
-                    <button
-                      onMouseDown={(e) => {
-                        e.stopPropagation()
-                        setIsDropdownOpen(false)
-                        setCurrentView('matrix')
-                      }}
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        setIsDropdownOpen(false)
-                        setCurrentView('matrix')
-                      }}
-                      className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold text-[#0F172A] hover:bg-[#EBF2FF] hover:text-[#163A70] transition-colors cursor-pointer"
-                    >
-                      <ShieldCheck className="h-4 w-4 shrink-0 text-[#64748B]" />
-                      <span className="truncate">Matriks Kewenangan (RBAC)</span>
-                    </button>
-                  )}
+                  <button
+                    onMouseDown={(e) => {
+                      e.stopPropagation()
+                      setIsDropdownOpen(false)
+                      setCurrentView('matrix')
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setIsDropdownOpen(false)
+                      setCurrentView('matrix')
+                    }}
+                    className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold text-[#0F172A] hover:bg-[#EBF2FF] hover:text-[#163A70] transition-colors cursor-pointer"
+                  >
+                    <ShieldCheck className="h-4 w-4 shrink-0 text-[#64748B]" />
+                    <span className="truncate">Matriks Kewenangan (RBAC)</span>
+                  </button>
 
-                  {(user?.role === 'Administrator' || user?.role === 'Director / BOD') && (
+                  {(isSystemAdmin(user?.role) || isBoardOfDirectors(user?.role)) && (
                     <>
                       <button
                         onMouseDown={(e) => {

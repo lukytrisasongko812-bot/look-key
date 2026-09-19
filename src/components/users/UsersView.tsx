@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { useApp, UserRole } from '@/context/AppContext'
+import { normalizeRole, isSystemAdmin, isBoardOfDirectors } from '@/lib/roles'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -44,7 +45,7 @@ export function UsersView() {
     setCurrentView,
   } = useApp()
 
-  const isAdmin = user?.role === 'Administrator' || user?.role === 'Director / BOD'
+  const isAdmin = isSystemAdmin(user?.role) || isBoardOfDirectors(user?.role)
 
   const [search, setSearch] = useState('')
   const [roleFilter, setRoleFilter] = useState('ALL')
@@ -57,9 +58,9 @@ export function UsersView() {
   const [isInviteOpen, setIsInviteOpen] = useState(false)
   const [inviteName, setInviteName] = useState('')
   const [inviteEmail, setInviteEmail] = useState('')
-  const [invitePosition, setInvitePosition] = useState('Reviewer')
+  const [invitePosition, setInvitePosition] = useState('Legal Officer')
   const [inviteDivision, setInviteDivision] = useState('Direktorat Legal & Compliance')
-  const [inviteRole, setInviteRole] = useState<UserRole>('Reviewer')
+  const [inviteRole, setInviteRole] = useState<UserRole>('Legal Officer')
   const [invitePassword, setInvitePassword] = useState('Password123!')
   const [inviteLoading, setInviteLoading] = useState(false)
 
@@ -180,11 +181,12 @@ export function UsersView() {
   }
 
   const rolesList: { id: UserRole; title: string; color: string }[] = [
-    { id: 'Requester', title: 'Business Initiator (Requester)', color: 'bg-[#EFF6FF] text-[#1D4ED8] border-[#BFDBFE]' },
-    { id: 'Reviewer', title: 'Legal & Compliance (Reviewer)', color: 'bg-[#FFFBEB] text-[#B45309] border-[#FDE68A]' },
-    { id: 'Approver', title: 'Executive Approver (Direksi)', color: 'bg-[#ECFDF5] text-[#047857] border-[#A7F3D0]' },
-    { id: 'Document Controller', title: 'Document Controller (Arsip)', color: 'bg-[#F5F3FF] text-[#6D28D9] border-[#DDD6FE]' },
-    { id: 'Administrator', title: 'System Administrator (Sistem)', color: 'bg-[#FEF2F2] text-[#B91C1C] border-[#FECACA]' },
+    { id: 'Guest', title: 'Guest', color: 'bg-[#F1F5F9] text-[#475569] border-[#CBD5E1]' },
+    { id: 'User', title: 'User', color: 'bg-[#EFF6FF] text-[#1D4ED8] border-[#BFDBFE]' },
+    { id: 'Legal Officer', title: 'Legal Officer', color: 'bg-[#FFFBEB] text-[#B45309] border-[#FDE68A]' },
+    { id: 'Legal Management', title: 'Legal Management', color: 'bg-[#F5F3FF] text-[#6D28D9] border-[#DDD6FE]' },
+    { id: 'Board of Directors', title: 'Board of Directors', color: 'bg-[#ECFDF5] text-[#047857] border-[#A7F3D0]' },
+    { id: 'System Administrator', title: 'System Administrator', color: 'bg-[#FEF2F2] text-[#B91C1C] border-[#FECACA]' },
   ]
 
   const filteredUsers = allUsers.filter((u) => {
@@ -196,7 +198,7 @@ export function UsersView() {
       u.position.toLowerCase().includes(q) ||
       u.division.toLowerCase().includes(q)
 
-    const matchesRole = roleFilter === 'ALL' || u.role === roleFilter
+    const matchesRole = roleFilter === 'ALL' || normalizeRole(u.role) === roleFilter
     return matchesSearch && matchesRole
   })
 
@@ -234,9 +236,9 @@ export function UsersView() {
       </div>
 
       {/* Overview Metric Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2.5">
         {rolesList.map((r) => {
-          const count = allUsers.filter((u) => u.role === r.id).length
+          const count = allUsers.filter((u) => normalizeRole(u.role) === r.id).length
           return (
             <Card key={r.id} className="border-[#E2E8F0] shadow-2xs">
               <CardContent className="p-3.5 flex flex-col justify-between">
@@ -317,7 +319,7 @@ export function UsersView() {
                   </tr>
                 ) : (
                   filteredUsers.map((u) => {
-                    const roleInfo = rolesList.find((r) => r.id === u.role) || {
+                    const roleInfo = rolesList.find((r) => r.id === normalizeRole(u.role)) || {
                       id: u.role,
                       title: u.role,
                       color: 'bg-[#F1F5F9] text-[#475569] border-[#CBD5E1]',
@@ -341,15 +343,16 @@ export function UsersView() {
                         </td>
                         <td className="py-3.5 px-4">
                           <select
-                            value={u.role}
+                            value={normalizeRole(u.role)}
                             onChange={(e) => handleRoleChange(u.id, e.target.value as UserRole)}
                             className="h-8 rounded-lg border border-[#CBD5E1] bg-[#F8FAFC] px-2 text-xs font-bold text-[#0B2147] focus:border-[#163A70] focus:outline-none cursor-pointer"
                           >
-                            <option value="Requester">Requester — Inisiator Dokumen</option>
-                            <option value="Reviewer">Reviewer — Legal &amp; Compliance</option>
-                            <option value="Approver">Approver — Direksi &amp; Otorisasi</option>
-                            <option value="Document Controller">Document Controller — Tata Kelola Arsip</option>
-                            <option value="Administrator">Administrator — Sistem &amp; Keamanan</option>
+                            <option value="Guest">Guest — Peninjau Tamu</option>
+                            <option value="User">User — Unit Kerja Pemohon</option>
+                            <option value="Legal Officer">Legal Officer — Staf Hukum &amp; Penelaah</option>
+                            <option value="Legal Management">Legal Management — Tata Kelola &amp; Kustodian</option>
+                            <option value="Board of Directors">Board of Directors — Dewan Direksi</option>
+                            <option value="System Administrator">System Administrator — Kontrol Penuh Sistem</option>
                           </select>
                         </td>
                         <td className="py-3.5 px-4 text-right">
@@ -453,11 +456,12 @@ export function UsersView() {
                 onChange={(e) => setInviteRole(e.target.value as UserRole)}
                 className="w-full h-10 rounded-xl border border-[#CBD5E1] bg-[#F8FAFC] px-3 text-xs font-bold text-[#0B2147] focus:border-[#163A70] focus:outline-none"
               >
-                <option value="Requester">Requester — Inisiator Dokumen</option>
-                <option value="Reviewer">Reviewer — Legal &amp; Compliance</option>
-                <option value="Approver">Approver — Direksi &amp; Otorisasi</option>
-                <option value="Document Controller">Document Controller — Tata Kelola Arsip</option>
-                <option value="Administrator">Administrator — Sistem &amp; Keamanan</option>
+                <option value="Guest">Guest — Peninjau Tamu</option>
+                <option value="User">User — Unit Kerja Pemohon</option>
+                <option value="Legal Officer">Legal Officer — Staf Hukum &amp; Penelaah</option>
+                <option value="Legal Management">Legal Management — Tata Kelola &amp; Kustodian</option>
+                <option value="Board of Directors">Board of Directors — Dewan Direksi</option>
+                <option value="System Administrator">System Administrator — Kontrol Penuh Sistem</option>
               </select>
             </div>
 

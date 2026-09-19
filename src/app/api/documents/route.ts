@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
 
     // Sesuai Matriks Kewenangan (RBAC Matrix): Pemohon (Requester) berwenang melihat dan mengunduh berkas.
     // Jika parameter ?mine=true diberikan, saring hanya dokumen miliknya.
-    if (onlyMine && tokenUser && tokenUser.role === 'Requester') {
+    if (onlyMine && tokenUser && (tokenUser.role === 'Requester' || tokenUser.role === 'User' || tokenUser.role === 'Guest')) {
       const userEmail = tokenUser.email.toLowerCase()
       const userId = tokenUser.userId
       const userName = tokenUser.employeeName?.toLowerCase() || ''

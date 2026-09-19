@@ -25,6 +25,7 @@ import {
   AlertTriangle,
 } from 'lucide-react'
 import { useApp, UserRole, UserProfile } from '@/context/AppContext'
+import { normalizeRole } from '@/lib/roles'
 import { toast } from 'sonner'
 
 export function AuthorityMatrixView() {
@@ -37,8 +38,9 @@ export function AuthorityMatrixView() {
     setCurrentView,
   } = useApp()
 
-  const isRequester = user?.role === 'Requester' || user?.role === 'User'
-  const isAdmin = user?.role === 'Administrator' || user?.role === 'Director / BOD'
+  const currentRole = normalizeRole(user?.role)
+  const isRequester = currentRole === 'User' || currentRole === 'Guest'
+  const isAdmin = currentRole === 'System Administrator' || currentRole === 'Board of Directors'
 
   const [selectedRoleFilter, setSelectedRoleFilter] = useState<string>('ALL')
   const [deleteTargetUser, setDeleteTargetUser] = useState<UserProfile | null>(null)
@@ -52,13 +54,41 @@ export function AuthorityMatrixView() {
 
   const roles = [
     {
-      id: 'Requester',
-      title: 'Business Initiator',
-      shortTitle: 'Requester',
-      subtitle: 'Inisiator Dokumen',
+      id: 'Guest',
+      title: 'Guest',
+      shortTitle: 'Guest',
+      subtitle: 'Peninjau Tamu',
+      level: 'Tingkat 0 • Tamu',
+      badgeColor: 'bg-[#F1F5F9] text-[#475569] border-[#CBD5E1]',
+      desc: 'Peninjau tamu atau mitra eksternal dengan hak akses penelusuran status berkas dokumen tanpa hak modifikasi.',
+      bullets: [
+        'Melihat ringkasan dan status penelusuran dokumen publik',
+        'Pratinjau berkas terbatas tanpa izin unggah berkas baru',
+        'Tidak memiliki kewenangan eksekusi telaah atau persetujuan',
+      ],
+      permissions: {
+        createDoc: false,
+        viewDocs: true,
+        addReviewNotes: false,
+        requestRevision: false,
+        uploadRevision: false,
+        approveStage: false,
+        rejectDoc: false,
+        uploadFinal: false,
+        manageExpiry: false,
+        manageUsers: false,
+        deleteMembership: false,
+        manageDatabase: false,
+      },
+    },
+    {
+      id: 'User',
+      title: 'User',
+      shortTitle: 'User',
+      subtitle: 'Unit Kerja Pemohon',
       level: 'Tingkat 1 • Pemohon',
       badgeColor: 'bg-[#EFF6FF] text-[#1D4ED8] border-[#BFDBFE]',
-      desc: 'Unit kerja atau inisiator bisnis operasional yang mengajukan draf permohonan dokumen dan kontrak kerja.',
+      desc: 'Karyawan atau unit kerja inisiator operasional yang mengajukan draf permohonan dokumen, kontrak kerja, dan pengadaan.',
       bullets: [
         'Membuat registrasi tiket dan unggah draf pengajuan awal (V0)',
         'Melihat & mengunduh seluruh berkas versi aktif dan lampiran',
@@ -80,80 +110,52 @@ export function AuthorityMatrixView() {
       },
     },
     {
-      id: 'Reviewer',
-      title: 'Legal & Compliance Reviewer',
-      shortTitle: 'Reviewer',
-      subtitle: 'Legal & Kepatuhan',
-      level: 'Tingkat 2 • Penelaah',
+      id: 'Legal Officer',
+      title: 'Legal Officer',
+      shortTitle: 'Legal Officer',
+      subtitle: 'Staf Hukum & Penelaah',
+      level: 'Tingkat 2 • Staf Legal',
       badgeColor: 'bg-[#FFFBEB] text-[#B45309] border-[#FDE68A]',
-      desc: 'Tim penelaah hukum dan kepatuhan yang menguji klausul, kesesuaian regulasi, serta memitigasi risiko hukum.',
+      desc: 'Staf ahli hukum yang menelaah klausul hukum, kepatuhan regulasi, serta memetakan mitigasi risiko kontraktual.',
       bullets: [
-        'Uji kelayakan hukum & analisa kepatuhan klausul kontrak',
-        'Memberikan catatan penelaahan pasal & permohonan revisi',
-        'Mengesahkan tahapan review legal untuk diteruskan ke direksi',
+        'Penelaahan mendalam klausul kontrak & kepatuhan regulasi',
+        'Memberikan catatan telaah hukum (legal review notes) resmi',
+        'Menginstruksikan permintaan perbaikan/revisi kepada inisiator',
       ],
       permissions: {
-        createDoc: true,
-        viewDocs: true,
-        addReviewNotes: true,
-        requestRevision: true,
-        uploadRevision: true,
-        approveStage: true,
-        rejectDoc: true,
-        uploadFinal: false,
-        manageExpiry: true,
-        manageUsers: false,
-        deleteMembership: false,
-        manageDatabase: false,
-      },
-    },
-    {
-      id: 'Approver',
-      title: 'Executive Approver',
-      shortTitle: 'Approver',
-      subtitle: 'Direksi / Otorisator',
-      level: 'Tingkat 3 • Otorisasi',
-      badgeColor: 'bg-[#ECFDF5] text-[#047857] border-[#A7F3D0]',
-      desc: 'Pimpinan manajemen dan direksi yang memegang wewenang otorisasi puncak dan eksekusi resmi perjanjian.',
-      bullets: [
-        'Otorisasi persetujuan eksekutif puncak (Approval Direksi)',
-        'Penandatanganan resmi dokumen perjanjian dan kerja sama',
-        'Otorisasi perpanjangan, adendum, atau terminasi jatuh tempo',
-      ],
-      permissions: {
-        createDoc: true,
+        createDoc: false,
         viewDocs: true,
         addReviewNotes: true,
         requestRevision: true,
         uploadRevision: false,
-        approveStage: true,
-        rejectDoc: true,
+        approveStage: false,
+        rejectDoc: false,
         uploadFinal: false,
-        manageExpiry: true,
+        manageExpiry: false,
         manageUsers: false,
         deleteMembership: false,
         manageDatabase: false,
       },
     },
     {
-      id: 'Document Controller',
-      title: 'Document Controller',
-      shortTitle: 'Controller',
-      subtitle: 'Tata Kelola Arsip',
-      level: 'Tingkat 4 • Kustodian',
+      id: 'Legal Management',
+      title: 'Legal Management',
+      shortTitle: 'Legal Mgmt',
+      subtitle: 'Tata Kelola & Kustodian',
+      level: 'Tingkat 3 • Manajemen Legal',
       badgeColor: 'bg-[#F5F3FF] text-[#6D28D9] border-[#DDD6FE]',
-      desc: 'Kustodian tata kelola arsip korporat, verifikator keabsahan tanda tangan, dan penguncian berkas final.',
+      desc: 'Pimpinan unit legal dan pengendali dokumen yang memverifikasi naskah final, kustodian arsip bertandatangan, dan memantau masa berlaku.',
       bullets: [
-        'Verifikasi keabsahan tanda tangan sah seluruh pihak terkait',
-        'Menerbitkan & mengunci Dokumen Final resmi (Status: FINAL)',
-        'Tata kelola repositori cloud Google Drive & pantauan masa berlaku',
+        'Verifikasi final telaah hukum sebelum diajukan ke Direksi',
+        'Kustodian & registrasi naskah final bertanda tangan resmi',
+        'Pengendalian masa berlaku, terminasi, dan perpanjangan kontrak',
       ],
       permissions: {
-        createDoc: true,
+        createDoc: false,
         viewDocs: true,
         addReviewNotes: true,
-        requestRevision: false,
-        uploadRevision: true,
+        requestRevision: true,
+        uploadRevision: false,
         approveStage: true,
         rejectDoc: true,
         uploadFinal: true,
@@ -164,17 +166,45 @@ export function AuthorityMatrixView() {
       },
     },
     {
-      id: 'Administrator',
+      id: 'Board of Directors',
+      title: 'Board of Directors',
+      shortTitle: 'BOD / Direksi',
+      subtitle: 'Dewan Direksi & Otorisasi',
+      level: 'Tingkat 4 • Otorisator',
+      badgeColor: 'bg-[#ECFDF5] text-[#047857] border-[#A7F3D0]',
+      desc: 'Jajaran Direksi korporat yang memegang kewenangan otorisasi eksekutif dan persetujuan penandatanganan dokumen kerja sama strategis.',
+      bullets: [
+        'Otorisasi final & keputusan persetujuan penandatanganan',
+        'Penolakan dokumen kerja sama dengan justifikasi manajerial',
+        'Akses menyeluruh seluruh arsip dan riwayat keputusan dokumen',
+      ],
+      permissions: {
+        createDoc: false,
+        viewDocs: true,
+        addReviewNotes: false,
+        requestRevision: true,
+        uploadRevision: false,
+        approveStage: true,
+        rejectDoc: true,
+        uploadFinal: false,
+        manageExpiry: false,
+        manageUsers: false,
+        deleteMembership: false,
+        manageDatabase: false,
+      },
+    },
+    {
+      id: 'System Administrator',
       title: 'System Administrator',
-      shortTitle: 'Admin',
-      subtitle: 'Sistem & Keamanan',
+      shortTitle: 'SysAdmin',
+      subtitle: 'Sistem, Keamanan & Akses',
       level: 'Tingkat 5 • Superuser',
       badgeColor: 'bg-[#FEF2F2] text-[#B91C1C] border-[#FECACA]',
-      desc: 'Penanggung jawab tata kelola sistem, manajemen hak akses pengguna, keamanan data, dan audit kepatuhan platform.',
+      desc: 'Pengelola sistem informasi, keamanan akun pengguna, hak istimewa RBAC, integrasi Google Drive, dan basis data.',
       bullets: [
-        'Manajemen pengguna, penetapan peran matriks, & audit trail',
-        'Penerbitan link undangan resmi & pencabutan keanggotaan',
-        'Tata kelola infrastruktur basis data & keamanan cloud platform',
+        'Kontrol penuh hak akses, peran, dan matriks kewenangan pengguna',
+        'Manajemen akun resmi, penerbitan undangan, dan audit log sistem',
+        'Pemeliharaan integritas basis data dan integrasi Google Drive',
       ],
       permissions: {
         createDoc: true,
@@ -233,7 +263,7 @@ export function AuthorityMatrixView() {
 
   const filteredMembers = allUsers.filter((u) => {
     if (selectedRoleFilter === 'ALL') return true
-    return u.role === selectedRoleFilter
+    return normalizeRole(u.role) === selectedRoleFilter
   })
 
   return (
@@ -245,13 +275,13 @@ export function AuthorityMatrixView() {
             Matriks Kewenangan &amp; Otoritas (RBAC Matrix)
           </h1>
           <p className="text-xs text-[#64748B] mt-1">
-            Struktur tata kelola wewenang standar korporat modern: pembagian tanggung jawab kerja dan hak akses operasional.
+            Struktur tata kelola wewenang standar korporat: pembagian tanggung jawab kerja dan hak akses operasional 6 peran resmi.
           </p>
         </div>
 
         <div className="flex items-center gap-2">
           <Badge className="bg-[#163A70] text-white py-1 px-3 text-xs">
-            Peran Anda: {user?.role || 'Reviewer'}
+            Peran Anda: {normalizeRole(user?.role)}
           </Badge>
           {isAdmin && (
             <Button
@@ -273,7 +303,7 @@ export function AuthorityMatrixView() {
       }`}>
         <ShieldCheck className={`h-5 w-5 shrink-0 mt-0.5 sm:mt-0 ${isRequester ? 'text-[#2563EB]' : 'text-[#163A70]'}`} />
         <div className="leading-relaxed">
-          <span className="font-bold">Ketentuan Matriks Kewenangan:</span> Seluruh dokumen dan berkas pengajuan dapat diakses, dilihat, dan diunduh oleh <b>Requester (Inisiator)</b> serta peran peninjau terkait. Akses langsung terhadap pengelolaan <b>Basis Data (Database)</b> dan konfigurasi master data sistem <b>dibatasi ketat hanya untuk Administrator</b>.
+          <span className="font-bold">Ketentuan Matriks Kewenangan:</span> Seluruh berkas dapat diakses dan diunduh oleh <b>User</b> (Unit Kerja Pemohon) serta peran verifikator terkait. Tamu (<b>Guest</b>) memiliki hak pratinjau baca. Pengelolaan <b>Basis Data &amp; Akun Sistem</b> dibatasi eksklusif untuk <b>System Administrator</b>.
         </div>
       </div>
 
@@ -281,7 +311,7 @@ export function AuthorityMatrixView() {
       <Card className="border-[#E2E8F0] shadow-sm overflow-hidden">
         <CardContent className="p-0">
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border-collapse min-w-[700px]">
+            <table className="w-full text-left text-xs border-collapse min-w-[850px]">
               <thead>
                 <tr className="border-b border-[#E2E8F0] bg-[#F8FAFC]">
                   <th className="py-4 px-5 font-bold text-[#0B2147] text-xs w-1/3">
@@ -437,7 +467,7 @@ export function AuthorityMatrixView() {
                       : 'bg-[#F1F5F9] text-[#475569] hover:bg-[#E2E8F0]'
                   }`}
                 >
-                  {r.shortTitle} ({allUsers.filter((u) => u.role === r.id).length})
+                  {r.shortTitle} ({allUsers.filter((u) => normalizeRole(u.role) === r.id).length})
                 </button>
               ))}
             </div>
@@ -489,15 +519,16 @@ export function AuthorityMatrixView() {
                             </td>
                             <td className="py-3.5 px-4">
                               <select
-                                value={m.role}
+                                value={normalizeRole(m.role)}
                                 onChange={(e) => handleRoleChange(m.id, e.target.value as UserRole)}
                                 className="h-8 rounded-lg border border-[#CBD5E1] bg-[#F8FAFC] px-2 text-xs font-bold text-[#0B2147] focus:border-[#163A70] focus:outline-none cursor-pointer"
                               >
-                                <option value="Requester">Requester — Inisiator Dokumen</option>
-                                <option value="Reviewer">Reviewer — Legal &amp; Compliance</option>
-                                <option value="Approver">Approver — Direksi &amp; Otorisasi</option>
-                                <option value="Document Controller">Document Controller — Tata Kelola Arsip</option>
-                                <option value="Administrator">Administrator — Sistem &amp; Keamanan</option>
+                                <option value="Guest">Guest — Peninjau Tamu</option>
+                                <option value="User">User — Unit Kerja Pemohon</option>
+                                <option value="Legal Officer">Legal Officer — Staf Hukum &amp; Penelaah</option>
+                                <option value="Legal Management">Legal Management — Tata Kelola &amp; Kustodian</option>
+                                <option value="Board of Directors">Board of Directors — Dewan Direksi</option>
+                                <option value="System Administrator">System Administrator — Kontrol Penuh Sistem</option>
                               </select>
                             </td>
 

@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react'
 import { useApp, DocumentItem, DocumentFile, DocumentVersionItem } from '@/context/AppContext'
+import { normalizeRole, isLegalManagement, isBoardOfDirectors, isLegalOfficer, isSystemAdmin } from '@/lib/roles'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -570,9 +571,9 @@ export function TrackingView() {
   }
 
   // Permissions check
-  const isDocumentController = user?.role === 'Document Controller' || user?.role === 'Administrator'
-  const isApprover = user?.role === 'Approver' || user?.role === 'Director / BOD' || user?.role === 'Administrator'
-  const isReviewer = user?.role === 'Reviewer' || user?.role === 'Legal Manager' || user?.role === 'Legal Officer' || user?.role === 'Administrator'
+  const isDocumentController = isLegalManagement(user?.role) || isSystemAdmin(user?.role)
+  const isApprover = isBoardOfDirectors(user?.role) || isSystemAdmin(user?.role)
+  const isReviewer = isLegalOfficer(user?.role) || isLegalManagement(user?.role) || isSystemAdmin(user?.role)
 
   return (
     <div className="space-y-3.5 sm:space-y-5 max-w-7xl mx-auto pb-12 animate-in fade-in duration-300">
@@ -1081,8 +1082,8 @@ export function TrackingView() {
                         </span>
                       </div>
 
-                      {/* Workflow Operational Controls (Hanya untuk Non-Requester: Reviewer, Approver, Doc Controller, Admin) */}
-                      {!(user?.role === 'Requester' || user?.role === 'User') && !activeDoc.rejected && activeDoc.stage < 5 && (
+                      {/* Workflow Operational Controls (Hanya untuk Non-Pemohon / Verifikator) */}
+                      {!(normalizeRole(user?.role) === 'User' || normalizeRole(user?.role) === 'Guest') && !activeDoc.rejected && activeDoc.stage < 5 && (
                         <div className="flex items-center gap-1.5 flex-wrap">
                           {!activeDoc.revisionRequested && (
                             <Button

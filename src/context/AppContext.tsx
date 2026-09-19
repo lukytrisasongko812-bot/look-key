@@ -13,14 +13,18 @@ export type ViewType =
   | 'menu'
 
 export type UserRole =
+  | 'Guest'
+  | 'User'
+  | 'Legal Officer'
+  | 'Legal Management'
+  | 'Board of Directors'
+  | 'System Administrator'
+  // Legacy / compatibility aliases
   | 'Requester'
   | 'Reviewer'
   | 'Approver'
   | 'Document Controller'
   | 'Administrator'
-  // Legacy compatibility
-  | 'User'
-  | 'Legal Officer'
   | 'Legal Manager'
   | 'Department Manager'
   | 'Director / BOD'
