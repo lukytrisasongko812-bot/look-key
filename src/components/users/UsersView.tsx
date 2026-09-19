@@ -403,7 +403,7 @@ export function UsersView() {
               <Input
                 value={inviteName}
                 onChange={(e) => setInviteName(e.target.value)}
-                placeholder="misal: Hendra Wijaya"
+                placeholder="Contoh: Hendra Wijaya"
                 required
                 className="h-10 text-xs rounded-xl"
               />

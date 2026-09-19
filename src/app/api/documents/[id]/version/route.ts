@@ -74,10 +74,10 @@ export async function POST(
           { status: 403 }
         )
       }
-    } else if (fileType === 'legal_draft' || versionTag?.includes('Draft') || versionTag?.includes('Telaah')) {
+    } else if (fileType === 'legal_draft' || versionTag?.includes('Draft') || versionTag?.includes('Kajian') || versionTag?.includes('Review') || versionTag?.includes('Telaah')) {
       if (!canUploadLegalDraft(userRole)) {
         return NextResponse.json(
-          { error: 'Akses Ditolak: Hanya Legal Officer, Legal Management, dan Administrator yang berhak mengunggah Draf Hasil Telaah/Produksi Legal.' },
+          { error: 'Akses Ditolak: Hanya Legal Officer, Legal Management, dan Administrator yang berhak mengunggah Hasil Kajian Legal / Draf Perjanjian.' },
           { status: 403 }
         )
       }

@@ -579,9 +579,9 @@ export function MyAccountView() {
                     <span>Dapat mengajukan berkas draf awal (V0).</span>
                   </div>
                   <div className="p-3.5 rounded-2xl bg-[#F8FAFC] border border-[#E2E8F0] space-y-1">
-                    <span className="font-bold text-[#0B2147] block">Telaah &amp; Revisi:</span>
+                    <span className="font-bold text-[#0B2147] block">Kajian &amp; Perbaikan:</span>
                     <span>
-                      Dapat menelaah, memberi catatan revisi, dan menyetujui tahapan.
+                      Dapat melakukan kajian hukum, memberikan catatan perbaikan, dan memproses persetujuan tahapan.
                     </span>
                   </div>
                 </div>
