@@ -2,7 +2,22 @@
 
 import React, { useState } from 'react'
 import { useApp, DocumentItem, DocumentFile, DocumentVersionItem } from '@/context/AppContext'
-import { normalizeRole, isLegalManagement, isBoardOfDirectors, isLegalOfficer, isSystemAdmin } from '@/lib/roles'
+import {
+  normalizeRole,
+  isLegalManagement,
+  isBoardOfDirectors,
+  isLegalOfficer,
+  isSystemAdmin,
+  isStandardUser,
+  isGuest,
+  isDocumentOwnerOrPic,
+  canUploadLegalDraft,
+  canUploadLegalApproval,
+  canUploadBodSigned,
+  canUploadFinalDocument,
+  canRequestRevision,
+  canApproveCurrentStage,
+} from '@/lib/roles'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -71,14 +86,14 @@ const STAGES = [
 ]
 
 const CONSIDERATION_OPTIONS = [
-  'Performa dan kualitas layanan/barang vendor memuaskan',
-  'Kebutuhan operasional unit kerja masih berlanjut',
-  'Efisiensi biaya dan ketersediaan pagu anggaran',
-  'Tidak ada temuan ketidakpatuhan atau sengketa hukum',
-  'Terdapat perubahan ruang lingkup (Scope of Work)',
-  'Kebutuhan pengadaan telah selesai / tidak dilanjutkan',
-  'Tersedia alternatif vendor atau penyedia yang lebih kompetitif',
-  'Klausul kontrak memerlukan adendum atau penyesuaian harga/jangka waktu',
+  'Kinerja vendor memuaskan',
+  'Kebutuhan operasional berlanjut',
+  'Efisiensi biaya & ketersediaan anggaran',
+  'Kepatuhan & legalitas aman',
+  'Perubahan ruang lingkup (SOW)',
+  'Pekerjaan selesai / tidak dilanjutkan',
+  'Tersedia vendor alternatif',
+  'Perlu adendum klausul / nilai / jangka waktu',
 ]
 
 export function TrackingView() {
@@ -100,7 +115,7 @@ export function TrackingView() {
 
   // New Request Form State
   const [reqName, setReqName] = useState('')
-  const [reqCategory, setReqCategory] = useState('Perjanjian')
+  const [reqCategory, setReqCategory] = useState('Kontrak Hukum')
   const [reqDivision, setReqDivision] = useState(user?.division || 'Direktorat Umum')
   const [reqPriority, setReqPriority] = useState<'Normal' | 'Urgent' | 'Critical'>('Normal')
   const [reqConfidentiality, setReqConfidentiality] = useState<'Internal' | 'Confidential' | 'Restricted'>('Internal')
@@ -126,6 +141,17 @@ export function TrackingView() {
   // Request Revision Prompt Modal State
   const [isRequestRevOpen, setIsRequestRevOpen] = useState(false)
   const [requestRevReason, setRequestRevReason] = useState('')
+
+  // Role-Based Stage Upload Modal State
+  const [isStageUploadModalOpen, setIsStageUploadModalOpen] = useState(false)
+  const [stageUploadMode, setStageUploadMode] = useState<
+    'legal_draft' | 'legal_approval' | 'bod_signed' | 'requester_revision' | 'final'
+  >('legal_draft')
+  const [stageUploadFile, setStageUploadFile] = useState<DocumentFile | null>(null)
+  const [stageUploadTag, setStageUploadTag] = useState('')
+  const [stageUploadNotes, setStageUploadNotes] = useState('')
+  const [stageUploadAdvance, setStageUploadAdvance] = useState(true)
+  const [stageUploadLoading, setStageUploadLoading] = useState(false)
 
   // Active Doc Selection
   const activeDoc: DocumentItem | undefined =
@@ -214,6 +240,116 @@ export function TrackingView() {
     }
   }
 
+  // Generic Stage Upload Handlers (Role Authority Matrix)
+  const handleStageFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.size > 20 * 1024 * 1024) {
+      toast.error('Ukuran berkas melebihi batas maksimal 20 MB.')
+      return
+    }
+    try {
+      const dataUrl = await readFileAsDataUrl(file)
+      setStageUploadFile({
+        originalName: file.name,
+        filename: file.name.toLowerCase().replace(/\s+/g, '_'),
+        size: file.size,
+        mimeType: file.type || 'application/pdf',
+        url: dataUrl,
+        dataUrl,
+        uploadedAt: new Date().toISOString(),
+      })
+    } catch {
+      toast.error('Gagal membaca berkas dokumen.')
+    }
+  }
+
+  const openStageUpload = (
+    mode: 'legal_draft' | 'legal_approval' | 'bod_signed' | 'requester_revision' | 'final',
+    defaultTag?: string
+  ) => {
+    setStageUploadMode(mode)
+    const currentRevCount = (activeDoc?.revisionDocuments?.length || 0) + 1
+    let initialTag = defaultTag || `Rev.${currentRevCount.toString().padStart(2, '0')}`
+
+    if (mode === 'legal_draft') {
+      initialTag = defaultTag || (activeDoc?.stage === 1 ? 'Hasil-Telaah-V1' : `Draf-Legal-V${currentRevCount}`)
+    } else if (mode === 'legal_approval') {
+      initialTag = defaultTag || 'Clearance-Legal'
+    } else if (mode === 'bod_signed') {
+      initialTag = defaultTag || 'BOD-Signed'
+    } else if (mode === 'final') {
+      initialTag = 'FINAL'
+    } else if (mode === 'requester_revision') {
+      initialTag = `Rev.${currentRevCount.toString().padStart(2, '0')}`
+    }
+
+    setStageUploadTag(initialTag)
+    setStageUploadNotes('')
+    setStageUploadFile(null)
+    setStageUploadAdvance(true)
+    setIsStageUploadModalOpen(true)
+  }
+
+  const handleStageUploadSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!activeDoc || !stageUploadFile) {
+      toast.error('Berkas dokumen wajib diunggah.')
+      return
+    }
+
+    setStageUploadLoading(true)
+
+    const cleanFile: DocumentFile = {
+      ...stageUploadFile,
+      dataUrl: stageUploadFile.size > 2 * 1024 * 1024 ? undefined : stageUploadFile.dataUrl,
+    }
+
+    let actionLabel = ''
+    let fileType: 'initial' | 'revision' | 'supporting' | 'final' = 'revision'
+    let isFinal = false
+
+    if (stageUploadMode === 'legal_draft') {
+      actionLabel = `Unggah Draf Hasil Produksi / Telaah Legal (${stageUploadTag})`
+      fileType = 'revision'
+    } else if (stageUploadMode === 'legal_approval') {
+      actionLabel = `Unggah Lembar Persetujuan Legal (${stageUploadTag})`
+      fileType = 'revision'
+    } else if (stageUploadMode === 'bod_signed') {
+      actionLabel = `Unggah Dokumen Bertanda Tangan Direksi (${stageUploadTag})`
+      fileType = 'revision'
+    } else if (stageUploadMode === 'final') {
+      actionLabel = 'Unggah Dokumen Final Resmi (FINAL)'
+      fileType = 'final'
+      isFinal = true
+    } else {
+      actionLabel = `Unggah Berkas Perbaikan Pemohon (${stageUploadTag})`
+      fileType = 'revision'
+    }
+
+    let ok = false
+    if (isFinal) {
+      ok = await uploadFinalDocument(activeDoc._id, cleanFile, stageUploadNotes)
+    } else {
+      ok = await uploadRevision(activeDoc._id, cleanFile, stageUploadNotes, stageUploadTag, {
+        actionLabel,
+        advanceStage: stageUploadAdvance,
+        fileType,
+      })
+    }
+
+    setStageUploadLoading(false)
+
+    if (ok) {
+      toast.success(`Berkas ${stageUploadTag} berhasil diunggah dan disimpan ke sistem!`)
+      setIsStageUploadModalOpen(false)
+      setStageUploadFile(null)
+      setStageUploadNotes('')
+    } else {
+      toast.error('Gagal mengunggah berkas. Periksa kewenangan atau ukuran berkas.')
+    }
+  }
+
   // Reliable file download & view handlers (Anti-404)
   const handleDownloadFile = (doc: DocumentItem, file: DocumentFile) => {
     const fileName = file.originalName || file.filename || 'dokumen'
@@ -256,7 +392,18 @@ export function TrackingView() {
       return
     }
 
-    const allFiles = uploadedFile ? [uploadedFile] : []
+    const sanitizeFile = (f: DocumentFile | null): DocumentFile | null => {
+      if (!f) return null
+      const isLarge = f.size > 2 * 1024 * 1024
+      return {
+        ...f,
+        url: isLarge ? `/files/${encodeURIComponent(f.filename || f.originalName)}` : (f.url || `/files/${encodeURIComponent(f.filename || f.originalName)}`),
+        dataUrl: isLarge ? undefined : f.dataUrl,
+      }
+    }
+
+    const cleanInitialFile = sanitizeFile(uploadedFile)
+    const allFiles = cleanInitialFile ? [cleanInitialFile] : []
 
     setIsSubmitting(true)
     const newDoc = await createDocument({
@@ -269,20 +416,25 @@ export function TrackingView() {
       contractEnd: reqNoDuration ? null : reqEnd || null,
       noDuration: reqNoDuration,
       notes: reqNotes,
-      initialDocument: uploadedFile,
+      initialDocument: cleanInitialFile,
       supportingDocuments: [],
       files: allFiles,
+      pic: user?.employeeName || 'Pengaju',
+      picEmail: user?.email || '',
+      createdBy: user?.id || (user as any)?.userId || user?.email,
     } as any)
     setIsSubmitting(false)
 
     if (newDoc) {
-      toast.success(`Pengajuan ${newDoc.docNumber} berhasil dibuat dan disinkronkan ke Google Drive!`)
+      toast.success(`Pengajuan ${newDoc.docNumber} berhasil dibuat dan masuk ke sistem!`)
       setSelectedDocNumber(newDoc.docNumber)
       setTrackSubTab('progress')
       // Reset
       setReqName('')
       setReqNotes('')
       setUploadedFile(null)
+    } else {
+      toast.error('Gagal membuat pengajuan dokumen. Silakan periksa kembali isian berkas atau coba beberapa saat lagi.')
     }
   }
 
@@ -298,8 +450,13 @@ export function TrackingView() {
       return
     }
 
+    const cleanRevFile: DocumentFile = {
+      ...revFile,
+      dataUrl: revFile.size > 2 * 1024 * 1024 ? undefined : revFile.dataUrl,
+    }
+
     setRevLoading(true)
-    const ok = await uploadRevision(activeDoc._id, revFile, revNotes)
+    const ok = await uploadRevision(activeDoc._id, cleanRevFile, revNotes)
     setRevLoading(false)
 
     if (ok) {
@@ -318,8 +475,13 @@ export function TrackingView() {
       return
     }
 
+    const cleanFinalFile: DocumentFile = {
+      ...finalFile,
+      dataUrl: finalFile.size > 2 * 1024 * 1024 ? undefined : finalFile.dataUrl,
+    }
+
     setFinalLoading(true)
-    const ok = await uploadFinalDocument(activeDoc._id, finalFile, finalNotes)
+    const ok = await uploadFinalDocument(activeDoc._id, cleanFinalFile, finalNotes)
     setFinalLoading(false)
 
     if (ok) {
@@ -496,20 +658,27 @@ export function TrackingView() {
     )
   }
 
-  // Permissions check
-  const isDocumentController = isLegalManagement(user?.role) || isSystemAdmin(user?.role)
-  const isApprover = isBoardOfDirectors(user?.role) || isSystemAdmin(user?.role)
-  const isReviewer = isLegalOfficer(user?.role) || isLegalManagement(user?.role) || isSystemAdmin(user?.role)
+  // Corporate Authority Matrix Checkers
+  const userRole = normalizeRole(user?.role)
+  const isDocOwner = isDocumentOwnerOrPic(user, activeDoc)
+  const userCanLegalDraft = canUploadLegalDraft(userRole)
+  const userCanLegalApproval = canUploadLegalApproval(userRole)
+  const userCanBodSign = canUploadBodSigned(userRole)
+  const userCanFinalDoc = canUploadFinalDocument(userRole)
+  const userCanReview = canRequestRevision(userRole)
+  const userCanApprove = canApproveCurrentStage(userRole, activeDoc?.stage ?? 0)
 
   return (
     <div className="space-y-3.5 sm:space-y-5 max-w-7xl mx-auto pb-12 animate-in fade-in duration-300">
       {/* Header */}
       <div>
         <h1 className="text-xl sm:text-2xl font-bold font-display text-[#0B2147] tracking-tight">
-          Lacak &amp; Ajukan Dokumen
+          {trackSubTab === 'new' ? 'Pengajuan Dokumen' : 'Lacak Alur Dokumen'}
         </h1>
         <p className="text-xs text-[#64748B] mt-0.5">
-          Pemesanan berkas baru, inspeksi riwayat revisi bertahap (V0, Rev.01, Rev.02), dan alur 7 tahap legal.
+          {trackSubTab === 'new'
+            ? 'Formulir pendaftaran berkas dan pengajuan telaah legal.'
+            : 'Pelacakan alur berkas, telaah klausul, dan persetujuan 7 tahap.'}
         </p>
       </div>
 
@@ -536,7 +705,7 @@ export function TrackingView() {
           }`}
         >
           <BarChart3 className="h-3.5 w-3.5" />
-          <span>Lacak &amp; Riwayat</span>
+          <span>Lacak Alur</span>
           <span className="rounded-full bg-[#EBF2FF] px-1.5 py-0.2 text-[9.5px] font-bold text-[#163A70]">
             {documents.length}
           </span>
@@ -556,18 +725,18 @@ export function TrackingView() {
                   Formulir Pengajuan Dokumen
                 </h2>
                 <p className="text-[11px] sm:text-xs text-[#64748B]">
-                  Lengkapi data pemesanan atau pengajuan draf awal dokumen (V0).
+                  Lengkapi data pengajuan berkas.
                 </p>
               </div>
             </div>
 
             <form onSubmit={handleNewRequestSubmit} className="space-y-3.5 sm:space-y-4">
               <div className="space-y-1">
-                <Label className="text-xs font-semibold">Judul / Perihal Dokumen <span className="text-[#DC2626]">*</span></Label>
+                <Label className="text-xs font-semibold">Nama Dokumen <span className="text-[#DC2626]">*</span></Label>
                 <Input
                   value={reqName}
                   onChange={(e) => setReqName(e.target.value)}
-                  placeholder="Contoh: Perjanjian Sewa Alat Berat Pertambangan Pomalaa"
+                  placeholder="Contoh: Perjanjian Sewa Alat Berat"
                   className="h-10 text-xs rounded-xl"
                   required
                 />
@@ -581,13 +750,13 @@ export function TrackingView() {
                     onChange={(e) => setReqCategory(e.target.value)}
                     className="w-full h-10 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-3 text-xs font-semibold text-[#0F172A] focus:border-[#163A70] focus:outline-none"
                   >
-                    <option value="Perjanjian">Perjanjian / Kontrak</option>
-                    <option value="Perizinan">Perizinan / Regulasi</option>
-                    <option value="Adendum">Adendum / Perubahan Kontrak</option>
-                    <option value="NDA">Non-Disclosure Agreement (NDA)</option>
-                    <option value="MoU">Memorandum of Understanding (MoU)</option>
-                    <option value="Legal Opinion">Legal Opinion</option>
-                    <option value="Surat Kuasa">Surat Kuasa Khusus</option>
+                    <option value="Kontrak Hukum">Kontrak Hukum</option>
+                    <option value="NDA">NDA (Non-Disclosure Agreement)</option>
+                    <option value="MoU">MoU (Memorandum of Understanding)</option>
+                    <option value="Legal Opinion / Analyst">Legal Opinion / Analyst</option>
+                    <option value="Perizinan">Perizinan</option>
+                    <option value="Surat Menyurat Resmi">Surat Menyurat Resmi (Korespondensi)</option>
+                    <option value="Dokumen Lainnya">Dokumen Lainnya</option>
                   </select>
                 </div>
 
@@ -598,16 +767,16 @@ export function TrackingView() {
                     onChange={(e) => setReqPriority(e.target.value as 'Normal' | 'Urgent' | 'Critical')}
                     className="w-full h-10 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-3 text-xs font-semibold text-[#0F172A] focus:border-[#163A70] focus:outline-none"
                   >
-                    <option value="Normal">Normal (SLA Standar 3 Hari)</option>
-                    <option value="Urgent">Mendesak / Urgent (SLA 24 Jam)</option>
-                    <option value="Critical">Kritis / Critical (SLA Segera Hari Ini)</option>
+                    <option value="Normal">Normal (15 Hari)</option>
+                    <option value="Urgent">Mendesak (10 Hari)</option>
+                    <option value="Critical">Kritis (5 Hari)</option>
                   </select>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <Label className="text-xs font-semibold">Divisi Pemrakarsa</Label>
+                  <Label className="text-xs font-semibold">Divisi</Label>
                   <Input
                     value={reqDivision}
                     onChange={(e) => setReqDivision(e.target.value)}
@@ -623,9 +792,9 @@ export function TrackingView() {
                     onChange={(e) => setReqConfidentiality(e.target.value as 'Internal' | 'Confidential' | 'Restricted')}
                     className="w-full h-10 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-3 text-xs font-semibold text-[#0F172A] focus:border-[#163A70] focus:outline-none"
                   >
-                    <option value="Internal">Internal (Hanya Staf Grup)</option>
-                    <option value="Confidential">Confidential (Rahasia Perusahaan)</option>
-                    <option value="Restricted">Restricted (Akses Terbatas Direksi)</option>
+                    <option value="Internal">Internal</option>
+                    <option value="Confidential">Rahasia (Confidential)</option>
+                    <option value="Restricted">Terbatas (Restricted)</option>
                   </select>
                 </div>
               </div>
@@ -674,7 +843,7 @@ export function TrackingView() {
                 <Textarea
                   value={reqNotes}
                   onChange={(e) => setReqNotes(e.target.value)}
-                  placeholder="Jelaskan kebutuhan pengajuan atau catatan untuk reviewer..."
+                  placeholder="Catatan tambahan untuk reviewer..."
                   rows={2}
                   className="text-xs rounded-xl"
                 />
@@ -701,14 +870,14 @@ export function TrackingView() {
                       <Upload className="h-6 w-6" />
                     </div>
                     <div className="text-xs font-bold text-[#0F172A]">
-                      Pilih atau seret berkas dokumen ke sini
+                      Pilih atau seret berkas ke sini
                     </div>
                     <p className="text-[11px] text-[#64748B] mt-0.5 mb-3">
-                      Ukuran berkas maksimal 20 MB (PDF, Word, Excel, Gambar)
+                      Format: PDF, Word, Excel, Gambar (Maks. 20 MB)
                     </p>
                     <div className="px-4 py-2 rounded-xl bg-[#163A70] hover:bg-[#0B2147] text-white font-bold text-xs shadow-2xs inline-flex items-center gap-2">
                       <Upload className="h-3.5 w-3.5" />
-                      <span>Pilih Berkas Dokumen</span>
+                      <span>Pilih Berkas</span>
                     </div>
                     <input
                       id="main-file-upload"
@@ -753,7 +922,7 @@ export function TrackingView() {
                   disabled={isSubmitting}
                   className="h-10 px-6 bg-[#163A70] hover:bg-[#0B2147] text-white font-bold text-xs rounded-xl shadow-xs cursor-pointer"
                 >
-                  {isSubmitting ? 'Mengirim Pengajuan...' : 'Kirim Pengajuan Dokumen'}
+                  {isSubmitting ? 'Mengirim...' : 'Kirim Pengajuan'}
                 </Button>
               </div>
             </form>
@@ -863,7 +1032,7 @@ export function TrackingView() {
                               : 'bg-[#F1F5F9] text-[#475569]'
                           }`}
                         >
-                          {activeDoc.priority === 'Critical' ? 'Kritis' : activeDoc.priority === 'Urgent' ? 'Mendesak' : 'Normal'}
+                          {activeDoc.priority === 'Critical' ? 'Kritis (5 Hari)' : activeDoc.priority === 'Urgent' ? 'Mendesak (10 Hari)' : 'Normal (15 Hari)'}
                         </Badge>
                       </div>
 
@@ -880,7 +1049,7 @@ export function TrackingView() {
                       </div>
                     </div>
 
-                    {/* Action Buttons Toolbar */}
+                    {/* Action Buttons Toolbar Sesuai Matriks Kewenangan */}
                     <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-[#F1F5F9]">
                       <a
                         href={activeDoc.driveFolderUrl || `https://drive.google.com/drive/search?q=${encodeURIComponent(activeDoc.docNumber)}`}
@@ -889,7 +1058,7 @@ export function TrackingView() {
                         className="inline-flex items-center gap-1.5 h-7 sm:h-8 px-2.5 sm:px-3 text-[11px] bg-[#0F9D58] hover:bg-[#0B8043] text-white font-bold rounded-xl shadow-2xs"
                       >
                         <FolderOpen className="h-3.5 w-3.5" />
-                        <span>Google Drive</span>
+                        <span>Drive</span>
                       </a>
                       <a
                         href={`/api/documents/${activeDoc._id}/sync-drive`}
@@ -897,34 +1066,76 @@ export function TrackingView() {
                         className="inline-flex items-center gap-1.5 h-7 sm:h-8 px-2.5 sm:px-3 text-[11px] bg-white border border-[#CBD5E1] hover:bg-[#F1F5F9] text-[#163A70] font-bold rounded-xl shadow-2xs"
                       >
                         <FileText className="h-3.5 w-3.5" />
-                        <span>Log Riwayat (.txt)</span>
+                        <span>Log (.txt)</span>
                       </a>
                       <Button
                         size="sm"
                         variant="outline"
                         disabled={syncingDrive}
                         onClick={() => handleSyncGoogleDrive(activeDoc._id)}
-                        className="h-7 sm:h-8 text-[11px] border-[#CBD5E1] text-[#334155] hover:bg-[#F8FAFC] font-bold rounded-xl gap-1 shadow-2xs px-2.5"
+                        className="h-7 sm:h-8 text-[11px] border-[#CBD5E1] text-[#334155] hover:bg-[#F8FAFC] font-bold rounded-xl gap-1 shadow-2xs px-2.5 cursor-pointer"
                       >
                         <RefreshCw className={`h-3.5 w-3.5 ${syncingDrive ? 'animate-spin' : ''}`} />
-                        <span>{syncingDrive ? 'Menyinkronkan...' : 'Sinkronisasi'}</span>
+                        <span>{syncingDrive ? 'Menyinkronkan...' : 'Sinkron'}</span>
                       </Button>
-                      <Button
-                        size="sm"
-                        onClick={() => setIsRevModalOpen(true)}
-                        className="h-7 sm:h-8 text-[11px] bg-[#D97706] hover:bg-[#B45309] text-white font-bold rounded-xl gap-1 shadow-2xs px-2.5"
-                      >
-                        <FileUp className="h-3.5 w-3.5" />
-                        <span>Revisi</span>
-                      </Button>
-                      {isDocumentController && (
+
+                      {/* Tombol Unggah Draf / Telaah Legal (Legal Officer / Legal Management) */}
+                      {userCanLegalDraft && activeDoc.stage < 5 && (
                         <Button
                           size="sm"
-                          onClick={() => setIsFinalModalOpen(true)}
-                          className="h-7 sm:h-8 text-[11px] bg-[#059669] hover:bg-[#047857] text-white font-bold rounded-xl gap-1 shadow-2xs px-2.5"
+                          onClick={() => openStageUpload('legal_draft')}
+                          className="h-7 sm:h-8 text-[11px] bg-[#163A70] hover:bg-[#0B2147] text-white font-bold rounded-xl gap-1 shadow-2xs px-2.5 cursor-pointer"
+                        >
+                          <FileEdit className="h-3.5 w-3.5" />
+                          <span>Draf Legal</span>
+                        </Button>
+                      )}
+
+                      {/* Tombol Unggah Persetujuan Legal (Legal Management) */}
+                      {userCanLegalApproval && activeDoc.stage >= 2 && activeDoc.stage < 5 && (
+                        <Button
+                          size="sm"
+                          onClick={() => openStageUpload('legal_approval')}
+                          className="h-7 sm:h-8 text-[11px] bg-[#4338CA] hover:bg-[#3730A3] text-white font-bold rounded-xl gap-1 shadow-2xs px-2.5 cursor-pointer"
+                        >
+                          <FileCheck2 className="h-3.5 w-3.5" />
+                          <span>Persetujuan Legal</span>
+                        </Button>
+                      )}
+
+                      {/* Tombol Unggah Dokumen Bertanda Tangan Direksi (BOD) */}
+                      {userCanBodSign && activeDoc.stage >= 3 && activeDoc.stage < 5 && (
+                        <Button
+                          size="sm"
+                          onClick={() => openStageUpload('bod_signed')}
+                          className="h-7 sm:h-8 text-[11px] bg-[#7C3AED] hover:bg-[#6D28D9] text-white font-bold rounded-xl gap-1 shadow-2xs px-2.5 cursor-pointer"
+                        >
+                          <FileSignature className="h-3.5 w-3.5" />
+                          <span>TTD Direksi</span>
+                        </Button>
+                      )}
+
+                      {/* Tombol Unggah Dokumen Final (Legal Management / Admin) */}
+                      {userCanFinalDoc && (
+                        <Button
+                          size="sm"
+                          onClick={() => openStageUpload('final')}
+                          className="h-7 sm:h-8 text-[11px] bg-[#059669] hover:bg-[#047857] text-white font-bold rounded-xl gap-1 shadow-2xs px-2.5 cursor-pointer"
                         >
                           <ShieldCheck className="h-3.5 w-3.5" />
                           <span>Final</span>
+                        </Button>
+                      )}
+
+                      {/* Tombol Unggah Berkas Perbaikan Pemohon jika ada status revisi */}
+                      {activeDoc.revisionRequested && (isDocOwner || isStandardUser(userRole) || isGuest(userRole)) && (
+                        <Button
+                          size="sm"
+                          onClick={() => openStageUpload('requester_revision')}
+                          className="h-7 sm:h-8 text-[11px] bg-[#D97706] hover:bg-[#B45309] text-white font-bold rounded-xl gap-1 shadow-2xs px-2.5 cursor-pointer animate-pulse"
+                        >
+                          <FileUp className="h-3.5 w-3.5" />
+                          <span>Unggah Revisi</span>
                         </Button>
                       )}
                     </div>
@@ -935,7 +1146,7 @@ export function TrackingView() {
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-bold text-[#0B2147] flex items-center gap-1.5">
                         <BarChart3 className="h-3.5 w-3.5 text-[#163A70]" />
-                        <span>Alur Status 7 Tahap</span>
+                        <span>Alur Status</span>
                       </span>
                       <span className="text-[11px] font-bold text-[#163A70]">
                         Tahap {activeDoc.stage + 1} / 7
@@ -989,7 +1200,7 @@ export function TrackingView() {
 
                     <div className="text-[11.5px] text-[#475569] bg-[#F8FAFC] p-2.5 rounded-xl border border-[#E2E8F0] flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span>Status Saat Ini:</span>
+                        <span>Status:</span>
                         <span
                           className={`font-bold px-2 py-0.5 rounded-md text-[10.5px] ${
                             activeDoc.rejected
@@ -1000,59 +1211,197 @@ export function TrackingView() {
                           }`}
                         >
                           {activeDoc.rejected
-                            ? 'Ditolak (Dibatalkan)'
+                            ? 'Ditolak'
                             : activeDoc.revisionRequested
-                            ? 'Perlu Revisi (Revisi Diminta)'
+                            ? 'Perlu Revisi'
                             : activeDoc.statusLabel || STAGES[activeDoc.stage]?.label}
                         </span>
                       </div>
 
-                      {/* Workflow Operational Controls (Hanya untuk Non-Pemohon / Verifikator) */}
-                      {!(normalizeRole(user?.role) === 'User' || normalizeRole(user?.role) === 'Guest') && !activeDoc.rejected && activeDoc.stage < 5 && (
+                      {/* Workflow Operational Controls Sesuai Matriks Kewenangan Tahapan */}
+                      {!activeDoc.rejected && (
                         <div className="flex items-center gap-1.5 flex-wrap">
-                          {!activeDoc.revisionRequested && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => setIsRequestRevOpen(true)}
-                              className="h-7 text-[11px] text-[#D97706] border-[#FDE68A] hover:bg-[#FFFBEB] font-bold rounded-lg cursor-pointer"
-                            >
-                              <AlertTriangle className="h-3 w-3 mr-1" />
-                              Minta Revisi
-                            </Button>
-                          )}
-
+                          {/* 1. Kondisi Status Perlu Revisi */}
                           {activeDoc.revisionRequested && (
-                            <Button
-                              size="sm"
-                              onClick={() => transitionDocument(activeDoc._id, 'resolve_revision', 'Revisi telah diverifikasi')}
-                              className="h-7 text-[11px] bg-[#059669] hover:bg-[#047857] text-white font-bold rounded-lg cursor-pointer"
-                            >
-                              <Check className="h-3 w-3 mr-1" />
-                              Verifikasi Revisi
-                            </Button>
+                            <>
+                              {(isDocOwner || isStandardUser(userRole) || isGuest(userRole)) && (
+                                <Button
+                                  size="sm"
+                                  onClick={() => openStageUpload('requester_revision')}
+                                  className="h-7 text-[11px] bg-[#D97706] hover:bg-[#B45309] text-white font-bold rounded-lg cursor-pointer"
+                                >
+                                  <FileUp className="h-3 w-3 mr-1" />
+                                  Unggah Berkas Perbaikan
+                                </Button>
+                              )}
+
+                              {userCanLegalDraft && (
+                                <>
+                                  <Button
+                                    size="sm"
+                                    onClick={() => transitionDocument(activeDoc._id, 'resolve_revision', 'Revisi telah diverifikasi oleh tim legal')}
+                                    className="h-7 text-[11px] bg-[#059669] hover:bg-[#047857] text-white font-bold rounded-lg cursor-pointer"
+                                  >
+                                    <Check className="h-3 w-3 mr-1" />
+                                    Verifikasi Revisi
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => openStageUpload('legal_draft')}
+                                    className="h-7 text-[11px] border-[#163A70] text-[#163A70] hover:bg-[#EBF2FF] font-bold rounded-lg cursor-pointer"
+                                  >
+                                    <FileEdit className="h-3 w-3 mr-1" />
+                                    Unggah Draf Baru
+                                  </Button>
+                                </>
+                              )}
+                            </>
                           )}
 
-                          {!activeDoc.revisionRequested && (
-                            <Button
-                              size="sm"
-                              onClick={() => transitionDocument(activeDoc._id, 'approve', 'Disetujui untuk lanjut ke tahap berikutnya')}
-                              className="h-7 text-[11px] bg-[#163A70] hover:bg-[#0B2147] text-white font-bold rounded-lg cursor-pointer"
-                            >
-                              <Check className="h-3 w-3 mr-1" />
-                              Setujui Tahap
-                            </Button>
-                          )}
+                          {/* 2. Kondisi Normal Berdasarkan Tahap & Kewenangan */}
+                          {!activeDoc.revisionRequested && activeDoc.stage < 5 && (
+                            <>
+                              {/* Stage 0: Pengajuan Baru */}
+                              {activeDoc.stage === 0 && userCanLegalDraft && (
+                                <>
+                                  <Button
+                                    size="sm"
+                                    onClick={() => transitionDocument(activeDoc._id, 'approve', 'Draf pengajuan diterima, mulai peninjauan kelayakan')}
+                                    className="h-7 text-[11px] bg-[#163A70] hover:bg-[#0B2147] text-white font-bold rounded-lg cursor-pointer"
+                                  >
+                                    <Check className="h-3 w-3 mr-1" />
+                                    Mulai Telaah (T2)
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => openStageUpload('legal_draft', 'Hasil-Telaah-V1')}
+                                    className="h-7 text-[11px] border-[#163A70] text-[#163A70] hover:bg-[#EBF2FF] font-bold rounded-lg cursor-pointer"
+                                  >
+                                    <FileEdit className="h-3 w-3 mr-1" />
+                                    Unggah Hasil Telaah
+                                  </Button>
+                                </>
+                              )}
 
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => setIsRejectModalOpen(true)}
-                            className="h-7 text-[11px] text-[#DC2626] border-[#FCA5A5] hover:bg-[#FEF2F2] font-bold rounded-lg cursor-pointer"
-                          >
-                            <Ban className="h-3 w-3 mr-1" />
-                            Tolak Dokumen
-                          </Button>
+                              {/* Stage 1: Peninjauan Kelayakan */}
+                              {activeDoc.stage === 1 && userCanLegalDraft && (
+                                <>
+                                  <Button
+                                    size="sm"
+                                    onClick={() => openStageUpload('legal_draft', 'Hasil-Telaah-V1')}
+                                    className="h-7 text-[11px] bg-[#163A70] hover:bg-[#0B2147] text-white font-bold rounded-lg cursor-pointer"
+                                  >
+                                    <FileEdit className="h-3 w-3 mr-1" />
+                                    Unggah Hasil Telaah
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    onClick={() => transitionDocument(activeDoc._id, 'approve', 'Kelayakan dokumen disetujui, lanjut penyusunan draf')}
+                                    className="h-7 text-[11px] bg-[#059669] hover:bg-[#047857] text-white font-bold rounded-lg cursor-pointer"
+                                  >
+                                    <Check className="h-3 w-3 mr-1" />
+                                    Setujui Kelayakan (T3)
+                                  </Button>
+                                </>
+                              )}
+
+                              {/* Stage 2: Penyusunan Draf (Drafting) */}
+                              {activeDoc.stage === 2 && userCanLegalDraft && (
+                                <>
+                                  <Button
+                                    size="sm"
+                                    onClick={() => openStageUpload('legal_draft', 'Draf-Legal-V1')}
+                                    className="h-7 text-[11px] bg-[#163A70] hover:bg-[#0B2147] text-white font-bold rounded-lg cursor-pointer"
+                                  >
+                                    <FileEdit className="h-3 w-3 mr-1" />
+                                    Unggah Draf Produksi
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    onClick={() => transitionDocument(activeDoc._id, 'approve', 'Penyusunan draf selesai, diajukan ke Legal Management')}
+                                    className="h-7 text-[11px] bg-[#059669] hover:bg-[#047857] text-white font-bold rounded-lg cursor-pointer"
+                                  >
+                                    <Check className="h-3 w-3 mr-1" />
+                                    Setujui Draf (T4)
+                                  </Button>
+                                </>
+                              )}
+
+                              {/* Stage 3: Persetujuan Legal (Legal Management) */}
+                              {activeDoc.stage === 3 && userCanLegalApproval && (
+                                <>
+                                  <Button
+                                    size="sm"
+                                    onClick={() => openStageUpload('legal_approval', 'Clearance-Legal')}
+                                    className="h-7 text-[11px] bg-[#4338CA] hover:bg-[#3730A3] text-white font-bold rounded-lg cursor-pointer"
+                                  >
+                                    <FileCheck2 className="h-3 w-3 mr-1" />
+                                    Unggah Persetujuan Legal
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    onClick={() => transitionDocument(activeDoc._id, 'approve', 'Legal clearance disetujui penuh oleh Legal Management')}
+                                    className="h-7 text-[11px] bg-[#059669] hover:bg-[#047857] text-white font-bold rounded-lg cursor-pointer"
+                                  >
+                                    <Check className="h-3 w-3 mr-1" />
+                                    Setujui ke Direksi (T5)
+                                  </Button>
+                                </>
+                              )}
+
+                              {/* Stage 4: Persetujuan Direksi (BOD Signed) */}
+                              {activeDoc.stage === 4 && (userCanBodSign || userCanLegalApproval) && (
+                                <>
+                                  {userCanBodSign && (
+                                    <Button
+                                      size="sm"
+                                      onClick={() => openStageUpload('bod_signed', 'BOD-Signed')}
+                                      className="h-7 text-[11px] bg-[#7C3AED] hover:bg-[#6D28D9] text-white font-bold rounded-lg cursor-pointer"
+                                    >
+                                      <FileSignature className="h-3 w-3 mr-1" />
+                                      Unggah TTD Direksi
+                                    </Button>
+                                  )}
+                                  <Button
+                                    size="sm"
+                                    onClick={() => transitionDocument(activeDoc._id, 'approve', 'Persetujuan eksekutif disahkan oleh Dewan Direksi')}
+                                    className="h-7 text-[11px] bg-[#059669] hover:bg-[#047857] text-white font-bold rounded-lg cursor-pointer"
+                                  >
+                                    <Check className="h-3 w-3 mr-1" />
+                                    Sahkan Dokumen Final
+                                  </Button>
+                                </>
+                              )}
+
+                              {/* Minta Revisi (Dapat diminta oleh Legal Officer, Management, BOD, Admin) */}
+                              {userCanReview && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => setIsRequestRevOpen(true)}
+                                  className="h-7 text-[11px] text-[#D97706] border-[#FDE68A] hover:bg-[#FFFBEB] font-bold rounded-lg cursor-pointer"
+                                >
+                                  <AlertTriangle className="h-3 w-3 mr-1" />
+                                  Minta Revisi
+                                </Button>
+                              )}
+
+                              {/* Tolak Dokumen */}
+                              {userCanReview && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => setIsRejectModalOpen(true)}
+                                  className="h-7 text-[11px] text-[#DC2626] border-[#FCA5A5] hover:bg-[#FEF2F2] font-bold rounded-lg cursor-pointer"
+                                >
+                                  <Ban className="h-3 w-3 mr-1" />
+                                  Tolak
+                                </Button>
+                              )}
+                            </>
+                          )}
                         </div>
                       )}
                     </div>
@@ -1075,7 +1424,7 @@ export function TrackingView() {
                         <div className="space-y-0.5">
                           <div className="flex items-center gap-1.5 flex-wrap">
                             <Clock className="h-3.5 w-3.5 text-[#163A70]" />
-                            <span className="text-xs sm:text-sm font-bold font-display text-[#0B2147]">Masa Berlaku &amp; Pengingat Jatuh Tempo</span>
+                            <span className="text-xs sm:text-sm font-bold font-display text-[#0B2147]">Masa Berlaku &amp; Pengingat</span>
                             <span className={`px-2 py-0.2 rounded-full text-[10px] font-bold border ${tag.color}`}>{tag.label}</span>
                           </div>
                           <div className="text-[11px] text-[#64748B]">
@@ -1083,7 +1432,7 @@ export function TrackingView() {
                           </div>
                         </div>
                         <div className="flex flex-wrap items-center gap-1.5 shrink-0">
-                          <Button size="sm" variant="outline" onClick={() => handleOpenReminderModal(activeDoc)} className="h-7 text-[11px] border-[#CBD5E1] text-[#163A70] font-bold rounded-lg shadow-2xs px-2.5"><BellRing className="h-3 w-3 mr-1" />Set Pengingat</Button>
+                          <Button size="sm" variant="outline" onClick={() => handleOpenReminderModal(activeDoc)} className="h-7 text-[11px] border-[#CBD5E1] text-[#163A70] font-bold rounded-lg shadow-2xs px-2.5"><BellRing className="h-3 w-3 mr-1" />Pengingat</Button>
                           <Button size="sm" onClick={() => handleOpenDecisionModal(activeDoc, 'renew')} className="h-7 text-[11px] bg-[#059669] text-white font-bold rounded-lg px-2.5"><RefreshCw className="h-3 w-3 mr-1" />Perpanjang</Button>
                         </div>
                       </div>
@@ -1119,8 +1468,8 @@ export function TrackingView() {
                     <div className="flex items-center gap-2">
                       <Layers className="h-4 w-4 text-[#163A70]" />
                       <div>
-                        <h3 className="text-xs sm:text-sm font-bold text-[#0B2147]">Paket Rangkaian Berkas &amp; Versi</h3>
-                        <p className="text-[10.5px] sm:text-[11px] text-[#64748B]">Seluruh riwayat versi dan dokumen final dalam satu tiket.</p>
+                        <h3 className="text-xs sm:text-sm font-bold text-[#0B2147]">Paket Berkas &amp; Versi</h3>
+                        <p className="text-[10.5px] sm:text-[11px] text-[#64748B]">Riwayat versi berkas dan dokumen final.</p>
                       </div>
                     </div>
                   </div>
@@ -1215,10 +1564,10 @@ export function TrackingView() {
                             <Paperclip className="h-4 w-4 text-[#059669]" />
                             <div>
                               <h4 className="text-xs font-bold text-[#0B2147]">
-                                Dokumen Pendukung &amp; Lampiran Pengajuan ({supportingList.length})
+                                Dokumen Pendukung ({supportingList.length})
                               </h4>
                               <p className="text-[10px] text-[#64748B]">
-                                Seluruh berkas lampiran utuh yang diajukan pemohon dalam tiket ini.
+                                Lampiran pendukung dari pemohon.
                               </p>
                             </div>
                           </div>
@@ -1287,8 +1636,8 @@ export function TrackingView() {
                   <div className="flex items-center gap-2 pb-2.5 border-b border-[#F1F5F9]">
                     <History className="h-4 w-4 text-[#163A70]" />
                     <div>
-                      <h3 className="text-xs sm:text-sm font-bold text-[#0B2147]">Riwayat Perkembangan Dokumen</h3>
-                      <p className="text-[10.5px] sm:text-[11px] text-[#64748B]">Log audit lengkap setiap aksi dan pergantian status.</p>
+                      <h3 className="text-xs sm:text-sm font-bold text-[#0B2147]">Riwayat Dokumen</h3>
+                      <p className="text-[10.5px] sm:text-[11px] text-[#64748B]">Log audit riwayat status dan tindakan.</p>
                     </div>
                   </div>
 
@@ -1518,10 +1867,10 @@ export function TrackingView() {
           <DialogHeader>
             <DialogTitle className="text-[#0B2147] flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 text-[#D97706]" />
-              Permintaan Revisi Dokumen — {activeDoc?.docNumber}
+              Permintaan Revisi — {activeDoc?.docNumber}
             </DialogTitle>
             <DialogDescription>
-              Tuliskan alasan perbaikan draf dokumen yang harus diselesaikan oleh pengaju/reviewer.
+              Catatan perbaikan yang harus diselesaikan pemohon.
             </DialogDescription>
           </DialogHeader>
 
@@ -1529,7 +1878,7 @@ export function TrackingView() {
             <Textarea
               value={requestRevReason}
               onChange={(e) => setRequestRevReason(e.target.value)}
-              placeholder="Jelaskan pasal atau bagian mana yang membutuhkan perbaikan..."
+              placeholder="Jelaskan bagian yang perlu direvisi..."
               rows={4}
               required
               className="text-xs rounded-xl"
@@ -1544,7 +1893,7 @@ export function TrackingView() {
               onClick={handleRequestRevisionSubmit}
               className="bg-[#D97706] hover:bg-[#B45309] text-white font-bold"
             >
-              Kirim Permintaan Revisi
+              Minta Revisi
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1556,10 +1905,10 @@ export function TrackingView() {
           <DialogHeader>
             <DialogTitle className="text-[#DC2626] flex items-center gap-2">
               <Ban className="h-5 w-5 text-[#DC2626]" />
-              Tolak Pengajuan Dokumen — {activeDoc?.docNumber}
+              Tolak Dokumen — {activeDoc?.docNumber}
             </DialogTitle>
             <DialogDescription>
-              Tuliskan alasan penolakan dokumen secara jelas untuk pemohon berkas.
+              Alasan penolakan pengajuan dokumen.
             </DialogDescription>
           </DialogHeader>
 
@@ -1567,7 +1916,7 @@ export function TrackingView() {
             <Textarea
               value={rejectReason}
               onChange={(e) => setRejectReason(e.target.value)}
-              placeholder="Jelaskan alasan pengajuan dokumen ini ditolak..."
+              placeholder="Jelaskan alasan penolakan dokumen..."
               rows={4}
               required
               className="text-xs rounded-xl"
@@ -1582,7 +1931,7 @@ export function TrackingView() {
                 disabled={rejectLoading}
                 className="bg-[#DC2626] hover:bg-[#B91C1C] text-white font-bold cursor-pointer"
               >
-                {rejectLoading ? 'Menolak...' : 'Konfirmasi Tolak Dokumen'}
+                {rejectLoading ? 'Menolak...' : 'Tolak Dokumen'}
               </Button>
             </DialogFooter>
           </form>
@@ -1595,16 +1944,16 @@ export function TrackingView() {
           <DialogHeader>
             <DialogTitle className="text-[#0B2147] flex items-center gap-2">
               <FileEdit className="h-5 w-5 text-[#163A70]" />
-              Formulir Justifikasi Kontrak — {activeDoc?.docNumber}
+              Justifikasi Kontrak — {activeDoc?.docNumber}
             </DialogTitle>
             <DialogDescription>
-              Ajukan evaluasi dan justifikasi resmi terhadap masa berlaku kontrak <b>{activeDoc?.name}</b>.
+              Evaluasi dan justifikasi masa berlaku kontrak.
             </DialogDescription>
           </DialogHeader>
 
           <form onSubmit={handleDecisionSubmit} className="space-y-4 pt-2">
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold block">Rekomendasi Tindakan Kontrak</Label>
+              <Label className="text-xs font-semibold block">Rekomendasi Tindakan</Label>
               <div className="grid grid-cols-3 gap-2">
                 <Button
                   type="button"
@@ -1634,7 +1983,7 @@ export function TrackingView() {
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold block">Faktor Pertimbangan &amp; Evaluasi (Pilih yang relevan)</Label>
+              <Label className="text-xs font-semibold block">Faktor Pertimbangan</Label>
               <div className="grid grid-cols-1 gap-1.5 max-h-40 overflow-y-auto p-2 bg-[#F8FAFC] rounded-xl border border-[#E2E8F0]">
                 {CONSIDERATION_OPTIONS.map((opt) => (
                   <label key={opt} className="flex items-center gap-2 text-xs text-[#475569] cursor-pointer">
@@ -1651,11 +2000,11 @@ export function TrackingView() {
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold block">Uraian Justifikasi Resmi</Label>
+              <Label className="text-xs font-semibold block">Uraian Justifikasi</Label>
               <Textarea
                 value={justification}
                 onChange={(e) => setJustification(e.target.value)}
-                placeholder="Tuliskan alasan, latar belakang kebutuhan, evaluasi performa, atau justifikasi perpanjangan/adendum..."
+                placeholder="Tuliskan alasan evaluasi kebutuhan perpanjangan/adendum..."
                 rows={3}
                 required
                 className="text-xs rounded-xl"
@@ -1683,18 +2032,18 @@ export function TrackingView() {
               Pengaturan Pengingat — {activeDoc?.docNumber}
             </DialogTitle>
             <DialogDescription>
-              Aktifkan interval pemberitahuan email &amp; portal menjelang tanggal jatuh tempo kontrak.
+              Interval notifikasi sebelum tanggal jatuh tempo.
             </DialogDescription>
           </DialogHeader>
 
           <form onSubmit={handleReminderSave} className="space-y-4 pt-2">
             <div className="space-y-3 p-3 bg-[#F8FAFC] rounded-xl border border-[#E2E8F0]">
               {[
-                { key: 'h60', label: 'Pengingat H-60 (60 Hari Sebelum Jatuh Tempo)', desc: 'Pra-evaluasi dan review berkas awal' },
-                { key: 'h30', label: 'Pengingat H-30 (30 Hari Sebelum Jatuh Tempo)', desc: 'Penyusunan telaah & justifikasi kebutuhan' },
-                { key: 'h15', label: 'Pengingat H-15 (15 Hari Sebelum Jatuh Tempo)', desc: 'Peringatan proses draf adendum/perpanjangan' },
-                { key: 'h7', label: 'Pengingat H-7 (7 Hari Sebelum Jatuh Tempo)', desc: 'Peringatan kritis persetujuan direksi' },
-                { key: 'h1', label: 'Pengingat H-1 (1 Hari Sebelum Jatuh Tempo)', desc: 'Peringatan final batas akhir kontrak' },
+                { key: 'h60', label: 'H-60 (60 Hari)', desc: 'Evaluasi awal berkas' },
+                { key: 'h30', label: 'H-30 (30 Hari)', desc: 'Penyusunan telaah kebutuhan' },
+                { key: 'h15', label: 'H-15 (15 Hari)', desc: 'Penyusunan draf kelanjutan' },
+                { key: 'h7', label: 'H-7 (7 Hari)', desc: 'Persetujuan pimpinan' },
+                { key: 'h1', label: 'H-1 (1 Hari)', desc: 'Batas akhir kontrak' },
               ].map((item) => (
                 <div key={item.key} className="flex items-center justify-between py-1">
                   <div>
@@ -1712,11 +2061,11 @@ export function TrackingView() {
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold block">Catatan Khusus Pengingat (Opsional)</Label>
+              <Label className="text-xs font-semibold block">Catatan Tambahan (Opsional)</Label>
               <Input
                 value={reminderConfig.customNotes}
                 onChange={(e) => setReminderConfig((prev) => ({ ...prev, customNotes: e.target.value }))}
-                placeholder="misal: Mohon hubungi legal 2 minggu sebelum jatuh tempo"
+                placeholder="misal: Hubungi tim legal segera"
                 className="h-10 text-xs rounded-xl"
               />
             </div>
@@ -1726,7 +2075,187 @@ export function TrackingView() {
                 Batal
               </Button>
               <Button type="submit" disabled={savingReminder} className="bg-[#163A70] hover:bg-[#0B2147] text-white font-bold">
-                {savingReminder ? 'Menyimpan...' : 'Simpan Pengaturan'}
+                {savingReminder ? 'Menyimpan...' : 'Simpan Pengingat'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* 3. Role-Based Stage Upload Modal (Corporate Authority Matrix) */}
+      <Dialog open={isStageUploadModalOpen} onOpenChange={setIsStageUploadModalOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <div className="flex items-center gap-2.5">
+              <div
+                className={`flex h-10 w-10 items-center justify-center rounded-xl shrink-0 ${
+                  stageUploadMode === 'legal_draft'
+                    ? 'bg-[#EBF2FF] text-[#163A70]'
+                    : stageUploadMode === 'legal_approval'
+                    ? 'bg-[#ECFDF5] text-[#059669]'
+                    : stageUploadMode === 'bod_signed'
+                    ? 'bg-[#F5F3FF] text-[#7C3AED]'
+                    : stageUploadMode === 'final'
+                    ? 'bg-[#F0FDF4] text-[#16A34A]'
+                    : 'bg-[#FFFBEB] text-[#D97706]'
+                }`}
+              >
+                {stageUploadMode === 'legal_draft' && <FileText className="h-5 w-5" />}
+                {stageUploadMode === 'legal_approval' && <ShieldCheck className="h-5 w-5" />}
+                {stageUploadMode === 'bod_signed' && <PenTool className="h-5 w-5" />}
+                {stageUploadMode === 'final' && <CheckCircle2 className="h-5 w-5" />}
+                {stageUploadMode === 'requester_revision' && <FileUp className="h-5 w-5" />}
+              </div>
+              <div>
+                <DialogTitle className="text-[#0B2147] text-base font-bold font-display">
+                  {stageUploadMode === 'legal_draft' && 'Unggah Draf / Hasil Telaah Legal'}
+                  {stageUploadMode === 'legal_approval' && 'Unggah Lembar Persetujuan Legal'}
+                  {stageUploadMode === 'bod_signed' && 'Unggah Dokumen Bertanda Tangan Direksi'}
+                  {stageUploadMode === 'final' && 'Unggah Dokumen Final Resmi (Arsip)'}
+                  {stageUploadMode === 'requester_revision' && 'Unggah Berkas Revisi Pemohon'}
+                </DialogTitle>
+                <DialogDescription className="text-xs text-[#64748B] mt-0.5">
+                  {stageUploadMode === 'legal_draft' &&
+                    'Unggah dokumen hasil telaah klausul atau draf revisi legal ke sistem.'}
+                  {stageUploadMode === 'legal_approval' &&
+                    'Unggah lembar clearance / persetujuan legal management.'}
+                  {stageUploadMode === 'bod_signed' &&
+                    'Unggah salinan dokumen yang telah ditandatangani oleh Direksi.'}
+                  {stageUploadMode === 'final' &&
+                    'Unggah berkas final bertanda tangan lengkap untuk arsip permanen.'}
+                  {stageUploadMode === 'requester_revision' &&
+                    'Unggah perbaikan berkas sesuai catatan telaah tim legal.'}
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+
+          <form onSubmit={handleStageUploadSubmit} className="space-y-4 pt-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs font-semibold">Nomor Berkas</Label>
+                <Input
+                  value={activeDoc?.docNumber || ''}
+                  disabled
+                  className="h-9 text-xs rounded-xl bg-[#F8FAFC] font-semibold text-[#0F172A]"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <Label className="text-xs font-semibold">
+                  Label / Tag Versi <span className="text-[#DC2626]">*</span>
+                </Label>
+                <Input
+                  value={stageUploadTag}
+                  onChange={(e) => setStageUploadTag(e.target.value)}
+                  placeholder="Contoh: Hasil-Telaah-V1, Clearance-Legal"
+                  className="h-9 text-xs rounded-xl"
+                  required
+                />
+              </div>
+            </div>
+
+            {/* File Upload Area */}
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold">
+                Berkas Dokumen <span className="text-[#DC2626]">*</span>
+              </Label>
+              <div className="border-2 border-dashed border-[#CBD5E1] hover:border-[#163A70] rounded-2xl p-4 text-center transition-colors bg-[#F8FAFC]">
+                {stageUploadFile ? (
+                  <div className="flex items-center justify-between bg-white p-3 rounded-xl border border-[#E2E8F0]">
+                    <div className="flex items-center gap-2.5 overflow-hidden">
+                      <div className="p-2 bg-[#EBF2FF] text-[#163A70] rounded-lg">
+                        <FileText className="h-4 w-4" />
+                      </div>
+                      <div className="text-left truncate">
+                        <p className="text-xs font-bold text-[#0F172A] truncate">
+                          {stageUploadFile.originalName}
+                        </p>
+                        <p className="text-[10.5px] text-[#64748B]">
+                          {(stageUploadFile.size / (1024 * 1024)).toFixed(2)} MB
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setStageUploadFile(null)}
+                      className="text-[#DC2626] hover:bg-[#FEF2F2] h-8 px-2"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div>
+                    <FileUp className="h-7 w-7 mx-auto text-[#94A3B8] mb-1.5" />
+                    <p className="text-xs font-bold text-[#0F172A]">Pilih berkas untuk diunggah</p>
+                    <p className="text-[10.5px] text-[#64748B] mt-0.5">
+                      PDF, DOCX, XLSX (Maks. 20 MB)
+                    </p>
+                    <label className="mt-2.5 inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#163A70] text-white text-xs font-bold rounded-xl cursor-pointer hover:bg-[#0B2147] transition-all">
+                      <Upload className="h-3.5 w-3.5" />
+                      <span>Cari Berkas</span>
+                      <input
+                        type="file"
+                        onChange={handleStageFileUpload}
+                        accept=".pdf,.docx,.doc,.xlsx,.xls,.zip"
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Notes */}
+            <div className="space-y-1">
+              <Label className="text-xs font-semibold">Catatan / Keterangan Dokumen</Label>
+              <Textarea
+                value={stageUploadNotes}
+                onChange={(e) => setStageUploadNotes(e.target.value)}
+                placeholder="Tuliskan ringkasan telaah, penyesuaian pasal, atau instruksi..."
+                rows={3}
+                className="text-xs rounded-xl"
+              />
+            </div>
+
+            {/* Advance Stage Option */}
+            {stageUploadMode !== 'final' && (
+              <div className="flex items-center justify-between p-3 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0]">
+                <div>
+                  <div className="text-xs font-bold text-[#0F172A]">
+                    Lanjutkan ke Tahap Berikutnya
+                  </div>
+                  <div className="text-[10.5px] text-[#64748B]">
+                    Otomatis perbarui status dan ajukan berkas ke proses selanjutnya.
+                  </div>
+                </div>
+                <Switch
+                  checked={stageUploadAdvance}
+                  onCheckedChange={setStageUploadAdvance}
+                />
+              </div>
+            )}
+
+            <DialogFooter className="pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsStageUploadModalOpen(false)}
+              >
+                Batal
+              </Button>
+              <Button
+                type="submit"
+                disabled={stageUploadLoading || !stageUploadFile}
+                className={`font-bold text-white ${
+                  stageUploadMode === 'final'
+                    ? 'bg-[#16A34A] hover:bg-[#15803D]'
+                    : 'bg-[#163A70] hover:bg-[#0B2147]'
+                }`}
+              >
+                {stageUploadLoading ? 'Mengunggah...' : 'Unggah & Simpan'}
               </Button>
             </DialogFooter>
           </form>

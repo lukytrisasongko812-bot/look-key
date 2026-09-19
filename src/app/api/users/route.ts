@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
 import { getDriveUsers, getDriveUserByEmail, saveDriveUser, StoredUser } from '@/lib/drive-store'
-import { sendNotificationEmail } from '@/lib/email'
+import { sendInviteEmail } from '@/lib/email'
 import { getUserFromRequest } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
@@ -54,13 +54,16 @@ export async function POST(request: NextRequest) {
 
     await saveDriveUser(newUser)
 
-    // Send invitation email via Resend
+    // Send invitation email with credentials card
     const inviterName = tokenUser?.employeeName || 'Administrator RIDE'
-    await sendNotificationEmail({
+    await sendInviteEmail({
       to: email.toLowerCase().trim(),
       userName: employeeName,
-      title: 'Undangan Bergabung ke Portal RIDE Platform',
-      description: `Halo ${employeeName}, Anda telah diundang oleh ${inviterName} untuk bergabung ke sistem RIDE dengan peran: ${newUser.role}. Kata sandi sementara Anda: "${tempPassword}". Silakan masuk ke https://risetrack.id dan perbarui kata sandi Anda.`,
+      role: newUser.role,
+      division: newUser.division,
+      position: newUser.position,
+      temporaryPassword: tempPassword,
+      invitedByName: inviterName,
     }).catch((err) => console.error('[Invite Email Error]', err))
 
     return NextResponse.json(

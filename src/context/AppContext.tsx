@@ -170,7 +170,17 @@ interface AppContextType {
   updateDocument: (id: string, updates: Partial<DocumentItem>) => Promise<boolean>
   deleteDocument: (id: string) => Promise<boolean>
   transitionDocument: (id: string, action: string, notes?: string) => Promise<boolean>
-  uploadRevision: (id: string, file: DocumentFile, notes: string, versionTag?: string) => Promise<boolean>
+  uploadRevision: (
+    id: string,
+    file: DocumentFile,
+    notes: string,
+    versionTag?: string,
+    options?: {
+      actionLabel?: string
+      advanceStage?: boolean
+      fileType?: 'initial' | 'revision' | 'supporting' | 'final'
+    }
+  ) => Promise<boolean>
   uploadFinalDocument: (id: string, file: DocumentFile, notes: string) => Promise<boolean>
   submitDecision: (id: string, decision: { type: 'renew' | 'terminate' | 'amendment'; justification: string; considerations: string[] }) => Promise<boolean>
   updateDocumentReminders: (id: string, reminders: Partial<ContractReminderConfig>) => Promise<boolean>
@@ -591,18 +601,35 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const createDocument = async (docData: Partial<DocumentItem>): Promise<DocumentItem | null> => {
     try {
       const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-      if (token) headers['Authorization'] = `Bearer ${token}`
+      const currentToken =
+        token ||
+        tokenRef.current ||
+        (typeof window !== 'undefined'
+          ? localStorage.getItem('ride_token') || localStorage.getItem('rise_token')
+          : null)
+      if (currentToken) headers['Authorization'] = `Bearer ${currentToken}`
+
+      const payload: Partial<DocumentItem> = {
+        ...docData,
+        pic: docData.pic || user?.employeeName || 'Requester',
+        picEmail: docData.picEmail || user?.email || '',
+        createdBy: docData.createdBy || user?.id || (user as any)?.userId || user?.email,
+      }
 
       const res = await fetch('/api/documents', {
         method: 'POST',
         headers,
-        body: JSON.stringify(docData),
+        body: JSON.stringify(payload),
       })
       if (res.ok) {
-        const created = await res.json()
+        const created: DocumentItem = await res.json()
+        setDocuments((prev) => [created, ...prev.filter((d) => d._id !== created._id)])
         await fetchDocuments()
         await fetchNotifications()
         return created
+      } else {
+        const errJson = await res.json().catch(() => ({}))
+        console.error('Failed to create document HTTP error:', res.status, errJson)
       }
       return null
     } catch (e) {
@@ -655,7 +682,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const transitionDocument = async (id: string, action: string, notes?: string): Promise<boolean> => {
     try {
       const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-      if (token) headers['Authorization'] = `Bearer ${token}`
+      const currentToken =
+        token ||
+        tokenRef.current ||
+        (typeof window !== 'undefined'
+          ? localStorage.getItem('ride_token') || localStorage.getItem('rise_token')
+          : null)
+      if (currentToken) headers['Authorization'] = `Bearer ${currentToken}`
 
       const res = await fetch(`/api/documents/${id}/transition`, {
         method: 'POST',
@@ -663,6 +696,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         body: JSON.stringify({ action, notes }),
       })
       if (res.ok) {
+        const data = await res.json()
+        if (data.document) {
+          setDocuments((prev) => [data.document, ...prev.filter((d) => d._id !== data.document._id)])
+        }
         await fetchDocuments()
         await fetchNotifications()
         return true
@@ -674,17 +711,45 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const uploadRevision = async (id: string, file: DocumentFile, notes: string, versionTag?: string): Promise<boolean> => {
+  const uploadRevision = async (
+    id: string,
+    file: DocumentFile,
+    notes: string,
+    versionTag?: string,
+    options?: {
+      actionLabel?: string
+      advanceStage?: boolean
+      fileType?: 'initial' | 'revision' | 'supporting' | 'final'
+    }
+  ): Promise<boolean> => {
     try {
       const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-      if (token) headers['Authorization'] = `Bearer ${token}`
+      const currentToken =
+        token ||
+        tokenRef.current ||
+        (typeof window !== 'undefined'
+          ? localStorage.getItem('ride_token') || localStorage.getItem('rise_token')
+          : null)
+      if (currentToken) headers['Authorization'] = `Bearer ${currentToken}`
 
       const res = await fetch(`/api/documents/${id}/version`, {
         method: 'POST',
         headers,
-        body: JSON.stringify({ file, notes, isFinal: false, versionTag }),
+        body: JSON.stringify({
+          file,
+          notes,
+          isFinal: false,
+          versionTag,
+          actionLabel: options?.actionLabel,
+          advanceStage: options?.advanceStage,
+          fileType: options?.fileType || 'revision',
+        }),
       })
       if (res.ok) {
+        const data = await res.json()
+        if (data.document) {
+          setDocuments((prev) => [data.document, ...prev.filter((d) => d._id !== data.document._id)])
+        }
         await fetchDocuments()
         await fetchNotifications()
         return true
@@ -699,7 +764,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const uploadFinalDocument = async (id: string, file: DocumentFile, notes: string): Promise<boolean> => {
     try {
       const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-      if (token) headers['Authorization'] = `Bearer ${token}`
+      const currentToken =
+        token ||
+        tokenRef.current ||
+        (typeof window !== 'undefined'
+          ? localStorage.getItem('ride_token') || localStorage.getItem('rise_token')
+          : null)
+      if (currentToken) headers['Authorization'] = `Bearer ${currentToken}`
 
       const res = await fetch(`/api/documents/${id}/version`, {
         method: 'POST',
@@ -707,6 +778,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         body: JSON.stringify({ file, notes, isFinal: true, versionTag: 'FINAL' }),
       })
       if (res.ok) {
+        const data = await res.json()
+        if (data.document) {
+          setDocuments((prev) => [data.document, ...prev.filter((d) => d._id !== data.document._id)])
+        }
         await fetchDocuments()
         await fetchNotifications()
         return true

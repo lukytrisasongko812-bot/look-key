@@ -382,11 +382,11 @@ export function LoginScreen({ skipIntro = false }: { skipIntro?: boolean } = {})
             {loading ? (
               <div className="flex items-center gap-2">
                 <RideSpinner size="xs" showGlow={false} speed="fast" />
-                <span>Memproses Otentikasi...</span>
+                <span>Memproses...</span>
               </div>
             ) : (
               <>
-                <span>Masuk ke Portal RIDE</span>
+                <span>Masuk</span>
                 <ChevronRight className="h-4 w-4" />
               </>
             )}
@@ -395,7 +395,7 @@ export function LoginScreen({ skipIntro = false }: { skipIntro?: boolean } = {})
 
         <div className="mt-5 border-t border-[#F1F5F9] pt-3 text-center">
           <p className="text-[11px] text-[#64748B]">
-            Akses internal &amp; privat · <span className="font-semibold text-[#163A70]">risetrack.id</span>
+            Akses internal · <span className="font-semibold text-[#163A70]">risetrack.id</span>
           </p>
         </div>
       </div>
@@ -409,10 +409,10 @@ export function LoginScreen({ skipIntro = false }: { skipIntro?: boolean } = {})
               <KeyRound className="h-6 w-6" />
             </div>
             <DialogTitle className="text-center text-lg font-bold text-[#0B2147]">
-              Verifikasi Otentikasi Dua Langkah (2FA)
+              Verifikasi 2FA
             </DialogTitle>
             <DialogDescription className="text-center text-xs text-[#64748B]">
-              Masukkan 6 digit kode OTP yang telah dikirimkan ke email <span className="font-bold text-[#0F172A]">{email}</span>.
+              Masukkan 6 digit kode OTP yang dikirim ke email <span className="font-bold text-[#0F172A]">{email}</span>.
             </DialogDescription>
           </DialogHeader>
 
@@ -445,7 +445,7 @@ export function LoginScreen({ skipIntro = false }: { skipIntro?: boolean } = {})
                   <span>Memverifikasi...</span>
                 </>
               ) : (
-                'Verifikasi & Lanjutkan Masuk'
+                'Verifikasi'
               )}
             </Button>
 
@@ -456,7 +456,7 @@ export function LoginScreen({ skipIntro = false }: { skipIntro?: boolean } = {})
                 disabled={resendingOtp}
                 className="text-xs text-[#163A70] font-semibold hover:underline cursor-pointer disabled:opacity-50"
               >
-                {resendingOtp ? 'Mengirim ulang...' : 'Belum menerima kode? Kirim ulang kode OTP'}
+                {resendingOtp ? 'Mengirim ulang...' : 'Kirim ulang kode OTP'}
               </button>
             </div>
           </form>
@@ -469,19 +469,19 @@ export function LoginScreen({ skipIntro = false }: { skipIntro?: boolean } = {})
           <DialogHeader>
             <div className="flex items-center gap-2">
               <Lock className="h-5 w-5 text-[#163A70]" />
-              <DialogTitle className="text-[#0B2147]">Perbarui Kata Sandi</DialogTitle>
+              <DialogTitle className="text-[#0B2147]">Ubah Kata Sandi</DialogTitle>
             </div>
             <DialogDescription>
-              Masukkan email akun Anda beserta kata sandi baru yang ingin diterapkan.
+              Masukkan email dan kata sandi baru Anda.
             </DialogDescription>
           </DialogHeader>
 
           <form onSubmit={handleResetPasswordSubmit} className="space-y-4 pt-2">
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold">Email Akun Terdaftar</Label>
+              <Label className="text-xs font-semibold">Email</Label>
               <Input
                 type="email"
-                placeholder="nama@resourcesid.co.id"
+                placeholder="nama@domain.co.id"
                 value={forgotEmail}
                 onChange={(e) => setForgotEmail(e.target.value)}
                 required
@@ -515,7 +515,7 @@ export function LoginScreen({ skipIntro = false }: { skipIntro?: boolean } = {})
                 type="submit"
                 className="h-10 text-xs bg-[#163A70] hover:bg-[#0B2147] text-white font-bold rounded-xl"
               >
-                Simpan Kata Sandi
+                Simpan Sandi
               </Button>
             </DialogFooter>
           </form>

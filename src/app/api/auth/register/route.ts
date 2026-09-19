@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
 import { getDriveUserByEmail, saveDriveUser, StoredUser } from '@/lib/drive-store'
 import { signToken } from '@/lib/auth'
+import { sendInviteEmail } from '@/lib/email'
 
 export const dynamic = 'force-dynamic'
 
@@ -39,6 +40,16 @@ export async function POST(request: NextRequest) {
     }
 
     await saveDriveUser(newUser)
+
+    // Send confirmation welcome email
+    await sendInviteEmail({
+      to: newUser.email,
+      userName: newUser.employeeName,
+      role: newUser.role,
+      division: newUser.division,
+      position: newUser.position,
+      invitedByName: 'Registrasi Mandiri Portal RIDE',
+    }).catch((err) => console.error('[Register Welcome Email Error]', err))
 
     const token = signToken({
       userId: newUser._id,

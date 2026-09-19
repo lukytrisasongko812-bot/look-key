@@ -165,8 +165,8 @@ export function MyDocumentsView() {
           </h1>
           <p className="text-xs text-[#64748B] mt-0.5">
             {isPrivileged
-              ? `Manajemen dan pelacakan dokumen sesuai matriks kewenangan peran ${userRole}.`
-              : `Arsip berkas dan pelacakan dokumen pengajuan resmi Anda (PIC: ${user?.employeeName || 'Inisiator'}).`}
+              ? `Daftar dokumen sesuai kewenangan ${userRole}.`
+              : `Daftar dan status dokumen pengajuan Anda.`}
           </p>
         </div>
 
@@ -175,7 +175,7 @@ export function MyDocumentsView() {
           className="self-start sm:self-auto h-10 sm:h-11 bg-[#163A70] hover:bg-[#0B2147] text-white font-bold text-xs rounded-xl gap-2 shadow-sm cursor-pointer px-4"
         >
           <Plus className="h-4 w-4" />
-          <span>Ajukan Dokumen Baru</span>
+          <span>Ajukan Dokumen</span>
         </Button>
       </div>
 
@@ -259,7 +259,7 @@ export function MyDocumentsView() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#94A3B8]" />
             <Input
               type="text"
-              placeholder="Cari nomor tiket, nama dokumen, PIC..."
+              placeholder="Cari dokumen atau PIC..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-9 h-9 sm:h-10 text-xs rounded-xl"
@@ -554,6 +554,7 @@ export function MyDocumentsView() {
                 <div><b>Kategori:</b> {viewModalDoc.category}</div>
                 <div><b>Divisi:</b> {viewModalDoc.division}</div>
                 <div><b>PIC:</b> {viewModalDoc.pic}</div>
+                <div><b>Prioritas (SLA):</b> {viewModalDoc.priority === 'Critical' ? 'Kritis (5 Hari)' : viewModalDoc.priority === 'Urgent' ? 'Mendesak (10 Hari)' : 'Normal (15 Hari)'}</div>
                 <div><b>Status:</b> {viewModalDoc.statusLabel || getDocStatusLabel(viewModalDoc)}</div>
               </div>
 
@@ -666,7 +667,7 @@ export function MyDocumentsView() {
               }}
               className="bg-[#163A70] hover:bg-[#0B2147] text-white font-bold text-xs"
             >
-              Buka di Halaman Tracking &amp; Riwayat
+              Lihat Riwayat Alur
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -677,7 +678,7 @@ export function MyDocumentsView() {
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="text-[#0B2147]">
-              Edit Pengajuan — {editModalDoc?.docNumber}
+              Edit Dokumen — {editModalDoc?.docNumber}
             </DialogTitle>
           </DialogHeader>
 
@@ -707,7 +708,7 @@ export function MyDocumentsView() {
                 Batal
               </Button>
               <Button type="submit" className="bg-[#163A70] hover:bg-[#0B2147] text-white font-bold">
-                Simpan Perubahan
+                Simpan
               </Button>
             </DialogFooter>
           </form>

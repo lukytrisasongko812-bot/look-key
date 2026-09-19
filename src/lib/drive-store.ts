@@ -15,6 +15,7 @@ import { User } from '@/models/User'
 import { DocumentModel } from '@/models/Document'
 
 const LOCAL_USERS_CACHE_FILE = '/tmp/ride_users_persistent_cache.json'
+const LOCAL_DOCS_CACHE_FILE = '/tmp/ride_docs_persistent_cache.json'
 
 function readLocalUsersCache(): StoredUser[] | null {
   try {
@@ -34,6 +35,29 @@ function readLocalUsersCache(): StoredUser[] | null {
 function writeLocalUsersCache(users: StoredUser[]) {
   try {
     fs.writeFileSync(LOCAL_USERS_CACHE_FILE, JSON.stringify(users), 'utf-8')
+  } catch (e) {
+    // Ignore write errors
+  }
+}
+
+function readLocalDocsCache(): StoredDocument[] | null {
+  try {
+    if (fs.existsSync(LOCAL_DOCS_CACHE_FILE)) {
+      const data = fs.readFileSync(LOCAL_DOCS_CACHE_FILE, 'utf-8')
+      const parsed = JSON.parse(data)
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed
+      }
+    }
+  } catch (e) {
+    // Ignore read errors
+  }
+  return null
+}
+
+function writeLocalDocsCache(docs: StoredDocument[]) {
+  try {
+    fs.writeFileSync(LOCAL_DOCS_CACHE_FILE, JSON.stringify(docs), 'utf-8')
   } catch (e) {
     // Ignore write errors
   }
@@ -323,7 +347,7 @@ export async function initAndSeedDriveStore() {
       _id: 'doc_ride_2026_0150',
       docNumber: 'RIDE-2026-0150',
       name: 'Perjanjian Kerja Sama Jual Beli RQD',
-      category: 'Perjanjian',
+      category: 'Kontrak Hukum',
       division: 'Direktorat Operasi & Logistik',
       priority: 'Normal',
       confidentiality: 'Internal',
@@ -397,7 +421,7 @@ export async function initAndSeedDriveStore() {
       _id: 'doc_ride_2026_0151',
       docNumber: 'RIDE-2026-0151',
       name: 'Perjanjian Sewa Motor Operasional Lapangan',
-      category: 'Perjanjian',
+      category: 'Kontrak Hukum',
       division: 'Direktorat Operasi & Logistik',
       priority: 'Normal',
       confidentiality: 'Internal',
@@ -471,7 +495,7 @@ export async function initAndSeedDriveStore() {
       _id: 'doc_ride_2026_0141',
       docNumber: 'RIDE-2026-0141',
       name: 'Non-Disclosure Agreement (NDA) Studi Kelayakan Smelter Pomalaa',
-      category: 'Kerahasiaan (NDA)',
+      category: 'NDA',
       division: 'Direktorat Pengembangan Usaha',
       priority: 'Urgent',
       confidentiality: 'Confidential',
@@ -576,7 +600,7 @@ export async function initAndSeedDriveStore() {
       _id: 'doc_ride_2026_0142',
       docNumber: 'RIDE-2026-0142',
       name: 'Perjanjian Sewa Alat Berat Pertambangan - Site Pomalaa',
-      category: 'Perjanjian',
+      category: 'Kontrak Hukum',
       division: 'Direktorat Operasi',
       priority: 'Urgent',
       confidentiality: 'Internal',
@@ -821,7 +845,7 @@ export async function initAndSeedDriveStore() {
       _id: 'doc_ride_2026_0144',
       docNumber: 'RIDE-2026-0144',
       name: 'Kontrak Pengadaan Ban Heavy Dump Truck 100 Ton',
-      category: 'Pengadaan / Vendor',
+      category: 'Kontrak Hukum',
       division: 'Direktorat Operasi',
       priority: 'Urgent',
       confidentiality: 'Internal',
@@ -903,7 +927,7 @@ export async function initAndSeedDriveStore() {
       _id: 'doc_ride_2026_0145',
       docNumber: 'RIDE-2026-0145',
       name: 'Power Purchase Agreement (PPA) Suplai Listrik Pabrik Smelter',
-      category: 'Komersial / Operasi',
+      category: 'MoU',
       division: 'Direktorat Operasi',
       priority: 'Critical',
       confidentiality: 'Confidential',
@@ -1056,6 +1080,78 @@ export async function initAndSeedDriveStore() {
     },
   ]
 
+  // Restore any persisted documents from local disk cache (/tmp)
+  const cachedDocs = readLocalDocsCache()
+  if (cachedDocs && cachedDocs.length > 0) {
+    for (const cd of cachedDocs) {
+      const idx = store.documents.findIndex(
+        (d) => d._id === cd._id || (cd.docNumber && d.docNumber === cd.docNumber)
+      )
+      if (idx >= 0) {
+        store.documents[idx] = { ...store.documents[idx], ...cd }
+      } else {
+        store.documents.unshift(cd)
+      }
+    }
+  }
+
+  // Gracefully load from MongoDB if available
+  try {
+    await connectToDatabase()
+    const dbDocs = await DocumentModel.find({}).lean()
+    if (dbDocs && dbDocs.length > 0) {
+      for (const d of dbDocs) {
+        const mappedDoc: StoredDocument = {
+          _id: (d as any)._id?.toString() || (d as any).id,
+          docNumber: d.docNumber,
+          name: d.name,
+          category: d.category,
+          division: d.division || 'Direktorat Umum',
+          priority: d.priority || 'Normal',
+          confidentiality: d.confidentiality || 'Internal',
+          contractStart: d.contractStart ? new Date(d.contractStart).toISOString() : null,
+          contractEnd: d.contractEnd ? new Date(d.contractEnd).toISOString() : null,
+          noDuration: Boolean(d.noDuration),
+          notes: d.notes || '',
+          stage: d.stage ?? 0,
+          stageStatus: d.stageStatus || 'active',
+          statusLabel: d.statusLabel || 'Pengajuan Baru',
+          pic: d.pic || 'Pengaju',
+          picEmail: d.picEmail || '',
+          revisionRequested: Boolean(d.revisionRequested),
+          rejected: Boolean(d.rejected),
+          files: (d.files || []) as any,
+          initialDocument: (d.initialDocument || null) as any,
+          revisionDocuments: (d.revisionDocuments || []) as any,
+          supportingDocuments: (d.supportingDocuments || []) as any,
+          finalDocument: (d.finalDocument || null) as any,
+          versions: (d.versions || []) as any,
+          decision: (d.decision || null) as any,
+          reminders: (d.reminders || null) as any,
+          history: (d.history || []) as any,
+          driveFolderId: d.driveFolderId,
+          driveFolderUrl: d.driveFolderUrl,
+          createdBy: d.createdBy?.toString(),
+          createdAt: d.createdAt ? new Date(d.createdAt).toISOString() : now,
+          updatedAt: d.updatedAt ? new Date(d.updatedAt).toISOString() : now,
+        }
+        const idx = store.documents.findIndex(
+          (x) => x.docNumber === mappedDoc.docNumber || x._id === mappedDoc._id
+        )
+        if (idx >= 0) {
+          store.documents[idx] = { ...store.documents[idx], ...mappedDoc }
+        } else {
+          store.documents.unshift(mappedDoc)
+        }
+      }
+      writeLocalDocsCache(store.documents)
+    }
+  } catch (err) {
+    // MongoDB failure ignored safely
+  }
+
+  writeLocalDocsCache(store.documents)
+
   store.notifications = [
     {
       _id: 'notif_01',
@@ -1131,13 +1227,31 @@ export async function getDriveDocumentById(id: string) {
 export async function saveDriveDocument(doc: StoredDocument) {
   await initAndSeedDriveStore()
   const store = getStore()
-  const idx = store.documents.findIndex((d) => d._id === doc._id)
+  const idx = store.documents.findIndex((d) => d._id === doc._id || d.docNumber === doc.docNumber)
   if (idx >= 0) {
     store.documents[idx] = { ...doc, updatedAt: new Date().toISOString() }
   } else {
     store.documents.unshift(doc)
   }
+
+  // 1. Persist to local disk cache (/tmp)
+  writeLocalDocsCache(store.documents)
+
+  // 2. Synchronize to Google Drive in background
   syncDocumentToGoogleDrive(doc).catch((e) => console.error('[Background GDrive Sync Doc Error]', e))
+
+  // 3. Graceful MongoDB persistence
+  try {
+    await connectToDatabase()
+    await DocumentModel.findOneAndUpdate(
+      { docNumber: doc.docNumber },
+      { $set: doc },
+      { upsert: true, new: true }
+    )
+  } catch (err) {
+    // MongoDB optional fallback
+  }
+
   return doc
 }
 
@@ -1146,7 +1260,12 @@ export async function deleteDriveDocument(id: string) {
   const store = getStore()
   const idx = store.documents.findIndex((d) => d._id === id || d.docNumber === id)
   if (idx >= 0) {
-    store.documents.splice(idx, 1)
+    const [deleted] = store.documents.splice(idx, 1)
+    writeLocalDocsCache(store.documents)
+    try {
+      await connectToDatabase()
+      await DocumentModel.deleteOne({ $or: [{ _id: id }, { docNumber: id }] })
+    } catch {}
     return true
   }
   return false

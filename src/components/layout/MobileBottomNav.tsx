@@ -13,6 +13,7 @@ import {
 export function MobileBottomNav() {
   const {
     currentView,
+    trackSubTab,
     setCurrentView,
     documents,
     user,
@@ -35,7 +36,7 @@ export function MobileBottomNav() {
       icon: GitPullRequestDraft,
       badge: reviewCount > 0 ? reviewCount : undefined,
       action: () => setCurrentView('tracking', 'progress'),
-      isActive: currentView === 'tracking',
+      isActive: currentView === 'tracking' && trackSubTab === 'progress',
     },
     // Center Floating Action Button (Ajukan Dokumen)
     {
@@ -43,7 +44,7 @@ export function MobileBottomNav() {
       label: 'Ajukan',
       isCenterAction: true,
       action: () => setCurrentView('tracking', 'new'),
-      isActive: false,
+      isActive: currentView === 'tracking' && trackSubTab === 'new',
     },
     {
       id: 'myDocuments' as ViewType,

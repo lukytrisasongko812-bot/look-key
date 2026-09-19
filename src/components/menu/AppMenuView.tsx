@@ -73,9 +73,9 @@ export function AppMenuView() {
               <User className="h-4 w-4" />
             </div>
             <div>
-              <div className="text-xs font-bold text-[#0F172A]">Profil &amp; Keamanan Akun</div>
+              <div className="text-xs font-bold text-[#0F172A]">Profil Akun</div>
               <div className="text-[10.5px] text-[#64748B]">
-                Kelola foto, data diri, kata sandi, dan 2FA
+                Foto, data diri, kata sandi, dan 2FA
               </div>
             </div>
           </div>
@@ -94,11 +94,11 @@ export function AppMenuView() {
               <Bell className="h-4 w-4" />
             </div>
             <div>
-              <div className="text-xs font-bold text-[#0F172A]">Notifikasi Sistem</div>
+              <div className="text-xs font-bold text-[#0F172A]">Notifikasi</div>
               <div className="text-[10.5px] text-[#64748B]">
                 {unreadNotifCount > 0
-                  ? `${unreadNotifCount} notifikasi baru belum dibaca`
-                  : 'Semua notifikasi telah dibaca'}
+                  ? `${unreadNotifCount} notifikasi belum dibaca`
+                  : 'Tidak ada notifikasi baru'}
               </div>
             </div>
           </div>

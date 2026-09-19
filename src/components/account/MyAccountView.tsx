@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import { useApp } from '@/context/AppContext'
-import { normalizeRole } from '@/lib/roles'
+import { normalizeRole, canAccessAuthorityMatrix } from '@/lib/roles'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -262,10 +262,10 @@ export function MyAccountView() {
       {/* Page Header */}
       <div>
         <h1 className="text-2xl font-bold font-display text-[#0B2147] tracking-tight">
-          Profil &amp; Keamanan Akun
+          Profil Akun
         </h1>
         <p className="text-xs text-[#64748B] mt-1">
-          Pengaturan identitas karyawan, otentikasi dua langkah (2FA), dan wewenang operasional Anda di RIDE.
+          Informasi identitas, keamanan 2FA, dan peran pengguna.
         </p>
       </div>
 
@@ -389,7 +389,7 @@ export function MyAccountView() {
               className="px-4 py-2 rounded-xl text-xs font-bold text-[#64748B] data-[state=active]:bg-white data-[state=active]:text-[#163A70] data-[state=active]:shadow-xs transition-all flex items-center gap-1.5"
             >
               <User className="h-3.5 w-3.5" />
-              <span>Informasi Profil</span>
+              <span>Profil</span>
             </TabsTrigger>
             <TabsTrigger
               value="security"
@@ -403,7 +403,7 @@ export function MyAccountView() {
               className="px-4 py-2 rounded-xl text-xs font-bold text-[#64748B] data-[state=active]:bg-white data-[state=active]:text-[#163A70] data-[state=active]:shadow-xs transition-all flex items-center gap-1.5"
             >
               <ShieldCheck className="h-3.5 w-3.5" />
-              <span>Peran &amp; Matriks</span>
+              <span>Peran &amp; Wewenang</span>
             </TabsTrigger>
           </TabsList>
         </div>
@@ -431,7 +431,7 @@ export function MyAccountView() {
                   <div className="space-y-1.5">
                     <Label className="text-xs font-bold text-[#0B2147] flex items-center gap-1.5">
                       <Mail className="h-3.5 w-3.5 text-[#163A70]" />
-                      <span>Email Akun (Login)</span>
+                      <span>Email (Login)</span>
                     </Label>
                     <Input
                       value={email}
@@ -443,7 +443,7 @@ export function MyAccountView() {
                   <div className="space-y-1.5">
                     <Label className="text-xs font-bold text-[#0B2147] flex items-center gap-1.5">
                       <Building className="h-3.5 w-3.5 text-[#163A70]" />
-                      <span>Divisi / Direktorat</span>
+                      <span>Divisi</span>
                     </Label>
                     <Input
                       value={department}
@@ -457,13 +457,13 @@ export function MyAccountView() {
                   <div className="space-y-1.5">
                     <Label className="text-xs font-bold text-[#0B2147] flex items-center gap-1.5">
                       <Briefcase className="h-3.5 w-3.5 text-[#163A70]" />
-                      <span>Jabatan Resmi</span>
+                      <span>Jabatan</span>
                     </Label>
                     <Input
                       value={position}
                       onChange={(e) => setPosition(e.target.value)}
                       required
-                      placeholder="Head of Enterprise Legal"
+                      placeholder="Head of Legal"
                       className="h-11 text-xs rounded-xl border-[#CBD5E1] focus:border-[#163A70] bg-[#F8FAFC]/50 focus:bg-white"
                     />
                   </div>
@@ -471,7 +471,7 @@ export function MyAccountView() {
                   <div className="space-y-1.5 sm:col-span-2">
                     <Label className="text-xs font-bold text-[#0B2147] flex items-center gap-1.5">
                       <Phone className="h-3.5 w-3.5 text-[#163A70]" />
-                      <span>Nomor WhatsApp / Kontak</span>
+                      <span>Nomor WhatsApp</span>
                     </Label>
                     <Input
                       value={phone}
@@ -495,7 +495,7 @@ export function MyAccountView() {
                         <Check className="h-4 w-4 mr-1.5" /> Tersimpan!
                       </>
                     ) : (
-                      'Simpan Perubahan'
+                      'Simpan Profil'
                     )}
                   </Button>
                 </div>
@@ -515,7 +515,7 @@ export function MyAccountView() {
                     <span>Otentikasi Dua Langkah (2FA OTP)</span>
                   </div>
                   <div className="text-[11px] sm:text-xs text-[#64748B] leading-relaxed">
-                    Mengirim kode OTP 6-digit ke email korporat Anda setiap kali melakukan proses masuk ke portal RIDE.
+                    Kirim kode OTP 6 digit ke email Anda setiap kali masuk portal.
                   </div>
                 </div>
                 <Switch
@@ -532,10 +532,10 @@ export function MyAccountView() {
                 <div className="space-y-1 pr-4">
                   <div className="text-xs sm:text-sm font-bold text-[#0B2147] flex items-center gap-2">
                     <Shield className="h-4 w-4 text-[#163A70]" />
-                    <span>Pemberitahuan Aktivitas &amp; Dokumen</span>
+                    <span>Notifikasi Email</span>
                   </div>
                   <div className="text-[11px] sm:text-xs text-[#64748B] leading-relaxed">
-                    Menerima notifikasi email saat ada pengajuan baru, permintaan revisi, atau dokumen final selesai.
+                    Terima email saat ada pengajuan, permohonan revisi, atau dokumen final selesai.
                   </div>
                 </div>
                 <Switch
@@ -554,12 +554,13 @@ export function MyAccountView() {
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#F1F5F9]">
                 <div>
                   <h3 className="text-sm font-bold text-[#0B2147]">
-                    Peran Pengguna Anda: <span className="text-[#163A70] font-black">{normalizeRole(user?.role)}</span>
+                    Peran Pengguna: <span className="text-[#163A70] font-black">{normalizeRole(user?.role)}</span>
                   </h3>
                   <p className="text-xs text-[#64748B] mt-0.5">
-                    Tingkat kewenangan menentukan wewenang operasional Anda dalam siklus alur 7 tahap dokumen.
+                    Wewenang operasional dalam alur dokumen.
                   </p>
                 </div>
+                {canAccessAuthorityMatrix(user?.role) && (
                   <Button
                     size="sm"
                     type="button"
@@ -569,17 +570,18 @@ export function MyAccountView() {
                     <ShieldCheck className="h-4 w-4" />
                     <span>Matriks Lengkap</span>
                   </Button>
+                )}
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-[#475569]">
                   <div className="p-3.5 rounded-2xl bg-[#F8FAFC] border border-[#E2E8F0] space-y-1">
-                    <span className="font-bold text-[#0B2147] block">Hak Pembuatan Dokumen:</span>
-                    <span>Diizinkan membuat draf pengajuan berkas baru (V0).</span>
+                    <span className="font-bold text-[#0B2147] block">Pembuatan Dokumen:</span>
+                    <span>Dapat mengajukan berkas draf awal (V0).</span>
                   </div>
                   <div className="p-3.5 rounded-2xl bg-[#F8FAFC] border border-[#E2E8F0] space-y-1">
-                    <span className="font-bold text-[#0B2147] block">Hak Review &amp; Revisi:</span>
+                    <span className="font-bold text-[#0B2147] block">Telaah &amp; Revisi:</span>
                     <span>
-                      Dapat memeriksa, memberi catatan revisi, dan menyetujui tahapan.
+                      Dapat menelaah, memberi catatan revisi, dan menyetujui tahapan.
                     </span>
                   </div>
                 </div>
@@ -592,15 +594,15 @@ export function MyAccountView() {
       <Dialog open={isPasswordModalOpen} onOpenChange={setIsPasswordModalOpen}>
         <DialogContent className="max-w-md rounded-3xl">
           <DialogHeader>
-            <DialogTitle className="text-[#0B2147] font-bold text-base">Ubah Kata Sandi Akun</DialogTitle>
+            <DialogTitle className="text-[#0B2147] font-bold text-base">Ubah Kata Sandi</DialogTitle>
             <DialogDescription className="text-xs text-[#64748B]">
-              Masukkan kata sandi lama Anda untuk memverifikasi penggantian kata sandi baru.
+              Masukkan kata sandi lama dan baru Anda.
             </DialogDescription>
           </DialogHeader>
 
           <form onSubmit={handleChangePasswordSubmit} className="space-y-3.5 pt-2">
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold text-[#0B2147]">Kata Sandi Saat Ini</Label>
+              <Label className="text-xs font-bold text-[#0B2147]">Kata Sandi Lama</Label>
               <Input
                 type="password"
                 value={currentPw}
@@ -623,7 +625,7 @@ export function MyAccountView() {
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold text-[#0B2147]">Konfirmasi Kata Sandi Baru</Label>
+              <Label className="text-xs font-bold text-[#0B2147]">Konfirmasi Kata Sandi</Label>
               <Input
                 type="password"
                 value={confirmPw}
@@ -639,7 +641,7 @@ export function MyAccountView() {
                 Batal
               </Button>
               <Button type="submit" disabled={pwLoading} className="bg-[#163A70] hover:bg-[#0B2147] text-white font-bold rounded-xl text-xs">
-                {pwLoading ? 'Menyimpan...' : 'Perbarui Kata Sandi'}
+                {pwLoading ? 'Menyimpan...' : 'Simpan Sandi'}
               </Button>
             </DialogFooter>
           </form>

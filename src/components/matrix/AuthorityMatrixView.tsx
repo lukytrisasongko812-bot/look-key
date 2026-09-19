@@ -25,7 +25,7 @@ import {
   AlertTriangle,
 } from 'lucide-react'
 import { useApp, UserRole, UserProfile } from '@/context/AppContext'
-import { normalizeRole } from '@/lib/roles'
+import { normalizeRole, canAccessAuthorityMatrix } from '@/lib/roles'
 import { toast } from 'sonner'
 
 export function AuthorityMatrixView() {
@@ -41,16 +41,43 @@ export function AuthorityMatrixView() {
   const currentRole = normalizeRole(user?.role)
   const isRequester = currentRole === 'User' || currentRole === 'Guest'
   const isAdmin = currentRole === 'System Administrator' || currentRole === 'Board of Directors'
+  const hasAccess = canAccessAuthorityMatrix(user?.role)
 
   const [selectedRoleFilter, setSelectedRoleFilter] = useState<string>('ALL')
   const [deleteTargetUser, setDeleteTargetUser] = useState<UserProfile | null>(null)
   const [deleteLoading, setDeleteLoading] = useState(false)
 
   useEffect(() => {
-    if (isAdmin) {
+    if (isAdmin && hasAccess) {
       fetchAllUsers()
     }
-  }, [fetchAllUsers, isAdmin])
+  }, [fetchAllUsers, isAdmin, hasAccess])
+
+  if (!hasAccess) {
+    return (
+      <div className="max-w-xl mx-auto my-12 p-8 bg-white border border-[#E2E8F0] rounded-2xl shadow-sm text-center space-y-4 animate-in fade-in duration-300">
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#FEF2F2] text-[#DC2626]">
+          <ShieldAlert className="h-7 w-7" />
+        </div>
+        <div>
+          <h2 className="text-lg font-bold font-display text-[#0B2147]">
+            Akses Terbatas
+          </h2>
+          <p className="text-xs text-[#64748B] mt-1.5 max-w-sm mx-auto">
+            Matriks Kewenangan hanya dapat diakses oleh peran <b>Legal Management</b> ke atas.
+          </p>
+        </div>
+        <div className="pt-2">
+          <Button
+            onClick={() => setCurrentView('dashboard')}
+            className="bg-[#163A70] hover:bg-[#0B2147] text-white font-bold text-xs rounded-xl cursor-pointer"
+          >
+            Kembali ke Beranda
+          </Button>
+        </div>
+      </div>
+    )
+  }
 
   const roles = [
     {
@@ -60,11 +87,11 @@ export function AuthorityMatrixView() {
       subtitle: 'Peninjau Tamu',
       level: 'Tingkat 0 • Tamu',
       badgeColor: 'bg-[#F1F5F9] text-[#475569] border-[#CBD5E1]',
-      desc: 'Peninjau tamu atau mitra eksternal dengan hak akses penelusuran status berkas dokumen tanpa hak modifikasi.',
+      desc: 'Peninjau tamu dengan hak penelusuran status berkas tanpa hak modifikasi.',
       bullets: [
-        'Melihat ringkasan dan status penelusuran dokumen publik',
-        'Pratinjau berkas terbatas tanpa izin unggah berkas baru',
-        'Tidak memiliki kewenangan eksekusi telaah atau persetujuan',
+        'Melihat status berkas publik',
+        'Pratinjau berkas terbatas',
+        'Tanpa wewenang telaah atau persetujuan',
       ],
       permissions: {
         createDoc: false,
@@ -88,11 +115,11 @@ export function AuthorityMatrixView() {
       subtitle: 'Unit Kerja Pemohon',
       level: 'Tingkat 1 • Pemohon',
       badgeColor: 'bg-[#EFF6FF] text-[#1D4ED8] border-[#BFDBFE]',
-      desc: 'Karyawan atau unit kerja inisiator operasional yang mengajukan draf permohonan dokumen, kontrak kerja, dan pengadaan.',
+      desc: 'Unit kerja pemohon yang mengajukan draf dokumen, kontrak, dan pengadaan.',
       bullets: [
-        'Membuat registrasi tiket dan unggah draf pengajuan awal (V0)',
-        'Melihat & mengunduh seluruh berkas versi aktif dan lampiran',
-        'Mengunggah draf penyesuaian jika menerima permohonan revisi',
+        'Mengajukan draf awal (V0)',
+        'Melihat & mengunduh berkas aktif',
+        'Mengunggah draf perbaikan/revisi',
       ],
       permissions: {
         createDoc: true,
@@ -116,11 +143,11 @@ export function AuthorityMatrixView() {
       subtitle: 'Staf Hukum & Penelaah',
       level: 'Tingkat 2 • Staf Legal',
       badgeColor: 'bg-[#FFFBEB] text-[#B45309] border-[#FDE68A]',
-      desc: 'Staf ahli hukum yang menelaah klausul hukum, kepatuhan regulasi, serta memetakan mitigasi risiko kontraktual.',
+      desc: 'Staf hukum yang menelaah klausul, kepatuhan regulasi, dan mitigasi risiko.',
       bullets: [
-        'Penelaahan mendalam klausul kontrak & kepatuhan regulasi',
-        'Memberikan catatan telaah hukum (legal review notes) resmi',
-        'Menginstruksikan permintaan perbaikan/revisi kepada inisiator',
+        'Telaah klausul & regulasi',
+        'Memberikan catatan telaah resmi',
+        'Meminta revisi kepada pemohon',
       ],
       permissions: {
         createDoc: false,
@@ -144,11 +171,11 @@ export function AuthorityMatrixView() {
       subtitle: 'Tata Kelola & Kustodian',
       level: 'Tingkat 3 • Manajemen Legal',
       badgeColor: 'bg-[#F5F3FF] text-[#6D28D9] border-[#DDD6FE]',
-      desc: 'Pimpinan unit legal dan pengendali dokumen yang memverifikasi naskah final, kustodian arsip bertandatangan, dan memantau masa berlaku.',
+      desc: 'Pimpinan unit legal yang memverifikasi naskah final dan mengelola masa berlaku.',
       bullets: [
-        'Verifikasi final telaah hukum sebelum diajukan ke Direksi',
-        'Kustodian & registrasi naskah final bertanda tangan resmi',
-        'Pengendalian masa berlaku, terminasi, dan perpanjangan kontrak',
+        'Verifikasi telaah sebelum ke Direksi',
+        'Kustodian naskah final resmi',
+        'Pengendalian jatuh tempo kontrak',
       ],
       permissions: {
         createDoc: false,
@@ -172,11 +199,11 @@ export function AuthorityMatrixView() {
       subtitle: 'Dewan Direksi & Otorisasi',
       level: 'Tingkat 4 • Otorisator',
       badgeColor: 'bg-[#ECFDF5] text-[#047857] border-[#A7F3D0]',
-      desc: 'Jajaran Direksi korporat yang memegang kewenangan otorisasi eksekutif dan persetujuan penandatanganan dokumen kerja sama strategis.',
+      desc: 'Dewan Direksi dengan kewenangan otorisasi eksekutif dan persetujuan akhir.',
       bullets: [
-        'Otorisasi final & keputusan persetujuan penandatanganan',
-        'Penolakan dokumen kerja sama dengan justifikasi manajerial',
-        'Akses menyeluruh seluruh arsip dan riwayat keputusan dokumen',
+        'Otorisasi persetujuan akhir',
+        'Penolakan dokumen dengan justifikasi',
+        'Akses seluruh arsip & riwayat',
       ],
       permissions: {
         createDoc: false,
@@ -200,11 +227,11 @@ export function AuthorityMatrixView() {
       subtitle: 'Sistem, Keamanan & Akses',
       level: 'Tingkat 5 • Superuser',
       badgeColor: 'bg-[#FEF2F2] text-[#B91C1C] border-[#FECACA]',
-      desc: 'Pengelola sistem informasi, keamanan akun pengguna, hak istimewa RBAC, integrasi Google Drive, dan basis data.',
+      desc: 'Pengelola sistem, keamanan akun, peran pengguna, dan basis data.',
       bullets: [
-        'Kontrol penuh hak akses, peran, dan matriks kewenangan pengguna',
-        'Manajemen akun resmi, penerbitan undangan, dan audit log sistem',
-        'Pemeliharaan integritas basis data dan integrasi Google Drive',
+        'Kontrol penuh peran & akses',
+        'Kelola akun & undangan resmi',
+        'Pemeliharaan data & integrasi Drive',
       ],
       permissions: {
         createDoc: true,
@@ -224,18 +251,18 @@ export function AuthorityMatrixView() {
   ]
 
   const operationalActions = [
-    { key: 'createDoc', label: 'Ajukan Dokumen Baru (V0)', desc: 'Registrasi tiket dan unggah draf pengajuan awal', category: 'Fase 1: Inisiasi & Akses Berkas' },
-    { key: 'viewDocs', label: 'Akses & Unduh Berkas', desc: 'Membaca dan mengunduh draf aktif serta seluruh lampiran pendukung', category: 'Fase 1: Inisiasi & Akses Berkas' },
-    { key: 'addReviewNotes', label: 'Catatan & Telaah Klausul', desc: 'Memberikan feedback klausul hukum dan mitigasi risiko', category: 'Fase 2: Telaah Hukum & Kepatuhan' },
-    { key: 'requestRevision', label: 'Permintaan Revisi Dokumen', desc: 'Mengembalikan draf ke inisiator untuk diperbaiki', category: 'Fase 2: Telaah Hukum & Kepatuhan' },
-    { key: 'uploadRevision', label: 'Unggah Draf Revisi (Rev.01+)', desc: 'Mengunggah draf perbaikan versi penyesuaian', category: 'Fase 2: Telaah Hukum & Kepatuhan' },
-    { key: 'approveStage', label: 'Persetujuan Tahapan (Approval)', desc: 'Otorisasi persetujuan telaah legal atau persetujuan direksi', category: 'Fase 3: Otorisasi & Keputusan' },
-    { key: 'rejectDoc', label: 'Penolakan Pengajuan Dokumen', desc: 'Membatalkan pengajuan yang tidak memenuhi kriteria hukum/operasional', category: 'Fase 3: Otorisasi & Keputusan' },
-    { key: 'manageExpiry', label: 'Keputusan Jatuh Tempo Kontrak', desc: 'Menetapkan perpanjangan (renewal), adendum, atau terminasi', category: 'Fase 3: Otorisasi & Keputusan' },
-    { key: 'uploadFinal', label: 'Rilis Dokumen Final Sah (FINAL)', desc: 'Verifikasi tanda tangan lengkap dan mengunci arsip digital resmi', category: 'Fase 4: Tata Kelola & Sistem' },
-    { key: 'manageUsers', label: 'Kelola Pengguna & Hak Akses', desc: 'Undang akun pengguna baru dan penetapan peran matriks', category: 'Fase 4: Tata Kelola & Sistem' },
-    { key: 'deleteMembership', label: 'Hapus Keanggotaan Matriks', desc: 'Mencabut hak akses keanggotaan pengguna dari sistem', category: 'Fase 4: Tata Kelola & Sistem' },
-    { key: 'manageDatabase', label: 'Manajemen Basis Data (Database)', desc: 'Pengelolaan penyimpanan cloud, pencadangan data, dan skema (Eksklusif Admin)', category: 'Fase 4: Tata Kelola & Sistem' },
+    { key: 'createDoc', label: 'Ajukan Dokumen (V0)', desc: 'Pendaftaran berkas draf awal', category: '1. Inisiasi & Akses' },
+    { key: 'viewDocs', label: 'Akses & Unduh Berkas', desc: 'Melihat dan mengunduh berkas aktif & lampiran', category: '1. Inisiasi & Akses' },
+    { key: 'addReviewNotes', label: 'Catatan Telaah', desc: 'Memberikan catatan telaah hukum', category: '2. Telaah Hukum' },
+    { key: 'requestRevision', label: 'Permintaan Revisi', desc: 'Mengembalikan berkas untuk perbaikan', category: '2. Telaah Hukum' },
+    { key: 'uploadRevision', label: 'Unggah Revisi (Rev.01+)', desc: 'Mengunggah berkas perbaikan', category: '2. Telaah Hukum' },
+    { key: 'approveStage', label: 'Persetujuan Tahapan', desc: 'Otorisasi persetujuan telaah atau direksi', category: '3. Otorisasi & Keputusan' },
+    { key: 'rejectDoc', label: 'Penolakan Dokumen', desc: 'Menolak pengajuan yang tidak sesuai', category: '3. Otorisasi & Keputusan' },
+    { key: 'manageExpiry', label: 'Keputusan Jatuh Tempo', desc: 'Perpanjangan, adendum, atau terminasi kontrak', category: '3. Otorisasi & Keputusan' },
+    { key: 'uploadFinal', label: 'Rilis Dokumen Final', desc: 'Mengunggah berkas final bertanda tangan', category: '4. Tata Kelola & Sistem' },
+    { key: 'manageUsers', label: 'Kelola Pengguna', desc: 'Undang pengguna dan atur peran', category: '4. Tata Kelola & Sistem' },
+    { key: 'deleteMembership', label: 'Hapus Keanggotaan', desc: 'Mencabut akses akun dari sistem', category: '4. Tata Kelola & Sistem' },
+    { key: 'manageDatabase', label: 'Manajemen Basis Data', desc: 'Kelola data & penyimpanan cloud (Eksklusif Admin)', category: '4. Tata Kelola & Sistem' },
   ]
 
   const handleRoleChange = async (userId: string, newRole: UserRole) => {
@@ -272,10 +299,10 @@ export function AuthorityMatrixView() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold font-display text-[#0B2147]">
-            Matriks Kewenangan &amp; Otoritas (RBAC Matrix)
+            Matriks Kewenangan
           </h1>
           <p className="text-xs text-[#64748B] mt-1">
-            Struktur tata kelola wewenang standar korporat: pembagian tanggung jawab kerja dan hak akses operasional 6 peran resmi.
+            Hak akses dan wewenang operasional 6 peran resmi.
           </p>
         </div>
 
@@ -289,7 +316,7 @@ export function AuthorityMatrixView() {
               className="h-9 bg-[#EBF2FF] hover:bg-[#DBEAFE] text-[#163A70] text-xs font-bold rounded-xl gap-1.5 cursor-pointer shadow-2xs"
             >
               <UserPlus className="h-3.5 w-3.5" />
-              <span>Undang Anggota Baru</span>
+              <span>Undang Pengguna</span>
             </Button>
           )}
         </div>
@@ -303,7 +330,7 @@ export function AuthorityMatrixView() {
       }`}>
         <ShieldCheck className={`h-5 w-5 shrink-0 mt-0.5 sm:mt-0 ${isRequester ? 'text-[#2563EB]' : 'text-[#163A70]'}`} />
         <div className="leading-relaxed">
-          <span className="font-bold">Ketentuan Matriks Kewenangan:</span> Seluruh berkas dapat diakses dan diunduh oleh <b>User</b> (Unit Kerja Pemohon) serta peran verifikator terkait. Tamu (<b>Guest</b>) memiliki hak pratinjau baca. Pengelolaan <b>Basis Data &amp; Akun Sistem</b> dibatasi eksklusif untuk <b>System Administrator</b>.
+          <span className="font-bold">Ketentuan Matriks:</span> Seluruh berkas dapat diakses dan diunduh oleh <b>User</b> dan verifikator. Tamu (<b>Guest</b>) hanya pratinjau baca. Pengelolaan sistem eksklusif untuk <b>System Administrator</b>.
         </div>
       </div>
 
@@ -315,7 +342,7 @@ export function AuthorityMatrixView() {
               <thead>
                 <tr className="border-b border-[#E2E8F0] bg-[#F8FAFC]">
                   <th className="py-4 px-5 font-bold text-[#0B2147] text-xs w-1/3">
-                    Aktivitas &amp; Hak Operasional
+                    Aktivitas &amp; Wewenang
                   </th>
                   {roles.map((r) => (
                     <th key={r.id} className="py-3 px-3 text-center">
@@ -379,10 +406,10 @@ export function AuthorityMatrixView() {
         <div className="mb-3">
           <h2 className="text-base font-bold font-display text-[#0B2147] flex items-center gap-2">
             <ShieldCheck className="h-5 w-5 text-[#163A70]" />
-            Struktur Peran &amp; Tanggung Jawab Standar Korporat
+            Daftar Peran &amp; Tanggung Jawab
           </h2>
           <p className="text-xs text-[#64748B] mt-0.5">
-            Pembagian tanggung jawab spesifik pada setiap tahapan tata kelola dokumen korporat.
+            Rincian wewenang setiap peran di sistem RIDE.
           </p>
         </div>
 
@@ -413,7 +440,7 @@ export function AuthorityMatrixView() {
 
                 <div className="rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] p-3 text-xs space-y-2">
                   <span className="font-bold text-[#0B2147] block text-[10.5px] uppercase tracking-wider text-[#163A70]">
-                    Kewenangan &amp; Tanggung Jawab:
+                    Kewenangan:
                   </span>
                   <ul className="space-y-1.5 text-[11.5px] text-[#475569]">
                     {r.bullets.map((b, idx) => (
@@ -438,10 +465,10 @@ export function AuthorityMatrixView() {
             <div>
               <h2 className="text-lg font-bold font-display text-[#0B2147] flex items-center gap-2">
                 <Users className="h-5 w-5 text-[#163A70]" />
-                Keanggotaan Pengguna dalam Matriks Kewenangan
+                Daftar Anggota Matriks
               </h2>
               <p className="text-xs text-[#64748B] mt-0.5">
-                Administrator dapat mengatur peran atau menghapus keanggotaan pengguna dari sistem.
+                Atur peran atau hapus keanggotaan pengguna.
               </p>
             </div>
 
@@ -455,7 +482,7 @@ export function AuthorityMatrixView() {
                     : 'bg-[#F1F5F9] text-[#475569] hover:bg-[#E2E8F0]'
                 }`}
               >
-                Semua Anggota ({allUsers.length})
+                Semua ({allUsers.length})
               </button>
               {roles.map((r) => (
                 <button
@@ -480,18 +507,18 @@ export function AuthorityMatrixView() {
                 <table className="w-full text-left text-xs border-collapse min-w-[760px]">
                   <thead>
                     <tr className="border-b border-[#E2E8F0] bg-[#F8FAFC] text-[11px] font-bold text-[#64748B] uppercase tracking-wider">
-                      <th className="py-3.5 px-4">Nama Anggota</th>
+                      <th className="py-3.5 px-4">Nama</th>
                       <th className="py-3.5 px-4">Email</th>
                       <th className="py-3.5 px-4">Divisi &amp; Jabatan</th>
-                      <th className="py-3.5 px-4">Penetapan Matriks Peran</th>
-                      <th className="py-3.5 px-4 text-right">Tindakan Otoritas</th>
+                      <th className="py-3.5 px-4">Peran Matriks</th>
+                      <th className="py-3.5 px-4 text-right">Aksi</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#E2E8F0] bg-white">
                     {filteredMembers.length === 0 ? (
                       <tr>
                         <td colSpan={5} className="py-8 text-center text-xs text-[#64748B]">
-                          Tidak ada anggota terdaftar untuk kategori peran ini.
+                          Tidak ada pengguna di kategori ini.
                         </td>
                       </tr>
                     ) : (
@@ -523,19 +550,19 @@ export function AuthorityMatrixView() {
                                 onChange={(e) => handleRoleChange(m.id, e.target.value as UserRole)}
                                 className="h-8 rounded-lg border border-[#CBD5E1] bg-[#F8FAFC] px-2 text-xs font-bold text-[#0B2147] focus:border-[#163A70] focus:outline-none cursor-pointer"
                               >
-                                <option value="Guest">Guest — Peninjau Tamu</option>
-                                <option value="User">User — Unit Kerja Pemohon</option>
-                                <option value="Legal Officer">Legal Officer — Staf Hukum &amp; Penelaah</option>
-                                <option value="Legal Management">Legal Management — Tata Kelola &amp; Kustodian</option>
-                                <option value="Board of Directors">Board of Directors — Dewan Direksi</option>
-                                <option value="System Administrator">System Administrator — Kontrol Penuh Sistem</option>
+                                <option value="Guest">Guest</option>
+                                <option value="User">User</option>
+                                <option value="Legal Officer">Legal Officer</option>
+                                <option value="Legal Management">Legal Management</option>
+                                <option value="Board of Directors">Board of Directors</option>
+                                <option value="System Administrator">System Administrator</option>
                               </select>
                             </td>
 
                             <td className="py-3.5 px-4 text-right">
                               {isSelf ? (
                                 <span className="text-[11px] text-[#94A3B8] italic font-medium">
-                                  Akun Aktif Sesi
+                                  Akun Anda
                                 </span>
                               ) : (
                                 <Button
@@ -545,7 +572,7 @@ export function AuthorityMatrixView() {
                                   className="h-8 text-xs font-bold text-[#DC2626] border-[#FCA5A5] hover:bg-[#FEF2F2] hover:text-[#B91C1C] rounded-lg gap-1.5 cursor-pointer shadow-2xs"
                                 >
                                   <Trash2 className="h-3.5 w-3.5" />
-                                  <span>Hapus Keanggotaan</span>
+                                  <span>Hapus</span>
                                 </Button>
                               )}
                             </td>
@@ -569,17 +596,17 @@ export function AuthorityMatrixView() {
               <AlertTriangle className="h-6 w-6" />
             </div>
             <DialogTitle className="text-center text-[#0B2147]">
-              Konfirmasi Hapus Keanggotaan Matriks
+              Konfirmasi Hapus Pengguna
             </DialogTitle>
             <DialogDescription className="text-center text-xs text-[#64748B]">
-              Tindakan ini akan menghapus akun dan seluruh hak akses keanggotaan pengguna dari sistem RIDE secara permanen.
+              Akun dan hak akses pengguna ini akan dihapus secara permanen.
             </DialogDescription>
           </DialogHeader>
 
           {deleteTargetUser && (
             <div className="p-3.5 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] space-y-1.5 text-xs">
               <div className="flex justify-between">
-                <span className="text-[#64748B]">Nama Anggota:</span>
+                <span className="text-[#64748B]">Nama:</span>
                 <span className="font-bold text-[#0F172A]">{deleteTargetUser.employeeName}</span>
               </div>
               <div className="flex justify-between">
@@ -587,7 +614,7 @@ export function AuthorityMatrixView() {
                 <span className="font-mono text-[#0F172A]">{deleteTargetUser.email}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-[#64748B]">Peran Matriks:</span>
+                <span className="text-[#64748B]">Peran:</span>
                 <span className="font-bold text-[#DC2626]">{deleteTargetUser.role}</span>
               </div>
               <div className="flex justify-between">
@@ -613,7 +640,7 @@ export function AuthorityMatrixView() {
               className="h-10 text-xs bg-[#DC2626] hover:bg-[#B91C1C] text-white font-bold rounded-xl gap-1.5"
             >
               <Trash2 className="h-4 w-4" />
-              {deleteLoading ? 'Menghapus...' : 'Ya, Hapus Keanggotaan'}
+              {deleteLoading ? 'Menghapus...' : 'Ya, Hapus'}
             </Button>
           </DialogFooter>
         </DialogContent>

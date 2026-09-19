@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import { useApp } from '@/context/AppContext'
-import { normalizeRole, isSystemAdmin, isBoardOfDirectors } from '@/lib/roles'
+import { normalizeRole, isSystemAdmin, isBoardOfDirectors, canAccessAuthorityMatrix } from '@/lib/roles'
 import { RideLogo } from '@/components/common/RideLogo'
 import {
   Menu,
@@ -84,7 +84,7 @@ export function Header() {
           <Search className="absolute left-3.5 h-4 w-4 text-[#94A3B8]" />
           <input
             type="text"
-            placeholder="Cari nomor dokumen, kontrak, vendor, PIC... (Enter)"
+            placeholder="Cari dokumen atau PIC... (Enter)"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyDown={handleSearchKeyDown}
@@ -187,25 +187,27 @@ export function Header() {
                     className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold text-[#0F172A] hover:bg-[#EBF2FF] hover:text-[#163A70] transition-colors cursor-pointer"
                   >
                     <UserIcon className="h-4 w-4 shrink-0 text-[#64748B]" />
-                    <span className="truncate">Profil &amp; Keamanan Akun</span>
+                    <span className="truncate">Profil Akun</span>
                   </button>
 
-                  <button
-                    onMouseDown={(e) => {
-                      e.stopPropagation()
-                      setIsDropdownOpen(false)
-                      setCurrentView('matrix')
-                    }}
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setIsDropdownOpen(false)
-                      setCurrentView('matrix')
-                    }}
-                    className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold text-[#0F172A] hover:bg-[#EBF2FF] hover:text-[#163A70] transition-colors cursor-pointer"
-                  >
-                    <ShieldCheck className="h-4 w-4 shrink-0 text-[#64748B]" />
-                    <span className="truncate">Matriks Kewenangan (RBAC)</span>
-                  </button>
+                  {canAccessAuthorityMatrix(user?.role) && (
+                    <button
+                      onMouseDown={(e) => {
+                        e.stopPropagation()
+                        setIsDropdownOpen(false)
+                        setCurrentView('matrix')
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setIsDropdownOpen(false)
+                        setCurrentView('matrix')
+                      }}
+                      className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold text-[#0F172A] hover:bg-[#EBF2FF] hover:text-[#163A70] transition-colors cursor-pointer"
+                    >
+                      <ShieldCheck className="h-4 w-4 shrink-0 text-[#64748B]" />
+                      <span className="truncate">Matriks Kewenangan</span>
+                    </button>
+                  )}
 
                   {(isSystemAdmin(user?.role) || isBoardOfDirectors(user?.role)) && (
                     <>
@@ -223,7 +225,7 @@ export function Header() {
                         className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold text-[#0F172A] hover:bg-[#EBF2FF] hover:text-[#163A70] transition-colors cursor-pointer"
                       >
                         <Users className="h-4 w-4 shrink-0 text-[#64748B]" />
-                        <span className="truncate">Kelola Pengguna &amp; Undangan</span>
+                        <span className="truncate">Kelola Pengguna</span>
                       </button>
 
                       <button
@@ -240,7 +242,7 @@ export function Header() {
                         className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-semibold text-[#0F172A] hover:bg-[#EBF2FF] hover:text-[#163A70] transition-colors cursor-pointer"
                       >
                         <SettingsIcon className="h-4 w-4 shrink-0 text-[#64748B]" />
-                        <span className="truncate">Pengaturan Sistem</span>
+                        <span className="truncate">Pengaturan</span>
                       </button>
                     </>
                   )}

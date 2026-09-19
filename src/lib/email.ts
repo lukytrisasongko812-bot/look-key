@@ -7,84 +7,27 @@ interface SendOtpEmailOptions {
   expiresInMinutes?: number
 }
 
-/**
- * Generate a professional corporate HTML email template for 2FA OTP
- */
-function generateOtpHtml(userName: string, otpCode: string, expiresInMinutes: number): string {
-  return `
-<!DOCTYPE html>
-<html lang="id">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Kode Verifikasi 2FA RIDE</title>
-  <style>
-    body { margin: 0; padding: 0; background-color: #F8FAFC; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
-    .container { max-width: 540px; margin: 30px auto; background: #FFFFFF; border-radius: 16px; border: 1px solid #E2E8F0; overflow: hidden; box-shadow: 0 4px 12px rgba(15, 42, 84, 0.05); }
-    .header { background: linear-gradient(135deg, #0B2147 0%, #163A70 100%); padding: 32px 28px; text-align: center; color: #FFFFFF; }
-    .header-logo { font-size: 26px; font-weight: 800; letter-spacing: 1px; margin-bottom: 6px; }
-    .header-sub { font-size: 11px; color: rgba(255, 255, 255, 0.8); text-transform: uppercase; letter-spacing: 0.5px; }
-    .content { padding: 36px 32px; color: #0F172A; }
-    .greeting { font-size: 16px; font-weight: 700; margin-bottom: 12px; color: #0F172A; }
-    .message { font-size: 13.5px; line-height: 1.6; color: #475569; margin-bottom: 28px; }
-    .otp-box { background: #F1F5F9; border: 2px dashed #94A3B8; border-radius: 12px; padding: 20px; text-align: center; margin-bottom: 28px; }
-    .otp-code { font-family: 'Courier New', Courier, monospace; font-size: 36px; font-weight: 800; letter-spacing: 8px; color: #163A70; margin: 0; }
-    .otp-note { font-size: 11.5px; color: #64748B; margin-top: 8px; }
-    .security-notice { background: #FEF3C7; border-left: 4px solid #F59E0B; padding: 12px 16px; border-radius: 4px; font-size: 12px; color: #92400E; margin-bottom: 24px; line-height: 1.5; }
-    .footer { background: #F8FAFC; border-top: 1px solid #E2E8F0; padding: 20px 28px; text-align: center; font-size: 11px; color: #94A3B8; line-height: 1.6; }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <div class="header">
-      <div class="header-logo">RIDE</div>
-      <div class="header-sub">Request Integrated Document Ecosystem · Otentikasi Keamanan 2FA</div>
-    </div>
-    <div class="content">
-      <div class="greeting">Halo, ${userName}</div>
-      <div class="message">
-        Kami menerima permintaan masuk ke akun Anda pada sistem <strong>RIDE (Request Integrated Document Ecosystem)</strong>.
-        Gunakan kode One-Time Password (OTP) berikut untuk menyelesaikan proses otentikasi:
-      </div>
-
-      <div class="otp-box">
-        <div class="otp-code">${otpCode}</div>
-        <div class="otp-note">Berlaku selama ${expiresInMinutes} menit</div>
-      </div>
-
-      <div class="security-notice">
-        <strong>Peringatan Keamanan:</strong> Jangan pernah memberikan kode OTP ini kepada siapa pun. Sistem RIDE tidak pernah meminta kode otentikasi Anda secara langsung.
-      </div>
-
-      <div class="message" style="font-size: 12px; color: #64748B; margin-bottom: 0;">
-        Jika Anda tidak merasa melakukan permintaan masuk ini, segera amankan akun Anda melalui sistem risetrack.id.
-      </div>
-    </div>
-    <div class="footer">
-      <div>RIDE — Request Integrated Document Ecosystem</div>
-      <div style="margin-top: 4px;">Email ini dikirim secara otomatis oleh sistem keamanan <a href="https://risetrack.id" style="color: #163A70; text-decoration: none;">risetrack.id</a>.</div>
-    </div>
-  </div>
-</body>
-</html>
-  `.trim()
+interface SendEmailParams {
+  to: string
+  subject: string
+  html: string
+  text?: string
+  fromAddress?: string
 }
 
 /**
- * Send real 2FA OTP Email via Resend API or SMTP (nodemailer)
+ * Universal email dispatcher with Resend API (and fallback) + SMTP support
  */
-export async function sendOtpEmail({
+async function dispatchEmail({
   to,
-  userName,
-  otpCode,
-  expiresInMinutes = 5,
-}: SendOtpEmailOptions): Promise<{ success: boolean; provider?: string; emailId?: string; error?: string }> {
-  const fromAddress = process.env.EMAIL_FROM || 'RIDE Security <official@risetrack.id>'
-  const subject = `[RIDE] Kode Verifikasi 2FA Anda: ${otpCode}`
-  const html = generateOtpHtml(userName, otpCode, expiresInMinutes)
-  const text = `Halo ${userName},\n\nKode One-Time Password (OTP) 2FA Anda untuk masuk ke sistem RIDE adalah: ${otpCode}\n\nKode ini berlaku selama ${expiresInMinutes} menit.\nJangan bagikan kode ini kepada siapapun.\n\nSistem RIDE — risetrack.id`
-
+  subject,
+  html,
+  text,
+  fromAddress,
+}: SendEmailParams): Promise<{ success: boolean; provider: string; emailId?: string; error?: string }> {
+  const defaultFrom = fromAddress || process.env.EMAIL_FROM || 'RIDE Platform <support@risetrack.id>'
   const resendApiKey = process.env.RESEND_API_KEY
+
   if (resendApiKey) {
     try {
       let response = await fetch('https://api.resend.com/emails', {
@@ -94,7 +37,7 @@ export async function sendOtpEmail({
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          from: fromAddress,
+          from: defaultFrom.includes('<') ? defaultFrom : `RIDE <${defaultFrom}>`,
           to: [to],
           subject,
           html,
@@ -121,6 +64,8 @@ export async function sendOtpEmail({
             to: [to],
             subject,
             html,
+            text,
+            reply_to: 'support@risetrack.id',
           }),
         })
         data = await response.json()
@@ -129,7 +74,7 @@ export async function sendOtpEmail({
         }
       }
     } catch (err: unknown) {
-      console.error('[Resend Error]', err)
+      console.error('[Resend Dispatch Error]', err)
     }
   }
 
@@ -149,19 +94,103 @@ export async function sendOtpEmail({
       })
 
       const info = await transporter.sendMail({
-        from: fromAddress,
+        from: defaultFrom,
         to,
         subject,
         html,
+        text,
+        replyTo: 'support@risetrack.id',
       })
 
       return { success: true, provider: 'smtp', emailId: info.messageId }
     } catch (err: unknown) {
-      console.error('[SMTP Error]', err)
+      console.error('[SMTP Dispatch Error]', err)
     }
   }
 
   return { success: true, provider: 'simulated' }
+}
+
+/**
+ * Generate a professional corporate HTML email template for 2FA OTP with 3-blade RIDE logo
+ */
+function generateOtpHtml(userName: string, otpCode: string, expiresInMinutes: number): string {
+  return `
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kode Verifikasi 2FA RIDE</title>
+  <style>
+    body { margin: 0; padding: 0; background-color: #F8FAFC; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+    .container { max-width: 540px; margin: 30px auto; background: #FFFFFF; border-radius: 16px; border: 1px solid #E2E8F0; overflow: hidden; box-shadow: 0 4px 20px rgba(15, 33, 71, 0.08); }
+    .header { background: linear-gradient(135deg, #07152E 0%, #0B2147 50%, #163A70 100%); padding: 32px 28px; text-align: center; color: #FFFFFF; }
+    .header-logo-icon { width: 64px; height: 64px; border-radius: 16px; display: block; margin: 0 auto 10px auto; background: #FFFFFF; padding: 4px; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25); }
+    .header-title { font-size: 24px; font-weight: 900; letter-spacing: 2px; color: #FFFFFF; margin-bottom: 3px; }
+    .header-sub { font-size: 11px; color: #93C5FD; text-transform: uppercase; letter-spacing: 1.2px; font-weight: 700; }
+    .content { padding: 36px 32px; color: #0F172A; }
+    .greeting { font-size: 17px; font-weight: 700; margin-bottom: 12px; color: #0B2147; }
+    .message { font-size: 13.5px; line-height: 1.65; color: #475569; margin-bottom: 26px; }
+    .otp-box { background: #F8FAFC; border: 2px dashed #2563EB; border-radius: 14px; padding: 24px 20px; text-align: center; margin-bottom: 26px; box-shadow: 0 2px 8px rgba(37, 99, 235, 0.06); }
+    .otp-code { font-family: 'Courier New', Courier, monospace; font-size: 38px; font-weight: 800; letter-spacing: 10px; color: #163A70; margin: 0; }
+    .otp-note { font-size: 12px; color: #64748B; margin-top: 10px; font-weight: 600; }
+    .security-notice { background: #FFFBEB; border-left: 4px solid #F59E0B; padding: 14px 18px; border-radius: 6px; font-size: 12px; color: #92400E; margin-bottom: 24px; line-height: 1.55; }
+    .footer { background: #F8FAFC; border-top: 1px solid #E2E8F0; padding: 22px 28px; text-align: center; font-size: 11px; color: #94A3B8; line-height: 1.6; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <img src="https://risetrack.id/images/rise-icon.png" alt="RIDE Logo" class="header-logo-icon" />
+      <div class="header-title">RIDE</div>
+      <div class="header-sub">Request Integrated Document Ecosystem · Otentikasi Keamanan 2FA</div>
+    </div>
+    <div class="content">
+      <div class="greeting">Halo, ${userName}</div>
+      <div class="message">
+        Kami menerima permintaan masuk ke akun Anda pada sistem <strong>RIDE (Request Integrated Document Ecosystem)</strong>.
+        Gunakan kode One-Time Password (OTP) berikut untuk menyelesaikan proses otentikasi:
+      </div>
+
+      <div class="otp-box">
+        <div class="otp-code">${otpCode}</div>
+        <div class="otp-note">⏳ Kode berlaku selama ${expiresInMinutes} menit</div>
+      </div>
+
+      <div class="security-notice">
+        <strong>Peringatan Keamanan:</strong> Jangan pernah memberikan kode OTP ini kepada siapa pun. Staf atau sistem RIDE tidak pernah meminta kode otentikasi Anda secara langsung.
+      </div>
+
+      <div class="message" style="font-size: 12px; color: #64748B; margin-bottom: 0;">
+        Jika Anda tidak merasa melakukan permintaan masuk ini, segera amankan akun Anda melalui sistem <a href="https://risetrack.id" style="color: #163A70; font-weight: 600;">risetrack.id</a>.
+      </div>
+    </div>
+    <div class="footer">
+      <div><strong>RIDE</strong> — Request Integrated Document Ecosystem</div>
+      <div style="margin-top: 4px;">Email ini dikirim secara otomatis oleh sistem keamanan <a href="https://risetrack.id" style="color: #163A70; text-decoration: none; font-weight: 600;">risetrack.id</a>.</div>
+    </div>
+  </div>
+</body>
+</html>
+  `.trim()
+}
+
+/**
+ * Send real 2FA OTP Email via Resend API or SMTP (nodemailer)
+ */
+export async function sendOtpEmail({
+  to,
+  userName,
+  otpCode,
+  expiresInMinutes = 5,
+}: SendOtpEmailOptions): Promise<{ success: boolean; provider?: string; emailId?: string; error?: string }> {
+  const fromAddress = process.env.EMAIL_FROM || 'RIDE Security <support@risetrack.id>'
+  const subject = `[RIDE] Kode Verifikasi 2FA Anda: ${otpCode}`
+  const html = generateOtpHtml(userName, otpCode, expiresInMinutes)
+  const text = `Halo ${userName},\n\nKode One-Time Password (OTP) 2FA Anda untuk masuk ke sistem RIDE adalah: ${otpCode}\n\nKode ini berlaku selama ${expiresInMinutes} menit.\nJangan bagikan kode ini kepada siapapun.\n\nSistem RIDE — risetrack.id`
+
+  return dispatchEmail({ to, subject, html, text, fromAddress })
 }
 
 export interface SendInviteEmailOptions {
@@ -183,80 +212,102 @@ function generateInviteHtml(opts: SendInviteEmailOptions): string {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Undangan Akses Portal RIDE</title>
+  <title>Undangan Akses & Kredensial Akun Portal RIDE</title>
   <style>
     body { margin: 0; padding: 0; background-color: #F8FAFC; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
-    .container { max-width: 560px; margin: 30px auto; background: #FFFFFF; border-radius: 16px; border: 1px solid #E2E8F0; overflow: hidden; box-shadow: 0 4px 12px rgba(15, 42, 84, 0.05); }
-    .header { background: linear-gradient(135deg, #0B2147 0%, #163A70 100%); padding: 32px 28px; text-align: center; color: #FFFFFF; }
-    .header-logo { font-size: 26px; font-weight: 800; letter-spacing: 1px; margin-bottom: 4px; }
-    .header-sub { font-size: 11px; color: rgba(255, 255, 255, 0.8); text-transform: uppercase; letter-spacing: 0.5px; }
+    .container { max-width: 580px; margin: 30px auto; background: #FFFFFF; border-radius: 16px; border: 1px solid #CBD5E1; overflow: hidden; box-shadow: 0 4px 20px rgba(15, 33, 71, 0.08); }
+    .header { background: linear-gradient(135deg, #07152E 0%, #0B2147 50%, #163A70 100%); padding: 32px 28px; text-align: center; color: #FFFFFF; }
+    .header-logo-icon { width: 64px; height: 64px; border-radius: 16px; display: block; margin: 0 auto 10px auto; background: #FFFFFF; padding: 4px; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25); }
+    .header-title { font-size: 24px; font-weight: 900; letter-spacing: 2px; color: #FFFFFF; margin-bottom: 3px; }
+    .header-sub { font-size: 11px; color: #93C5FD; text-transform: uppercase; letter-spacing: 1.2px; font-weight: 700; }
     .content { padding: 36px 32px; color: #0F172A; }
-    .greeting { font-size: 16px; font-weight: 700; margin-bottom: 12px; color: #0B2147; }
-    .message { font-size: 13.5px; line-height: 1.6; color: #475569; margin-bottom: 24px; }
-    .creds-box { background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 12px; padding: 20px; margin-bottom: 24px; }
-    .creds-table { width: 100%; font-size: 13px; border-collapse: collapse; }
-    .creds-table td { padding: 6px 0; }
-    .footer { background: #F8FAFC; border-top: 1px solid #E2E8F0; padding: 20px 28px; text-align: center; font-size: 11px; color: #94A3B8; line-height: 1.6; }
+    .greeting { font-size: 18px; font-weight: 800; margin-bottom: 12px; color: #0B2147; }
+    .message { font-size: 13.5px; line-height: 1.65; color: #475569; margin-bottom: 24px; }
+    
+    /* Credentials Card Styling */
+    .creds-card { background: #F8FAFC; border: 1.5px solid #CBD5E1; border-radius: 14px; padding: 22px 24px; margin-bottom: 26px; box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04); }
+    .creds-title { font-weight: 800; font-size: 12.5px; color: #0B2147; margin-bottom: 16px; text-transform: uppercase; letter-spacing: 0.6px; border-bottom: 1px solid #E2E8F0; padding-bottom: 8px; }
+    .creds-row { margin-bottom: 12px; }
+    .creds-label { font-size: 11px; font-weight: 700; color: #64748B; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+    .creds-box-email { background: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 8px; padding: 9px 14px; font-family: 'Courier New', Courier, monospace; font-size: 14px; font-weight: 700; color: #0F172A; }
+    .creds-box-password { background: #EFF6FF; border: 1.5px dashed #2563EB; border-radius: 8px; padding: 10px 14px; font-family: 'Courier New', Courier, monospace; font-size: 16px; font-weight: 800; color: #163A70; letter-spacing: 0.5px; }
+    .creds-meta-table { width: 100%; font-size: 12.5px; border-collapse: collapse; margin-top: 14px; border-top: 1px solid #E2E8F0; padding-top: 10px; }
+    .creds-meta-table td { padding: 6px 0; }
+    
+    .btn-container { text-align: center; margin: 28px 0 22px 0; }
+    .btn-login { display: inline-block; background: #163A70; color: #FFFFFF !important; font-weight: 800; font-size: 14.5px; padding: 14px 34px; border-radius: 10px; text-decoration: none; box-shadow: 0 4px 14px rgba(22, 58, 112, 0.28); letter-spacing: 0.3px; }
+    .link-box { background: #F1F5F9; border: 1px solid #E2E8F0; border-radius: 8px; padding: 12px 16px; margin-bottom: 22px; font-size: 11.5px; color: #475569; word-break: break-all; }
+    .footer { background: #F8FAFC; border-top: 1px solid #E2E8F0; padding: 22px 28px; text-align: center; font-size: 11px; color: #94A3B8; line-height: 1.6; }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="header">
-      <div class="header-logo">RIDE</div>
-      <div class="header-sub">Request Integrated Document Ecosystem · Akses Akun Resmi</div>
+      <img src="https://risetrack.id/images/rise-icon.png" alt="RIDE Logo" class="header-logo-icon" />
+      <div class="header-title">RIDE</div>
+      <div class="header-sub">Request Integrated Document Ecosystem · Undangan Akses Akun Resmi</div>
     </div>
     <div class="content">
       <div class="greeting">Halo, ${opts.userName}</div>
       <div class="message">
-        Anda telah diundang untuk bergabung ke portal <strong>RIDE (Request Integrated Document Ecosystem)</strong> sebagai <strong>${opts.role}</strong>${opts.invitedByName ? ` oleh ${opts.invitedByName}` : ''}.
+        Anda telah diundang untuk bergabung ke portal <strong>RIDE (Request Integrated Document Ecosystem)</strong> sebagai <strong>${opts.role}</strong>${opts.invitedByName ? ` oleh <strong>${opts.invitedByName}</strong>` : ''}.
+        Berikut adalah informasi akun Anda untuk masuk ke sistem:
       </div>
 
-      <div class="creds-box">
-        <div style="font-weight: 700; font-size: 12px; color: #0B2147; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px;">
-          Informasi Akun Anda:
+      <!-- Kredensial Box Modern -->
+      <div class="creds-card">
+        <div class="creds-title">
+          🔐 KREDENSIAL MASUK AKUN ANDA
         </div>
-        <table class="creds-table">
+
+        <div class="creds-row">
+          <div class="creds-label">Email Akun (Login):</div>
+          <div class="creds-box-email">${opts.to}</div>
+        </div>
+
+        ${opts.temporaryPassword ? `
+        <div class="creds-row" style="margin-top: 12px;">
+          <div class="creds-label">Kata Sandi (Password):</div>
+          <div class="creds-box-password">${opts.temporaryPassword}</div>
+        </div>
+        ` : ''}
+
+        <table class="creds-meta-table">
           <tr>
-            <td style="width: 140px; font-weight: 600; color: #64748B;">Email Akun:</td>
-            <td style="font-family: monospace; font-weight: 700; color: #0F172A;">${opts.to}</td>
+            <td style="width: 140px; font-weight: 600; color: #64748B;">Peran (Role RBAC):</td>
+            <td>
+              <span style="background: #EBF2FF; color: #1D4ED8; border: 1px solid #BFDBFE; font-weight: 700; font-size: 11.5px; padding: 3px 8px; border-radius: 6px; display: inline-block;">
+                ${opts.role}
+              </span>
+            </td>
           </tr>
           <tr>
-            <td style="font-weight: 600; color: #64748B;">Peran (Role RBAC):</td>
-            <td style="font-weight: 700; color: #2563EB;">${opts.role}</td>
+            <td style="font-weight: 600; color: #64748B;">Divisi / Posisi:</td>
+            <td style="color: #334155; font-weight: 600;">${opts.division || 'Direktorat Operasi'} · ${opts.position || 'Staff'}</td>
           </tr>
-          <tr>
-            <td style="font-weight: 600; color: #64748B;">Divisi / Jabatan:</td>
-            <td style="color: #475569;">${opts.division} · ${opts.position}</td>
-          </tr>
-          ${opts.temporaryPassword ? `
-          <tr>
-            <td style="font-weight: 600; color: #64748B;">Kata Sandi Awal:</td>
-            <td style="font-family: monospace; font-weight: 700; color: #0F172A; background: #EEF2FF; padding: 3px 8px; border-radius: 4px; display: inline-block;">${opts.temporaryPassword}</td>
-          </tr>
-          ` : ''}
           <tr>
             <td style="font-weight: 600; color: #64748B;">Otentikasi 2FA:</td>
-            <td style="color: #059669; font-weight: 600;">Aktif (Kode 6-Digit via Email)</td>
+            <td style="color: #059669; font-weight: 700;">🛡️ Aktif (Kode 6-Digit via Email)</td>
           </tr>
         </table>
       </div>
 
-      <div style="text-align: center; margin: 28px 0;">
-        <a href="${inviteUrl}" style="display: inline-block; background: #163A70; color: #FFFFFF !important; font-weight: 700; font-size: 14px; padding: 14px 32px; border-radius: 8px; text-decoration: none; box-shadow: 0 4px 12px rgba(22, 58, 112, 0.25);">Aktivasi Akun &amp; Masuk ke RIDE &rarr;</a>
+      <div class="btn-container">
+        <a href="${inviteUrl}" class="btn-login">Masuk ke Portal RIDE &rarr;</a>
       </div>
 
-      <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 12px 16px; margin-bottom: 20px; font-size: 11.5px; color: #475569; word-break: break-all;">
-        <span style="font-weight: 600; color: #0F172A; display: block; margin-bottom: 4px;">Tautan Undangan Langsung:</span>
+      <div class="link-box">
+        <span style="font-weight: 700; color: #0F172A; display: block; margin-bottom: 4px;">Tautan Langsung:</span>
         <a href="${inviteUrl}" style="color: #163A70; text-decoration: underline;">${inviteUrl}</a>
       </div>
 
       <div class="message" style="font-size: 12px; color: #64748B; margin-bottom: 0;">
-        Setelah berhasil masuk, Anda dapat memperbarui kata sandi Anda di menu pengaturan profil.
+        💡 <em>Catatan: Setelah berhasil masuk, Anda dapat memperbarui kata sandi Anda kapan saja melalui menu pengaturan profil.</em>
       </div>
     </div>
     <div class="footer">
-      <div>RIDE — Request Integrated Document Ecosystem</div>
-      <div style="margin-top: 4px;">Undangan ini diterbitkan secara resmi melalui sistem <a href="https://risetrack.id" style="color: #163A70; text-decoration: none;">risetrack.id</a>.</div>
+      <div><strong>RIDE</strong> — Request Integrated Document Ecosystem</div>
+      <div style="margin-top: 4px;">Undangan resmi diterbitkan melalui sistem <a href="https://risetrack.id" style="color: #163A70; text-decoration: none; font-weight: 600;">risetrack.id</a>.</div>
     </div>
   </div>
 </body>
@@ -265,37 +316,12 @@ function generateInviteHtml(opts: SendInviteEmailOptions): string {
 }
 
 export async function sendInviteEmail(opts: SendInviteEmailOptions): Promise<{ success: boolean; provider: string; error?: string }> {
-  const fromAddress = process.env.EMAIL_FROM || 'RIDE Portal <official@risetrack.id>'
-  const subject = `[RIDE] Undangan Akses Portal: ${opts.userName}`
+  const fromAddress = process.env.EMAIL_FROM || 'RIDE Portal <support@risetrack.id>'
+  const subject = `[RIDE] Undangan Akses & Kredensial Akun: ${opts.userName}`
   const html = generateInviteHtml(opts)
+  const text = `Halo ${opts.userName},\n\nAnda telah diundang untuk bergabung ke portal RIDE (Request Integrated Document Ecosystem) sebagai ${opts.role}.\n\nInformasi Akun Anda:\n- Email: ${opts.to}\n- Password: ${opts.temporaryPassword || '(Kata sandi yang telah Anda atur)'}\n- Role: ${opts.role}\n- Divisi: ${opts.division}\n\nSilakan masuk melalui link: https://risetrack.id/?email=${encodeURIComponent(opts.to)}&invited=true\n\nSistem RIDE — risetrack.id`
 
-  const resendKey = process.env.RESEND_API_KEY
-  if (resendKey) {
-    try {
-      const res = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${resendKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          from: fromAddress.includes('<') ? fromAddress : `RIDE <${fromAddress}>`,
-          to: [opts.to],
-          subject,
-          html,
-        }),
-      })
-
-      const data = await res.json()
-      if (res.ok && data.id) {
-        return { success: true, provider: 'resend' }
-      }
-    } catch (err: unknown) {
-      console.error('[Resend Invite Exception]', err)
-    }
-  }
-
-  return { success: true, provider: 'simulated' }
+  return dispatchEmail({ to: opts.to, subject, html, text, fromAddress })
 }
 
 export interface SendNotificationEmailOptions {
@@ -316,22 +342,24 @@ function generateNotificationHtml(opts: SendNotificationEmailOptions): string {
   <title>Notifikasi Dokumen RIDE</title>
   <style>
     body { margin: 0; padding: 0; background-color: #F8FAFC; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
-    .container { max-width: 560px; margin: 30px auto; background: #FFFFFF; border-radius: 16px; border: 1px solid #E2E8F0; overflow: hidden; box-shadow: 0 4px 12px rgba(15, 42, 84, 0.05); }
-    .header { background: linear-gradient(135deg, #0B2147 0%, #163A70 100%); padding: 28px; text-align: center; color: #FFFFFF; }
-    .header-logo { font-size: 26px; font-weight: 800; letter-spacing: 1px; margin-bottom: 4px; }
-    .header-sub { font-size: 11px; color: rgba(255, 255, 255, 0.8); text-transform: uppercase; letter-spacing: 0.5px; }
+    .container { max-width: 560px; margin: 30px auto; background: #FFFFFF; border-radius: 16px; border: 1px solid #E2E8F0; overflow: hidden; box-shadow: 0 4px 20px rgba(15, 33, 71, 0.08); }
+    .header { background: linear-gradient(135deg, #07152E 0%, #0B2147 50%, #163A70 100%); padding: 28px; text-align: center; color: #FFFFFF; }
+    .header-logo-icon { width: 60px; height: 60px; border-radius: 15px; display: block; margin: 0 auto 8px auto; background: #FFFFFF; padding: 4px; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25); }
+    .header-title { font-size: 22px; font-weight: 900; letter-spacing: 2px; color: #FFFFFF; margin-bottom: 2px; }
+    .header-sub { font-size: 11px; color: #93C5FD; text-transform: uppercase; letter-spacing: 1.2px; font-weight: 700; }
     .content { padding: 32px 28px; color: #0F172A; }
-    .title { font-size: 18px; font-weight: 700; color: #0B2147; margin-bottom: 12px; }
-    .message { font-size: 14px; line-height: 1.6; color: #475569; margin-bottom: 24px; }
-    .badge { display: inline-block; background: #EBF2FF; color: #163A70; font-weight: 700; font-size: 12px; padding: 4px 12px; border-radius: 6px; margin-bottom: 16px; font-family: monospace; }
-    .btn { display: inline-block; background: #163A70; color: #FFFFFF !important; font-weight: 700; font-size: 14px; padding: 12px 28px; border-radius: 8px; text-decoration: none; }
+    .title { font-size: 18px; font-weight: 800; color: #0B2147; margin-bottom: 12px; }
+    .message { font-size: 14px; line-height: 1.65; color: #475569; margin-bottom: 24px; }
+    .badge { display: inline-block; background: #EBF2FF; color: #163A70; border: 1px solid #BFDBFE; font-weight: 800; font-size: 12px; padding: 4px 12px; border-radius: 6px; margin-bottom: 16px; font-family: monospace; }
+    .btn { display: inline-block; background: #163A70; color: #FFFFFF !important; font-weight: 800; font-size: 14px; padding: 13px 30px; border-radius: 10px; text-decoration: none; box-shadow: 0 4px 12px rgba(22, 58, 112, 0.25); }
     .footer { background: #F8FAFC; border-top: 1px solid #E2E8F0; padding: 20px 28px; text-align: center; font-size: 11px; color: #94A3B8; line-height: 1.6; }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="header">
-      <div class="header-logo">RIDE</div>
+      <img src="https://risetrack.id/images/rise-icon.png" alt="RIDE Logo" class="header-logo-icon" />
+      <div class="header-title">RIDE</div>
       <div class="header-sub">Request Integrated Document Ecosystem · Notifikasi Alur Kerja</div>
     </div>
     <div class="content">
@@ -339,13 +367,13 @@ function generateNotificationHtml(opts: SendNotificationEmailOptions): string {
       <div class="title">${opts.title}</div>
       <div class="message">${opts.description}</div>
 
-      <div style="text-align: center; margin: 24px 0;">
+      <div style="text-align: center; margin: 26px 0;">
         <a href="https://risetrack.id" class="btn">Buka Dokumen di Portal RIDE &rarr;</a>
       </div>
     </div>
     <div class="footer">
-      <div>RIDE — Request Integrated Document Ecosystem</div>
-      <div style="margin-top: 4px;">Notifikasi resmi sistem dari <a href="https://risetrack.id" style="color: #163A70; text-decoration: none;">risetrack.id</a>.</div>
+      <div><strong>RIDE</strong> — Request Integrated Document Ecosystem</div>
+      <div style="margin-top: 4px;">Notifikasi resmi sistem dari <a href="https://risetrack.id" style="color: #163A70; text-decoration: none; font-weight: 600;">risetrack.id</a>.</div>
     </div>
   </div>
 </body>
@@ -354,37 +382,12 @@ function generateNotificationHtml(opts: SendNotificationEmailOptions): string {
 }
 
 export async function sendNotificationEmail(opts: SendNotificationEmailOptions): Promise<{ success: boolean; provider: string; error?: string }> {
-  const fromAddress = process.env.EMAIL_FROM || 'RIDE Portal <official@risetrack.id>'
+  const fromAddress = process.env.EMAIL_FROM || 'RIDE Portal <support@risetrack.id>'
   const subject = `[RIDE Notifikasi] ${opts.title}`
   const html = generateNotificationHtml(opts)
+  const text = `Notifikasi RIDE:\n\n${opts.title}\n\n${opts.description}\n\nBuka portal di: https://risetrack.id`
 
-  const resendKey = process.env.RESEND_API_KEY
-  if (resendKey) {
-    try {
-      const res = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${resendKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          from: fromAddress.includes('<') ? fromAddress : `RIDE <${fromAddress}>`,
-          to: [opts.to],
-          subject,
-          html,
-        }),
-      })
-
-      const data = await res.json()
-      if (res.ok && data.id) {
-        return { success: true, provider: 'resend' }
-      }
-    } catch (err: unknown) {
-      console.error('[Resend Notification Exception]', err)
-    }
-  }
-
-  return { success: true, provider: 'simulated' }
+  return dispatchEmail({ to: opts.to, subject, html, text, fromAddress })
 }
 
 export interface SendContractReminderEmailOptions {
@@ -426,10 +429,11 @@ function generateContractReminderHtml(opts: SendContractReminderEmailOptions): s
   <title>Pengingat Jatuh Tempo Kontrak RIDE</title>
   <style>
     body { margin: 0; padding: 0; background-color: #F8FAFC; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
-    .container { max-width: 580px; margin: 30px auto; background: #FFFFFF; border-radius: 16px; border: 1px solid #CBD5E1; overflow: hidden; box-shadow: 0 4px 16px rgba(15, 42, 84, 0.08); }
-    .header { background: linear-gradient(135deg, #0B2147 0%, #163A70 100%); padding: 32px 28px; text-align: center; color: #FFFFFF; }
-    .header-logo { font-size: 26px; font-weight: 800; letter-spacing: 1px; margin-bottom: 4px; }
-    .header-sub { font-size: 11px; color: rgba(255, 255, 255, 0.85); text-transform: uppercase; letter-spacing: 0.5px; }
+    .container { max-width: 580px; margin: 30px auto; background: #FFFFFF; border-radius: 16px; border: 1px solid #CBD5E1; overflow: hidden; box-shadow: 0 4px 20px rgba(15, 33, 71, 0.08); }
+    .header { background: linear-gradient(135deg, #07152E 0%, #0B2147 50%, #163A70 100%); padding: 32px 28px; text-align: center; color: #FFFFFF; }
+    .header-logo-icon { width: 64px; height: 64px; border-radius: 16px; display: block; margin: 0 auto 10px auto; background: #FFFFFF; padding: 4px; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25); }
+    .header-title { font-size: 24px; font-weight: 900; letter-spacing: 2px; color: #FFFFFF; margin-bottom: 3px; }
+    .header-sub { font-size: 11px; color: #93C5FD; text-transform: uppercase; letter-spacing: 1.2px; font-weight: 700; }
     .content { padding: 36px 30px; color: #0F172A; }
     .badge { display: inline-block; background: ${ms.color}15; color: ${ms.color}; border: 1px solid ${ms.color}40; font-weight: 800; font-size: 12px; padding: 5px 14px; border-radius: 9999px; margin-bottom: 16px; text-transform: uppercase; }
     .title { font-size: 19px; font-weight: 800; color: #0B2147; line-height: 1.35; margin-bottom: 12px; }
@@ -437,14 +441,15 @@ function generateContractReminderHtml(opts: SendContractReminderEmailOptions): s
     .info-card { background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 12px; padding: 20px; margin-bottom: 26px; }
     .info-table { width: 100%; font-size: 13px; border-collapse: collapse; }
     .info-table td { padding: 6px 0; }
-    .btn { display: inline-block; background: #163A70; color: #FFFFFF !important; font-weight: 700; font-size: 14px; padding: 13px 30px; border-radius: 10px; text-decoration: none; box-shadow: 0 4px 12px rgba(22, 58, 112, 0.25); }
+    .btn { display: inline-block; background: #163A70; color: #FFFFFF !important; font-weight: 800; font-size: 14px; padding: 13px 30px; border-radius: 10px; text-decoration: none; box-shadow: 0 4px 12px rgba(22, 58, 112, 0.25); }
     .footer { background: #F8FAFC; border-top: 1px solid #E2E8F0; padding: 20px 28px; text-align: center; font-size: 11px; color: #94A3B8; line-height: 1.6; }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="header">
-      <div class="header-logo">RIDE</div>
+      <img src="https://risetrack.id/images/rise-icon.png" alt="RIDE Logo" class="header-logo-icon" />
+      <div class="header-title">RIDE</div>
       <div class="header-sub">Request Integrated Document Ecosystem · Pengingat Jatuh Tempo Kontrak</div>
     </div>
     <div class="content">
@@ -488,8 +493,8 @@ function generateContractReminderHtml(opts: SendContractReminderEmailOptions): s
       </div>
     </div>
     <div class="footer">
-      <div>RIDE — Request Integrated Document Ecosystem</div>
-      <div style="margin-top: 4px;">Pemberitahuan otomatis dari sistem <a href="https://risetrack.id" style="color: #163A70; text-decoration: none;">risetrack.id</a>.</div>
+      <div><strong>RIDE</strong> — Request Integrated Document Ecosystem</div>
+      <div style="margin-top: 4px;">Pemberitahuan otomatis dari sistem <a href="https://risetrack.id" style="color: #163A70; text-decoration: none; font-weight: 600;">risetrack.id</a>.</div>
     </div>
   </div>
 </body>
@@ -498,36 +503,11 @@ function generateContractReminderHtml(opts: SendContractReminderEmailOptions): s
 }
 
 export async function sendContractReminderEmail(opts: SendContractReminderEmailOptions): Promise<{ success: boolean; provider: string; error?: string }> {
-  const fromAddress = process.env.EMAIL_FROM || 'RIDE Contract Alerts <official@risetrack.id>'
+  const fromAddress = process.env.EMAIL_FROM || 'RIDE Contract Alerts <support@risetrack.id>'
   const milestoneLabel = opts.milestone.toUpperCase()
   const subject = `[RIDE ${milestoneLabel}] Pengingat Masa Berlaku Kontrak: ${opts.docNumber} - ${opts.docName}`
   const html = generateContractReminderHtml(opts)
+  const text = `Pengingat Jatuh Tempo Kontrak RIDE:\n\nNomor: ${opts.docNumber}\nNama Dokumen: ${opts.docName}\nTanggal Berakhir: ${opts.contractEnd}\nSisa Hari: ${opts.diffDays}\n\nBuka portal di: https://risetrack.id`
 
-  const resendKey = process.env.RESEND_API_KEY
-  if (resendKey) {
-    try {
-      const res = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${resendKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          from: fromAddress.includes('<') ? fromAddress : `RIDE Alert <${fromAddress}>`,
-          to: [opts.to],
-          subject,
-          html,
-        }),
-      })
-
-      const data = await res.json()
-      if (res.ok && data.id) {
-        return { success: true, provider: 'resend' }
-      }
-    } catch (err: unknown) {
-      console.error('[Resend Contract Reminder Exception]', err)
-    }
-  }
-
-  return { success: true, provider: 'simulated' }
+  return dispatchEmail({ to: opts.to, subject, html, text, fromAddress })
 }

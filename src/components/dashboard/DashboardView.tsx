@@ -178,14 +178,14 @@ const STAGES = [
 ]
 
 const CONSIDERATION_OPTIONS = [
-  'Performa dan kualitas layanan/barang vendor memuaskan',
-  'Kebutuhan operasional unit kerja masih berlanjut',
-  'Efisiensi biaya dan ketersediaan pagu anggaran',
-  'Tidak ada temuan ketidakpatuhan atau sengketa hukum',
-  'Terdapat perubahan ruang lingkup (Scope of Work)',
-  'Kebutuhan pengadaan telah selesai / tidak dilanjutkan',
-  'Tersedia alternatif vendor atau penyedia yang lebih kompetitif',
-  'Klausul kontrak memerlukan adendum atau penyesuaian harga/jangka waktu',
+  'Kinerja vendor memuaskan',
+  'Kebutuhan operasional berlanjut',
+  'Efisiensi biaya & ketersediaan anggaran',
+  'Kepatuhan & legalitas aman',
+  'Perubahan ruang lingkup (SOW)',
+  'Pekerjaan selesai / tidak dilanjutkan',
+  'Tersedia vendor alternatif',
+  'Perlu adendum klausul / nilai / jangka waktu',
 ]
 
 export interface MoodOption {
@@ -202,7 +202,7 @@ const MOOD_OPTIONS: MoodOption[] = [
     id: 'semangat',
     emoji: '🔥',
     label: 'Semangat',
-    desc: 'Siap menuntaskan target & pengajuan!',
+    desc: 'Siap tuntaskan target',
     animation: 'animate-mood-bounce',
     color: 'bg-orange-500/20 text-orange-200 border-orange-400/40',
   },
@@ -210,7 +210,7 @@ const MOOD_OPTIONS: MoodOption[] = [
     id: 'fokus',
     emoji: '🎯',
     label: 'Fokus',
-    desc: 'Konsentrasi tinggi & mode hening',
+    desc: 'Konsentrasi penuh',
     animation: 'animate-mood-float',
     color: 'bg-blue-500/20 text-blue-200 border-blue-400/40',
   },
@@ -218,7 +218,7 @@ const MOOD_OPTIONS: MoodOption[] = [
     id: 'kopi',
     emoji: '☕',
     label: 'Butuh Kopi',
-    desc: 'Perlu kafein biar segar kembali',
+    desc: 'Perlu kafein tambahan',
     animation: 'animate-mood-float',
     color: 'bg-amber-600/20 text-amber-200 border-amber-500/40',
   },
@@ -226,7 +226,7 @@ const MOOD_OPTIONS: MoodOption[] = [
     id: 'bahagia',
     emoji: '😊',
     label: 'Bahagia',
-    desc: 'Hari menyenangkan & penuh senyum',
+    desc: 'Hari menyenangkan',
     animation: 'animate-mood-bounce',
     color: 'bg-emerald-500/20 text-emerald-200 border-emerald-400/40',
   },
@@ -234,7 +234,7 @@ const MOOD_OPTIONS: MoodOption[] = [
     id: 'santai',
     emoji: '😎',
     label: 'Santai',
-    desc: 'Semua terkendali & tenang',
+    desc: 'Semua terkendali',
     animation: 'animate-mood-float',
     color: 'bg-cyan-500/20 text-cyan-200 border-cyan-400/40',
   },
@@ -242,7 +242,7 @@ const MOOD_OPTIONS: MoodOption[] = [
     id: 'gaspol',
     emoji: '🚀',
     label: 'Gaspol',
-    desc: 'Kecepatan penuh tuntaskan berkas!',
+    desc: 'Kecepatan penuh',
     animation: 'animate-mood-bounce',
     color: 'bg-purple-500/20 text-purple-200 border-purple-400/40',
   },
@@ -250,7 +250,7 @@ const MOOD_OPTIONS: MoodOption[] = [
     id: 'ide',
     emoji: '💡',
     label: 'Kreatif',
-    desc: 'Banyak ide segar bermunculan',
+    desc: 'Banyak ide baru',
     animation: 'animate-mood-float',
     color: 'bg-yellow-500/20 text-yellow-200 border-yellow-400/40',
   },
@@ -258,7 +258,7 @@ const MOOD_OPTIONS: MoodOption[] = [
     id: 'lelah',
     emoji: '😴',
     label: 'Lelah',
-    desc: 'Baterai tipis, butuh jeda istirahat',
+    desc: 'Butuh jeda istirahat',
     animation: 'animate-mood-float',
     color: 'bg-slate-500/20 text-slate-200 border-slate-400/40',
   },
@@ -629,7 +629,7 @@ export function DashboardView() {
               Selamat Datang, {user?.employeeName || 'Pengguna'} 👋
             </h1>
             <p className="text-xs text-white/75 max-w-xl leading-relaxed">
-              Pantau pengajuan berkas, tracking persetujuan, dan jatuh tempo kontrak Anda dalam satu ekosistem terpadu.
+              Kelola pengajuan berkas, alur persetujuan, dan jatuh tempo kontrak.
             </p>
           </div>
 
@@ -659,11 +659,11 @@ export function DashboardView() {
                 Semua
               </span>
             </div>
-            <div className="text-[11px] sm:text-xs font-semibold text-[#64748B]">Pengajuan Saya</div>
+            <div className="text-[11px] sm:text-xs font-semibold text-[#64748B]">Total Dokumen</div>
             <div className="text-xl sm:text-3xl font-extrabold text-[#0B2147] mt-0.5">
               {totalCount}
             </div>
-            <div className="text-[10px] sm:text-[11px] text-[#94A3B8] mt-0.5">Total berkas terdaftar</div>
+            <div className="text-[10px] sm:text-[11px] text-[#94A3B8] mt-0.5">Total terdaftar</div>
           </CardContent>
         </Card>
 
@@ -687,7 +687,7 @@ export function DashboardView() {
             <div className="text-xl sm:text-3xl font-extrabold text-[#D97706] mt-0.5">
               {revisionCount}
             </div>
-            <div className="text-[10px] sm:text-[11px] text-[#94A3B8] mt-0.5">Menunggu perbaikan</div>
+            <div className="text-[10px] sm:text-[11px] text-[#94A3B8] mt-0.5">Perlu perbaikan</div>
           </CardContent>
         </Card>
 
@@ -709,7 +709,7 @@ export function DashboardView() {
             <div className="text-xl sm:text-3xl font-extrabold text-[#2563EB] mt-0.5">
               {inProgressCount}
             </div>
-            <div className="text-[10px] sm:text-[11px] text-[#94A3B8] mt-0.5">Peninjauan &amp; draf</div>
+            <div className="text-[10px] sm:text-[11px] text-[#94A3B8] mt-0.5">Sedang berjalan</div>
           </CardContent>
         </Card>
 
@@ -731,7 +731,7 @@ export function DashboardView() {
             <div className="text-xl sm:text-3xl font-extrabold text-[#059669] mt-0.5">
               {completedCount}
             </div>
-            <div className="text-[10px] sm:text-[11px] text-[#94A3B8] mt-0.5">Bertanda tangan sah</div>
+            <div className="text-[10px] sm:text-[11px] text-[#94A3B8] mt-0.5">Sudah sah</div>
           </CardContent>
         </Card>
       </div>
@@ -746,10 +746,10 @@ export function DashboardView() {
               </div>
               <div>
                 <h2 className="text-sm sm:text-base font-bold font-display text-[#0B2147]">
-                  Pengingat Jatuh Tempo Kontrak
+                  Jatuh Tempo Kontrak
                 </h2>
                 <p className="text-[11px] sm:text-xs text-[#64748B]">
-                  Dokumen kontrak yang mendekati tanggal berakhir (&le; 60 hari).
+                  Kontrak yang mendekati batas akhir (&le; 60 hari).
                 </p>
               </div>
             </div>
@@ -760,7 +760,7 @@ export function DashboardView() {
               onClick={() => setCurrentView('tracking', 'progress')}
               className="self-start sm:self-auto text-xs h-8 sm:h-9 font-semibold text-[#163A70] rounded-xl cursor-pointer gap-1"
             >
-              <span>Lacak Jatuh Tempo</span>
+              <span>Lacak</span>
               <ArrowRight className="h-3.5 w-3.5" />
             </Button>
           </div>
@@ -768,7 +768,7 @@ export function DashboardView() {
           <div className="space-y-3">
             {expiringDocs.length === 0 ? (
               <div className="text-center py-6 text-xs text-[#64748B]">
-                Tidak ada dokumen kontrak yang mendekati jatuh tempo saat ini.
+                Tidak ada dokumen mendekati jatuh tempo saat ini.
               </div>
             ) : (
               expiringDocs.slice(0, 4).map((doc) => {
@@ -856,10 +856,10 @@ export function DashboardView() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b border-[#F1F5F9]">
             <div>
               <h2 className="text-base font-bold font-display text-[#0B2147]">
-                Status Alur Persetujuan &amp; Versi Dokumen
+                Alur Persetujuan Dokumen
               </h2>
               <p className="text-xs text-[#64748B] mt-0.5">
-                Pemantauan 7 tahapan alur kerja legal dari pengajuan draf hingga berkas final sah.
+                Status 7 tahapan alur berkas dari draf hingga final sah.
               </p>
             </div>
 
@@ -908,7 +908,7 @@ export function DashboardView() {
                   className="h-8.5 sm:h-9 text-xs bg-[#163A70] hover:bg-[#0B2147] text-white font-bold rounded-xl gap-1.5 w-full sm:w-auto justify-center cursor-pointer"
                 >
                   <History className="h-3.5 w-3.5" />
-                  Lihat Riwayat &amp; Versi Lengkap
+                  Riwayat Versi
                 </Button>
               </div>
 
@@ -1036,13 +1036,13 @@ export function DashboardView() {
               Keputusan Kontrak — {decisionDoc?.docNumber}
             </DialogTitle>
             <DialogDescription>
-              Tentukan langkah perpanjangan atau terminasi terhadap kontrak ini.
+              Pilih tindakan kelanjutan kontrak ini.
             </DialogDescription>
           </DialogHeader>
 
           <form onSubmit={handleDecisionSubmit} className="space-y-4 pt-2">
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold block">Rekomendasi Tindakan Kontrak</label>
+              <label className="text-xs font-semibold block">Tindakan Kontrak</label>
               <div className="grid grid-cols-3 gap-2">
                 <Button
                   type="button"
@@ -1089,11 +1089,11 @@ export function DashboardView() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold block">Catatan &amp; Justifikasi Keputusan</label>
+              <label className="text-xs font-semibold block">Catatan / Justifikasi</label>
               <Textarea
                 value={justification}
                 onChange={(e) => setJustification(e.target.value)}
-                placeholder="Tuliskan justifikasi keputusan perpanjangan/terminasi..."
+                placeholder="Tulis catatan atau alasan..."
                 rows={3}
                 required
                 className="text-xs rounded-xl"
@@ -1105,7 +1105,7 @@ export function DashboardView() {
                 Batal
               </Button>
               <Button type="submit" className="bg-[#163A70] hover:bg-[#0B2147] text-white font-bold">
-                Simpan Keputusan
+                Simpan
               </Button>
             </DialogFooter>
           </form>
@@ -1119,11 +1119,11 @@ export function DashboardView() {
             <div className="flex items-center gap-2">
               <span className="text-2xl animate-mood-bounce inline-block">✨</span>
               <DialogTitle className="text-base sm:text-lg font-bold text-[#0B2147] font-display">
-                Suasana Hati Anda Hari Ini
+                Suasana Hati Hari Ini
               </DialogTitle>
             </div>
             <DialogDescription className="text-xs text-slate-500">
-              Pilih ekspresi yang menggambarkan kondisi hati Anda hari ini. Emoji akan ditampilkan dengan animasi di kolom RIDE Anda.
+              Pilih suasana hati Anda hari ini untuk ditampilkan di profil.
             </DialogDescription>
           </DialogHeader>
 

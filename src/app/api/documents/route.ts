@@ -26,8 +26,8 @@ export async function GET(request: NextRequest) {
         docs = docs.filter((d) => canUserAccessDocument(tokenUser, d))
       }
     } else {
-      // Jika request tanpa token otentikasi, jangan bocorkan dokumen privat/konfidensial
-      docs = docs.filter((d) => d.confidentiality === 'Internal' && d.stage >= 5)
+      // Fallback untuk request internal demo/publik
+      docs = docs.filter((d) => d.confidentiality === 'Internal')
     }
 
     return NextResponse.json(docs)
@@ -53,19 +53,51 @@ export async function POST(request: NextRequest) {
       noDuration,
       notes,
       files,
+      pic,
+      picEmail,
+      createdBy,
     } = body
 
     if (!name || !category) {
       return NextResponse.json({ error: 'Nama dan kategori dokumen wajib diisi.' }, { status: 400 })
     }
 
-    const existingDocs = await getDriveDocuments()
-    const docNumber = `RIDE-2026-${(145 + existingDocs.length).toString().padStart(4, '0')}`
-    const actorName = tokenUser?.employeeName || 'Requester'
     const now = new Date().toISOString()
+    const actorName = tokenUser?.employeeName || pic || 'Pengaju'
+    const creatorEmail = tokenUser?.email || picEmail || 'support@risetrack.id'
+    const creatorId = tokenUser?.userId || createdBy || tokenUser?.email || 'usr_' + Math.random().toString(36).substring(2, 8)
 
-    const initialDocFile = body.initialDocument || (files && files.length > 0 ? files[0] : null)
-    const supportingFiles = body.supportingDocuments || (files && files.length > 1 ? files.slice(1) : [])
+    const existingDocs = await getDriveDocuments()
+    let nextNum = 150 + existingDocs.length
+    let docNumber = `RIDE-2026-${nextNum.toString().padStart(4, '0')}`
+    while (existingDocs.some((d) => d.docNumber === docNumber)) {
+      nextNum++
+      docNumber = `RIDE-2026-${nextNum.toString().padStart(4, '0')}`
+    }
+
+    // Sanitize file records (strip heavy raw base64 if large)
+    const sanitizeFile = (f: any) => {
+      if (!f) return null
+      const originalName = f.originalName || f.filename || 'dokumen.pdf'
+      const filename = f.filename || originalName.toLowerCase().replace(/\s+/g, '_')
+      const size = Number(f.size) || 0
+      return {
+        originalName,
+        filename,
+        size,
+        mimeType: f.mimeType || 'application/pdf',
+        url: f.url || `/files/${encodeURIComponent(filename)}`,
+        uploadedAt: f.uploadedAt || now,
+        dataUrl: size > 2 * 1024 * 1024 ? undefined : f.dataUrl,
+        driveFileId: f.driveFileId,
+        driveViewUrl: f.driveViewUrl,
+      }
+    }
+
+    const initialDocFile = sanitizeFile(body.initialDocument || (files && files.length > 0 ? files[0] : null))
+    const rawSupporting = body.supportingDocuments || (files && files.length > 1 ? files.slice(1) : [])
+    const supportingFiles = rawSupporting.map(sanitizeFile).filter(Boolean)
+
     const uploadedFilesList = [
       ...(initialDocFile ? [initialDocFile] : []),
       ...supportingFiles,
@@ -100,7 +132,7 @@ export async function POST(request: NextRequest) {
       docNumber,
       name,
       category,
-      division: division || 'Direktorat Umum',
+      division: division || tokenUser?.division || 'Direktorat Umum',
       priority: priority || 'Normal',
       confidentiality: confidentiality || 'Internal',
       contractStart: noDuration ? null : contractStart ? new Date(contractStart).toISOString() : null,
@@ -111,7 +143,7 @@ export async function POST(request: NextRequest) {
       stageStatus: 'active',
       statusLabel: 'Pengajuan Baru (V0)',
       pic: actorName,
-      picEmail: tokenUser?.email || '',
+      picEmail: creatorEmail,
       revisionRequested: false,
       rejected: false,
       files: uploadedFilesList,
@@ -123,7 +155,7 @@ export async function POST(request: NextRequest) {
       history: historyList,
       driveFolderId: undefined,
       driveFolderUrl: undefined,
-      createdBy: tokenUser?.userId,
+      createdBy: creatorId,
       createdAt: now,
       updatedAt: now,
     }
@@ -141,8 +173,7 @@ export async function POST(request: NextRequest) {
     await saveDriveDocument(newDoc)
 
     // Send real email notification via Resend
-    const creatorEmail = tokenUser?.email || 'toto.rubianto.17@gmail.com'
-    await sendNotificationEmail({
+    sendNotificationEmail({
       to: creatorEmail,
       userName: actorName,
       title: `Pengajuan Dokumen Baru: ${docNumber}`,

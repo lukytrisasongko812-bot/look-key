@@ -208,10 +208,10 @@ export function UsersView() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold font-display text-[#0B2147]">
-            Manajemen Pengguna &amp; Undangan Akun Resmi
+            Manajemen Pengguna
           </h1>
           <p className="text-xs text-[#64748B] mt-1">
-            Pendaftaran pengguna sistem RIDE dilakukan secara privat melalui link undangan resmi ke Gmail.
+            Kelola akun pengguna dan kirim undangan resmi.
           </p>
         </div>
 
@@ -222,7 +222,7 @@ export function UsersView() {
             className="h-11 text-xs font-bold text-[#163A70] rounded-xl gap-2 cursor-pointer"
           >
             <ShieldCheck className="h-4 w-4" />
-            <span>Matriks Kewenangan (RBAC)</span>
+            <span>Matriks Kewenangan</span>
           </Button>
 
           <Button
@@ -230,7 +230,7 @@ export function UsersView() {
             className="h-11 bg-[#163A70] hover:bg-[#0B2147] text-white font-bold text-xs rounded-xl shadow-md gap-2 cursor-pointer"
           >
             <UserPlus className="h-4 w-4" />
-            <span>Undang Pengguna Baru</span>
+            <span>Undang Pengguna</span>
           </Button>
         </div>
       </div>
@@ -261,7 +261,7 @@ export function UsersView() {
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[#94A3B8]" />
             <Input
               type="text"
-              placeholder="Cari nama, email, jabatan, atau divisi..."
+              placeholder="Cari nama, email, atau divisi..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-10 h-10 text-xs rounded-xl"
@@ -277,7 +277,7 @@ export function UsersView() {
                   : 'bg-[#F1F5F9] text-[#475569] hover:bg-[#E2E8F0]'
               }`}
             >
-              Semua Peran ({allUsers.length})
+              Semua ({allUsers.length})
             </button>
             {rolesList.map((r) => (
               <button
@@ -303,28 +303,22 @@ export function UsersView() {
             <table className="w-full text-left text-xs border-collapse min-w-[760px]">
               <thead>
                 <tr className="border-b border-[#E2E8F0] bg-[#F8FAFC] text-[11px] font-bold text-[#64748B] uppercase tracking-wider">
-                  <th className="py-3.5 px-4">Nama Karyawan</th>
-                  <th className="py-3.5 px-4">Email Terdaftar</th>
+                  <th className="py-3.5 px-4">Nama</th>
+                  <th className="py-3.5 px-4">Email</th>
                   <th className="py-3.5 px-4">Divisi &amp; Jabatan</th>
-                  <th className="py-3.5 px-4">Peran (Role RBAC)</th>
-                  <th className="py-3.5 px-4 text-right">Link Undangan &amp; Aksi</th>
+                  <th className="py-3.5 px-4">Peran</th>
+                  <th className="py-3.5 px-4 text-right">Aksi</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#E2E8F0] bg-white">
                 {filteredUsers.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="py-8 text-center text-xs text-[#64748B]">
-                      Tidak ada pengguna yang sesuai dengan filter atau pencarian.
+                      Tidak ada pengguna ditemukan.
                     </td>
                   </tr>
                 ) : (
                   filteredUsers.map((u) => {
-                    const roleInfo = rolesList.find((r) => r.id === normalizeRole(u.role)) || {
-                      id: u.role,
-                      title: u.role,
-                      color: 'bg-[#F1F5F9] text-[#475569] border-[#CBD5E1]',
-                    }
-
                     return (
                       <tr key={u.id} className="hover:bg-[#F8FAFC]/70 transition-colors">
                         <td className="py-3.5 px-4">
@@ -347,12 +341,12 @@ export function UsersView() {
                             onChange={(e) => handleRoleChange(u.id, e.target.value as UserRole)}
                             className="h-8 rounded-lg border border-[#CBD5E1] bg-[#F8FAFC] px-2 text-xs font-bold text-[#0B2147] focus:border-[#163A70] focus:outline-none cursor-pointer"
                           >
-                            <option value="Guest">Guest — Peninjau Tamu</option>
-                            <option value="User">User — Unit Kerja Pemohon</option>
-                            <option value="Legal Officer">Legal Officer — Staf Hukum &amp; Penelaah</option>
-                            <option value="Legal Management">Legal Management — Tata Kelola &amp; Kustodian</option>
-                            <option value="Board of Directors">Board of Directors — Dewan Direksi</option>
-                            <option value="System Administrator">System Administrator — Kontrol Penuh Sistem</option>
+                            <option value="Guest">Guest</option>
+                            <option value="User">User</option>
+                            <option value="Legal Officer">Legal Officer</option>
+                            <option value="Legal Management">Legal Management</option>
+                            <option value="Board of Directors">Board of Directors</option>
+                            <option value="System Administrator">System Administrator</option>
                           </select>
                         </td>
                         <td className="py-3.5 px-4 text-right">
@@ -373,7 +367,7 @@ export function UsersView() {
                                 variant="outline"
                                 onClick={() => setDeleteTargetUser(u)}
                                 className="h-8 text-xs font-bold text-[#DC2626] border-[#FCA5A5] hover:bg-[#FEF2F2] hover:text-[#B91C1C] rounded-lg px-2.5 cursor-pointer shadow-2xs"
-                                title="Hapus Keanggotaan Pengguna"
+                                title="Hapus Pengguna"
                               >
                                 <Trash2 className="h-3.5 w-3.5" />
                               </Button>
@@ -396,16 +390,16 @@ export function UsersView() {
           <DialogHeader>
             <DialogTitle className="text-[#0B2147] flex items-center gap-2">
               <UserPlus className="h-5 w-5 text-[#163A70]" />
-              Undang Pengguna Baru ke RIDE
+              Undang Pengguna Baru
             </DialogTitle>
             <DialogDescription>
-              Akun baru akan dibuat dan tautan aktivasi langsung dikirimkan ke alamat email tujuan.
+              Kirim tautan aktivasi akun ke email pengguna.
             </DialogDescription>
           </DialogHeader>
 
           <form onSubmit={handleInviteSubmit} className="space-y-3 pt-2">
             <div className="space-y-1">
-              <Label className="text-xs font-semibold">Nama Lengkap Karyawan</Label>
+              <Label className="text-xs font-semibold">Nama Lengkap</Label>
               <Input
                 value={inviteName}
                 onChange={(e) => setInviteName(e.target.value)}
@@ -416,12 +410,12 @@ export function UsersView() {
             </div>
 
             <div className="space-y-1">
-              <Label className="text-xs font-semibold">Email Gmail / Korporat</Label>
+              <Label className="text-xs font-semibold">Email</Label>
               <Input
                 type="email"
                 value={inviteEmail}
                 onChange={(e) => setInviteEmail(e.target.value)}
-                placeholder="nama@gmail.com atau nama@resourcesid.co.id"
+                placeholder="nama@gmail.com atau nama@domain.co.id"
                 required
                 className="h-10 text-xs rounded-xl"
               />
@@ -429,7 +423,7 @@ export function UsersView() {
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <Label className="text-xs font-semibold">Divisi / Unit</Label>
+                <Label className="text-xs font-semibold">Divisi</Label>
                 <Input
                   value={inviteDivision}
                   onChange={(e) => setInviteDivision(e.target.value)}
@@ -439,7 +433,7 @@ export function UsersView() {
               </div>
 
               <div className="space-y-1">
-                <Label className="text-xs font-semibold">Jabatan Resmi</Label>
+                <Label className="text-xs font-semibold">Jabatan</Label>
                 <Input
                   value={invitePosition}
                   onChange={(e) => setInvitePosition(e.target.value)}
@@ -450,23 +444,23 @@ export function UsersView() {
             </div>
 
             <div className="space-y-1">
-              <Label className="text-xs font-semibold">Peran (Role RBAC)</Label>
+              <Label className="text-xs font-semibold">Peran</Label>
               <select
                 value={inviteRole}
                 onChange={(e) => setInviteRole(e.target.value as UserRole)}
                 className="w-full h-10 rounded-xl border border-[#CBD5E1] bg-[#F8FAFC] px-3 text-xs font-bold text-[#0B2147] focus:border-[#163A70] focus:outline-none"
               >
-                <option value="Guest">Guest — Peninjau Tamu</option>
-                <option value="User">User — Unit Kerja Pemohon</option>
-                <option value="Legal Officer">Legal Officer — Staf Hukum &amp; Penelaah</option>
-                <option value="Legal Management">Legal Management — Tata Kelola &amp; Kustodian</option>
-                <option value="Board of Directors">Board of Directors — Dewan Direksi</option>
-                <option value="System Administrator">System Administrator — Kontrol Penuh Sistem</option>
+                <option value="Guest">Guest</option>
+                <option value="User">User</option>
+                <option value="Legal Officer">Legal Officer</option>
+                <option value="Legal Management">Legal Management</option>
+                <option value="Board of Directors">Board of Directors</option>
+                <option value="System Administrator">System Administrator</option>
               </select>
             </div>
 
             <div className="space-y-1">
-              <Label className="text-xs font-semibold">Kata Sandi Awal Sementara</Label>
+              <Label className="text-xs font-semibold">Kata Sandi Sementara</Label>
               <Input
                 type="text"
                 value={invitePassword}
@@ -485,7 +479,7 @@ export function UsersView() {
                 disabled={inviteLoading}
                 className="bg-[#163A70] hover:bg-[#0B2147] text-white font-bold"
               >
-                {inviteLoading ? 'Mengirim Undangan...' : 'Kirim Undangan Resmi'}
+                {inviteLoading ? 'Mengirim...' : 'Kirim Undangan'}
               </Button>
             </DialogFooter>
           </form>
@@ -500,10 +494,10 @@ export function UsersView() {
               <CheckCircle2 className="h-6 w-6" />
             </div>
             <DialogTitle className="text-center text-[#0B2147]">
-              Undangan Resmi Berhasil Dibuat!
+              Undangan Berhasil Dibuat
             </DialogTitle>
             <DialogDescription className="text-center">
-              Email telah dikirim melalui Resend. Anda juga dapat menyalin tautan undangan aktivasi berikut secara langsung:
+              Email telah dikirim. Anda juga dapat menyalin tautan berikut:
             </DialogDescription>
           </DialogHeader>
 
@@ -517,14 +511,14 @@ export function UsersView() {
                 onClick={() => {
                   if (navigator.clipboard) {
                     navigator.clipboard.writeText(createdInviteUrl)
-                    toast.success('Link undangan aktivasi berhasil disalin!')
+                    toast.success('Link undangan berhasil disalin!')
                   }
                   setCreatedInviteUrl(null)
                 }}
                 className="w-full bg-[#163A70] hover:bg-[#0B2147] text-white font-bold h-10 rounded-xl"
               >
                 <Copy className="h-4 w-4 mr-1.5" />
-                Salin Tautan Aktivasi
+                Salin Tautan
               </Button>
             </div>
           )}
@@ -539,17 +533,17 @@ export function UsersView() {
               <AlertTriangle className="h-6 w-6" />
             </div>
             <DialogTitle className="text-center text-[#0B2147]">
-              Konfirmasi Hapus Keanggotaan Pengguna
+              Konfirmasi Hapus Pengguna
             </DialogTitle>
             <DialogDescription className="text-center text-xs text-[#64748B]">
-              Tindakan ini akan menghapus akun dan seluruh hak akses keanggotaan pengguna dari sistem RIDE secara permanen.
+              Akun dan hak akses pengguna ini akan dihapus secara permanen.
             </DialogDescription>
           </DialogHeader>
 
           {deleteTargetUser && (
             <div className="p-3.5 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] space-y-1.5 text-xs">
               <div className="flex justify-between">
-                <span className="text-[#64748B]">Nama Lengkap:</span>
+                <span className="text-[#64748B]">Nama:</span>
                 <span className="font-bold text-[#0F172A]">{deleteTargetUser.employeeName}</span>
               </div>
               <div className="flex justify-between">
@@ -557,7 +551,7 @@ export function UsersView() {
                 <span className="font-mono text-[#0F172A]">{deleteTargetUser.email}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-[#64748B]">Peran (Role):</span>
+                <span className="text-[#64748B]">Peran:</span>
                 <span className="font-bold text-[#DC2626]">{deleteTargetUser.role}</span>
               </div>
               <div className="flex justify-between">
@@ -583,7 +577,7 @@ export function UsersView() {
               className="h-10 text-xs bg-[#DC2626] hover:bg-[#B91C1C] text-white font-bold rounded-xl gap-1.5"
             >
               <Trash2 className="h-4 w-4" />
-              {deleteLoading ? 'Menghapus...' : 'Ya, Hapus Keanggotaan'}
+              {deleteLoading ? 'Menghapus...' : 'Ya, Hapus'}
             </Button>
           </DialogFooter>
         </DialogContent>

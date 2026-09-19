@@ -4,6 +4,7 @@ import React from 'react'
 import { useApp, ViewType } from '@/context/AppContext'
 import {
   LayoutDashboard,
+  FilePlus2,
   GitPullRequestDraft,
   Files,
   UserCog,
@@ -13,11 +14,12 @@ import {
   LogOut,
 } from 'lucide-react'
 import { RideLogo } from '@/components/common/RideLogo'
-import { normalizeRole, isSystemAdmin, isBoardOfDirectors } from '@/lib/roles'
+import { normalizeRole, isSystemAdmin, isBoardOfDirectors, canAccessAuthorityMatrix } from '@/lib/roles'
 
 export function Sidebar() {
   const {
     currentView,
+    trackSubTab,
     setCurrentView,
     isSidebarCollapsed,
     setIsSidebarCollapsed,
@@ -31,14 +33,17 @@ export function Sidebar() {
 
   const reviewCount = documents.filter((d) => d.stage === 0 || d.stage === 1 || d.revisionRequested).length
   const isAdmin = isSystemAdmin(user?.role) || isBoardOfDirectors(user?.role)
+  const canAccessMatrix = canAccessAuthorityMatrix(user?.role)
 
   const allNavItems: {
     id: ViewType
+    subTab?: 'new' | 'progress'
     label: string
     icon: React.ReactNode
     badge?: number | string
     badgeColor?: string
     adminOnly?: boolean
+    legalManagementAndAbove?: boolean
     hideForRequester?: boolean
   }[] = [
     {
@@ -48,7 +53,14 @@ export function Sidebar() {
     },
     {
       id: 'tracking',
-      label: 'Lacak & Ajukan Dokumen',
+      subTab: 'new',
+      label: 'Ajukan Dokumen',
+      icon: <FilePlus2 className="h-4 w-4 shrink-0" />,
+    },
+    {
+      id: 'tracking',
+      subTab: 'progress',
+      label: 'Lacak Alur',
       icon: <GitPullRequestDraft className="h-4 w-4 shrink-0" />,
       badge: reviewCount > 0 ? reviewCount : undefined,
       badgeColor: 'bg-[#D97706] text-white',
@@ -63,10 +75,11 @@ export function Sidebar() {
       id: 'matrix',
       label: 'Matriks Kewenangan',
       icon: <ShieldCheck className="h-4 w-4 shrink-0" />,
+      legalManagementAndAbove: true,
     },
     {
       id: 'myAccount',
-      label: 'Profil & Keamanan',
+      label: 'Profil Akun',
       icon: <UserCog className="h-4 w-4 shrink-0" />,
     },
     {
@@ -78,14 +91,19 @@ export function Sidebar() {
     },
     {
       id: 'settings',
-      label: 'Pengaturan Sistem',
+      label: 'Pengaturan',
       icon: <SlidersHorizontal className="h-4 w-4 shrink-0" />,
       adminOnly: true,
     },
   ]
 
   const isRequester = normalizeRole(user?.role) === 'User' || normalizeRole(user?.role) === 'Guest'
-  const navItems = allNavItems.filter((item) => (!item.adminOnly || isAdmin) && (!item.hideForRequester || !isRequester))
+  const navItems = allNavItems.filter((item) => {
+    if (item.adminOnly && !isAdmin) return false
+    if (item.legalManagementAndAbove && !canAccessMatrix) return false
+    if (item.hideForRequester && isRequester) return false
+    return true
+  })
 
   return (
     <>
@@ -110,13 +128,17 @@ export function Sidebar() {
         {/* Navigation Items */}
         <div className="flex-1 space-y-1 p-3 overflow-y-auto">
           {navItems.map((item) => {
-            const isActive = currentView === item.id
+            const isActive =
+              currentView === item.id &&
+              (item.subTab ? trackSubTab === item.subTab : true)
+
+            const navKey = item.id + (item.subTab ? `-${item.subTab}` : '')
 
             return (
               <button
-                key={item.id}
+                key={navKey}
                 onClick={() => {
-                  setCurrentView(item.id)
+                  setCurrentView(item.id, item.subTab)
                   setIsMobileSidebarOpen(false)
                 }}
                 className={`group flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-xs font-semibold transition-all cursor-pointer ${
