@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useApp, DocumentItem } from '@/context/AppContext'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -33,7 +33,45 @@ import {
   History,
   Download,
   FileEdit,
+  MapPin,
+  Sun,
+  CloudSun,
+  Cloud,
+  CloudRain,
+  CloudDrizzle,
+  CloudFog,
+  CloudLightning,
+  CloudSnow,
+  Thermometer,
 } from 'lucide-react'
+
+function getWeatherIcon(code: number | null) {
+  if (code === null) return CloudSun
+  if (code === 0) return Sun
+  if (code === 1 || code === 2) return CloudSun
+  if (code === 3) return Cloud
+  if (code >= 45 && code <= 48) return CloudFog
+  if (code >= 51 && code <= 57) return CloudDrizzle
+  if (code >= 61 && code <= 67) return CloudRain
+  if (code >= 71 && code <= 77) return CloudSnow
+  if (code >= 80 && code <= 82) return CloudRain
+  if (code >= 95) return CloudLightning
+  return CloudSun
+}
+
+function getWeatherCondition(code: number | null): string {
+  if (code === null) return 'Cerah Berawan'
+  if (code === 0) return 'Cerah'
+  if (code === 1 || code === 2) return 'Cerah Berawan'
+  if (code === 3) return 'Berawan'
+  if (code >= 45 && code <= 48) return 'Berkabut'
+  if (code >= 51 && code <= 57) return 'Gerimis'
+  if (code >= 61 && code <= 67) return 'Hujan'
+  if (code >= 71 && code <= 77) return 'Bersalju'
+  if (code >= 80 && code <= 82) return 'Hujan Deras'
+  if (code >= 95) return 'Hujan Petir'
+  return 'Cerah Berawan'
+}
 import {
   Dialog,
   DialogContent,
@@ -151,21 +189,141 @@ export function DashboardView() {
     )
   }
 
+  // Real-time Clock State
+  const [currentTime, setCurrentTime] = useState<Date | null>(null)
+
+  // Real-time Weather & Location State
+  const [weatherData, setWeatherData] = useState<{
+    temperature: number | null
+    weatherCode: number | null
+    condition: string
+    location: string
+    loading: boolean
+  }>({
+    temperature: null,
+    weatherCode: null,
+    condition: 'Memuat...',
+    location: 'Jakarta, ID',
+    loading: true,
+  })
+
+  // Live Clock Ticker
+  useEffect(() => {
+    setCurrentTime(new Date())
+    const timer = setInterval(() => {
+      setCurrentTime(new Date())
+    }, 1000)
+    return () => clearInterval(timer)
+  }, [])
+
+  // Live Location & Weather Fetcher
+  useEffect(() => {
+    let isMounted = true
+
+    async function fetchWeather(lat: number, lon: number, locationLabel: string) {
+      try {
+        const weatherRes = await fetch(
+          `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code`
+        )
+        if (weatherRes.ok && isMounted) {
+          const wData = await weatherRes.json()
+          const code = wData.current?.weather_code ?? 1
+          const temp =
+            typeof wData.current?.temperature_2m === 'number'
+              ? Math.round(wData.current.temperature_2m)
+              : 28
+          setWeatherData({
+            temperature: temp,
+            weatherCode: code,
+            condition: getWeatherCondition(code),
+            location: locationLabel,
+            loading: false,
+          })
+        }
+      } catch (e) {
+        // Fallback gracefully
+      }
+    }
+
+    async function initLocationAndWeather() {
+      let lat = -6.2088
+      let lon = 106.8456
+      let locName = 'Jakarta, ID'
+
+      // 1. IP Geolocation (Instant, zero browser popups)
+      try {
+        const geoRes = await fetch('https://api.bigdatacloud.net/data/reverse-geocode-client?localityLanguage=id')
+        if (geoRes.ok) {
+          const geo = await geoRes.json()
+          if (geo.latitude && geo.longitude) {
+            lat = geo.latitude
+            lon = geo.longitude
+            const city = geo.city || geo.locality || geo.principalSubdivision || 'Jakarta'
+            const country = geo.countryCode || 'ID'
+            locName = `${city}, ${country}`
+          }
+        }
+      } catch (e) {
+        // Default to Jakarta
+      }
+
+      if (isMounted) {
+        await fetchWeather(lat, lon, locName)
+      }
+
+      // 2. Refine with precise GPS if device permitted
+      if (typeof window !== 'undefined' && 'geolocation' in navigator) {
+        navigator.geolocation.getCurrentPosition(
+          async (pos) => {
+            if (!isMounted) return
+            const gpsLat = pos.coords.latitude
+            const gpsLon = pos.coords.longitude
+            try {
+              const rGeo = await fetch(
+                `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${gpsLat}&longitude=${gpsLon}&localityLanguage=id`
+              )
+              if (rGeo.ok) {
+                const geoData = await rGeo.json()
+                const gpsCity = geoData.city || geoData.locality || geoData.principalSubdivision || 'Jakarta'
+                const gpsCountry = geoData.countryCode || 'ID'
+                await fetchWeather(gpsLat, gpsLon, `${gpsCity}, ${gpsCountry}`)
+              }
+            } catch (e) {
+              await fetchWeather(gpsLat, gpsLon, locName)
+            }
+          },
+          () => {},
+          { timeout: 5000, maximumAge: 300000 }
+        )
+      }
+    }
+
+    initLocationAndWeather()
+
+    const weatherTimer = setInterval(initLocationAndWeather, 10 * 60 * 1000)
+    return () => {
+      isMounted = false
+      clearInterval(weatherTimer)
+    }
+  }, [])
+
+  const WeatherIcon = getWeatherIcon(weatherData.weatherCode)
+
   return (
     <div className="space-y-3.5 sm:space-y-5 max-w-7xl mx-auto pb-12 animate-in fade-in duration-300">
       {/* Top Hero Banner — Responsive (Mode HP Ringkas & Elegan, Mode Desktop Lengkap) */}
       {/* Mobile View (HP) */}
-      <div className="sm:hidden relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#0B2147] via-[#163A70] to-[#1E4D94] p-4 text-white shadow-sm">
+      <div className="sm:hidden relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#0B2147] via-[#163A70] to-[#1E4D94] p-4 text-white shadow-sm space-y-3">
         <div className="flex items-center justify-between gap-3">
-          <div className="space-y-1 min-w-0">
-            <div className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-0.5 text-[10.5px] font-medium backdrop-blur-md border border-white/15 text-white/90">
+          <div className="space-y-0.5 min-w-0">
+            <div className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-0.5 text-[10px] font-medium backdrop-blur-md border border-white/15 text-white/90">
               <span className="flex h-1.5 w-1.5 rounded-full bg-[#10B981] animate-pulse" />
               <span>RIDE Online</span>
               <span className="text-white/40">•</span>
               <span className="truncate">{user?.division || 'MIND ID'}</span>
             </div>
-            <h1 className="text-base font-bold font-display text-white tracking-tight truncate">
-              Halo, {user?.employeeName || 'Pengguna'} 👋
+            <h1 className="text-base font-bold font-display text-white tracking-tight truncate pt-0.5">
+              Selamat Datang, {user?.employeeName || 'Pengguna'} 👋
             </h1>
             <p className="text-[11px] text-white/70 truncate">
               Peran: <span className="font-semibold text-white/90">{user?.role || 'Karyawan'}</span>
@@ -174,6 +332,39 @@ export function DashboardView() {
 
           <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 shadow-xs shrink-0">
             <img src="/icon.svg" alt="RIDE" className="h-6.5 w-6.5 object-contain" />
+          </div>
+        </div>
+
+        {/* Real-time Widget: Jam, Lokasi, Suhu di Mobile */}
+        <div className="pt-2 border-t border-white/10 flex flex-wrap items-center gap-1.5 text-[11px]">
+          {/* Live Clock */}
+          <div className="inline-flex items-center gap-1.5 rounded-lg bg-white/10 px-2.5 py-1 backdrop-blur-md border border-white/15 text-white font-mono font-semibold">
+            <Clock className="h-3.5 w-3.5 text-[#60A5FA]" />
+            <span>
+              {currentTime
+                ? currentTime.toLocaleTimeString('id-ID', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: false,
+                  })
+                : '--:--:--'}
+            </span>
+          </div>
+
+          {/* Location */}
+          <div className="inline-flex items-center gap-1 rounded-lg bg-white/10 px-2.5 py-1 backdrop-blur-md border border-white/15 text-white">
+            <MapPin className="h-3.5 w-3.5 text-[#F87171] shrink-0" />
+            <span className="truncate max-w-[120px]">{weatherData.location}</span>
+          </div>
+
+          {/* Temperature & Weather */}
+          <div className="inline-flex items-center gap-1.5 rounded-lg bg-white/10 px-2.5 py-1 backdrop-blur-md border border-white/15 text-white">
+            <WeatherIcon className="h-3.5 w-3.5 text-[#FBBF24] shrink-0" />
+            <span className="font-bold">
+              {weatherData.temperature !== null ? `${weatherData.temperature}°C` : '--°C'}
+            </span>
+            <span className="text-white/75 truncate max-w-[90px]">{weatherData.condition}</span>
           </div>
         </div>
       </div>
@@ -201,13 +392,61 @@ export function DashboardView() {
               </div>
             </div>
 
-            <div className="pt-1">
-              <h1 className="text-base sm:text-lg font-bold font-display tracking-tight text-white/95">
-                Selamat Datang, {user?.employeeName || 'Pengguna'}
-              </h1>
-              <p className="text-xs text-white/75 mt-0.5 max-w-xl leading-relaxed">
-                Pantau pengajuan berkas, tracking persetujuan, dan jatuh tempo kontrak Anda dalam satu ekosistem terpadu.
-              </p>
+            <div className="pt-1 space-y-2.5">
+              <div>
+                <h1 className="text-lg sm:text-xl font-bold font-display tracking-tight text-white">
+                  Selamat Datang, {user?.employeeName || 'Pengguna'}
+                </h1>
+                <p className="text-xs text-white/75 mt-0.5 max-w-xl leading-relaxed">
+                  Pantau pengajuan berkas, tracking persetujuan, dan jatuh tempo kontrak Anda dalam satu ekosistem terpadu.
+                </p>
+              </div>
+
+              {/* Real-time Widget: Jam, Lokasi, Suhu Real-time */}
+              <div className="flex flex-wrap items-center gap-2 pt-0.5">
+                {/* Jam Real-time */}
+                <div className="inline-flex items-center gap-2 rounded-xl bg-white/10 px-3 py-1.5 text-xs font-semibold backdrop-blur-md border border-white/15 text-white shadow-2xs">
+                  <Clock className="h-4 w-4 text-[#60A5FA]" />
+                  <span className="font-mono tracking-wider font-bold">
+                    {currentTime
+                      ? currentTime.toLocaleTimeString('id-ID', {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          second: '2-digit',
+                          hour12: false,
+                        })
+                      : '--:--:--'}
+                  </span>
+                  <span className="text-[10px] text-white/70 font-sans font-medium">WIB</span>
+                  <span className="text-white/30">•</span>
+                  <span className="text-[11px] text-white/80 font-normal">
+                    {currentTime
+                      ? currentTime.toLocaleDateString('id-ID', {
+                          weekday: 'short',
+                          day: 'numeric',
+                          month: 'short',
+                          year: 'numeric',
+                        })
+                      : ''}
+                  </span>
+                </div>
+
+                {/* Lokasi Real-time */}
+                <div className="inline-flex items-center gap-1.5 rounded-xl bg-white/10 px-3 py-1.5 text-xs font-medium backdrop-blur-md border border-white/15 text-white shadow-2xs">
+                  <MapPin className="h-4 w-4 text-[#F87171] shrink-0" />
+                  <span>{weatherData.location}</span>
+                </div>
+
+                {/* Suhu Real-time */}
+                <div className="inline-flex items-center gap-2 rounded-xl bg-white/10 px-3 py-1.5 text-xs font-medium backdrop-blur-md border border-white/15 text-white shadow-2xs">
+                  <WeatherIcon className="h-4 w-4 text-[#FBBF24] shrink-0" />
+                  <span className="font-bold font-display">
+                    {weatherData.temperature !== null ? `${weatherData.temperature}°C` : '--°C'}
+                  </span>
+                  <span className="text-white/30">•</span>
+                  <span className="text-white/85">{weatherData.condition}</span>
+                </div>
+              </div>
             </div>
           </div>
 
