@@ -519,40 +519,10 @@ export async function syncUserToGoogleDrive(user: StoredUser): Promise<boolean> 
       }
     }
 
-    const fallbackHash = await getDefaultPasswordHash()
-    const userMetadata = JSON.stringify({
-      _id: user._id,
-      id: user.id || user._id,
-      employeeName: user.employeeName,
-      email: cleanEmail,
-      passwordHash: user.passwordHash || fallbackHash,
-      position: user.position || 'Reviewer',
-      division: user.division || 'Direktorat Umum',
-      role: user.role,
-      phone: user.phone || '',
-      avatarUrl: user.avatarUrl || '',
-      coverUrl: user.coverUrl || '',
-      twoFactorEnabled: user.twoFactorEnabled ?? true,
-      twoFactorSecret: user.twoFactorSecret || null,
-      twoFactorExpires: user.twoFactorExpires || null,
-      isActive: user.isActive ?? true,
-      createdAt: user.createdAt || new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    }, null, 2)
-
     let folderId: string | undefined
 
     if (matchingFolders.length > 0) {
       folderId = matchingFolders[0].id
-      await drive.files.update({
-        fileId: folderId,
-        requestBody: {
-          name: folderName,
-          description: userMetadata,
-        },
-        supportsAllDrives: true,
-      })
-
       // Clean up extra duplicate folders for this user
       if (matchingFolders.length > 1) {
         for (let i = 1; i < matchingFolders.length; i++) {
@@ -571,13 +541,15 @@ export async function syncUserToGoogleDrive(user: StoredUser): Promise<boolean> 
           name: folderName,
           mimeType: 'application/vnd.google-apps.folder',
           parents: [USERS_REGISTRY_FOLDER_ID],
-          description: userMetadata,
         },
         supportsAllDrives: true,
         fields: 'id',
       })
       folderId = created.data.id!
     }
+
+    let avatarDriveLink = ''
+    let coverDriveLink = ''
 
     if (folderId) {
       // 1. Upload User Summary Text Log
@@ -610,8 +582,20 @@ Tautan Portal     : https://risetrack.id
           const ext = matches[1] === 'jpeg' ? 'jpg' : matches[1]
           const mime = `image/${matches[1]}`
           const buf = Buffer.from(matches[2], 'base64')
-          await uploadOrUpdateFileInFolder(folderId, `foto_profil.${ext}`, mime, buf)
+          const upRes = await uploadOrUpdateFileInFolder(folderId, `foto_profil.${ext}`, mime, buf)
+          if (upRes) {
+            try {
+              await drive.permissions.create({
+                fileId: upRes.fileId,
+                requestBody: { role: 'reader', type: 'anyone' },
+                supportsAllDrives: true,
+              })
+            } catch {}
+            avatarDriveLink = upRes.webViewLink || `/api/users/${user._id}/avatar`
+          }
         }
+      } else if (user.avatarUrl && !user.avatarUrl.startsWith('data:')) {
+        avatarDriveLink = user.avatarUrl
       }
 
       // 3. Upload Cover Photo (coverUrl)
@@ -621,14 +605,105 @@ Tautan Portal     : https://risetrack.id
           const ext = matches[1] === 'jpeg' ? 'jpg' : matches[1]
           const mime = `image/${matches[1]}`
           const buf = Buffer.from(matches[2], 'base64')
-          await uploadOrUpdateFileInFolder(folderId, `foto_sampul.${ext}`, mime, buf)
+          const upRes = await uploadOrUpdateFileInFolder(folderId, `foto_sampul.${ext}`, mime, buf)
+          if (upRes) {
+            try {
+              await drive.permissions.create({
+                fileId: upRes.fileId,
+                requestBody: { role: 'reader', type: 'anyone' },
+                supportsAllDrives: true,
+              })
+            } catch {}
+            coverDriveLink = upRes.webViewLink || ''
+          }
         }
+      } else if (user.coverUrl && !user.coverUrl.startsWith('data:')) {
+        coverDriveLink = user.coverUrl
       }
+
+      // Compact user metadata (excluding huge base64 strings so description is always < 800 bytes)
+      const fallbackHash = await getDefaultPasswordHash()
+      const userMetadata = JSON.stringify({
+        _id: user._id,
+        id: user.id || user._id,
+        employeeName: user.employeeName,
+        email: cleanEmail,
+        passwordHash: user.passwordHash || fallbackHash,
+        position: user.position || 'Reviewer',
+        division: user.division || 'Direktorat Umum',
+        role: user.role,
+        phone: user.phone || '',
+        avatarUrl: avatarDriveLink || (user.avatarUrl?.startsWith('data:') ? `/api/users/${user._id}/avatar` : user.avatarUrl) || '',
+        coverUrl: coverDriveLink || (user.coverUrl?.startsWith('data:') ? '' : user.coverUrl) || '',
+        twoFactorEnabled: user.twoFactorEnabled ?? true,
+        twoFactorSecret: user.twoFactorSecret || null,
+        twoFactorExpires: user.twoFactorExpires || null,
+        isActive: user.isActive ?? true,
+        createdAt: user.createdAt || new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      })
+
+      await drive.files.update({
+        fileId: folderId,
+        requestBody: {
+          name: folderName,
+          description: userMetadata,
+        },
+        supportsAllDrives: true,
+      })
     }
 
     return true
   } catch (e) {
     console.error('[User Drive Sync Error]', e)
+    return false
+  }
+}
+
+/**
+ * Trash a document folder from Google Drive
+ */
+export async function trashDocumentInGoogleDrive(folderIdOrDocNumber: string): Promise<boolean> {
+  if (!folderIdOrDocNumber) return false
+  try {
+    const drive = getDriveClient()
+    // 1. Try directly by folder ID
+    if (!folderIdOrDocNumber.startsWith('RIDE-') && !folderIdOrDocNumber.startsWith('doc_')) {
+      try {
+        await drive.files.update({
+          fileId: folderIdOrDocNumber,
+          requestBody: { trashed: true },
+          supportsAllDrives: true,
+        })
+        return true
+      } catch {}
+    }
+
+    // 2. Search for folder by document number inside DEFAULT_PARENT_FOLDER_ID
+    const res = await drive.files.list({
+      q: `'${DEFAULT_PARENT_FOLDER_ID}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
+      supportsAllDrives: true,
+      includeItemsFromAllDrives: true,
+      fields: 'files(id, name, description)',
+    })
+
+    for (const f of res.data.files || []) {
+      if (
+        (f.name && f.name.includes(folderIdOrDocNumber)) ||
+        (f.description && f.description.includes(folderIdOrDocNumber))
+      ) {
+        if (f.id) {
+          await drive.files.update({
+            fileId: f.id,
+            requestBody: { trashed: true },
+            supportsAllDrives: true,
+          })
+        }
+      }
+    }
+    return true
+  } catch (err) {
+    console.error('[trashDocumentInGoogleDrive Error]', err)
     return false
   }
 }

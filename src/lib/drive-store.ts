@@ -9,6 +9,7 @@ import {
   getUserFromGoogleDriveByEmail,
   getUserFromGoogleDriveById,
   deleteUserFromGoogleDrive,
+  trashDocumentInGoogleDrive,
 } from './gdrive'
 import { connectToDatabase } from './db'
 import { User } from '@/models/User'
@@ -16,6 +17,7 @@ import { DocumentModel } from '@/models/Document'
 
 const LOCAL_USERS_CACHE_FILE = '/tmp/ride_users_persistent_cache.json'
 const LOCAL_DOCS_CACHE_FILE = '/tmp/ride_docs_persistent_cache.json'
+const LOCAL_DELETED_DOCS_CACHE_FILE = '/tmp/ride_deleted_docs_persistent_cache.json'
 
 function readLocalUsersCache(): StoredUser[] | null {
   try {
@@ -58,6 +60,29 @@ function readLocalDocsCache(): StoredDocument[] | null {
 function writeLocalDocsCache(docs: StoredDocument[]) {
   try {
     fs.writeFileSync(LOCAL_DOCS_CACHE_FILE, JSON.stringify(docs), 'utf-8')
+  } catch (e) {
+    // Ignore write errors
+  }
+}
+
+function readLocalDeletedDocsCache(): string[] {
+  try {
+    if (fs.existsSync(LOCAL_DELETED_DOCS_CACHE_FILE)) {
+      const data = fs.readFileSync(LOCAL_DELETED_DOCS_CACHE_FILE, 'utf-8')
+      const parsed = JSON.parse(data)
+      if (Array.isArray(parsed)) {
+        return parsed
+      }
+    }
+  } catch (e) {
+    // Ignore read errors
+  }
+  return []
+}
+
+function writeLocalDeletedDocsCache(deletedIds: string[]) {
+  try {
+    fs.writeFileSync(LOCAL_DELETED_DOCS_CACHE_FILE, JSON.stringify(Array.from(new Set(deletedIds))), 'utf-8')
   } catch (e) {
     // Ignore write errors
   }
@@ -1081,9 +1106,19 @@ export async function initAndSeedDriveStore() {
   ]
 
   // Restore any persisted documents from local disk cache (/tmp)
+  const deletedDocIds = readLocalDeletedDocsCache()
+
+  // Filter out any documents that have been deleted
+  store.documents = store.documents.filter(
+    (d) => !deletedDocIds.includes(d._id) && !deletedDocIds.includes(d.docNumber)
+  )
+
   const cachedDocs = readLocalDocsCache()
   if (cachedDocs && cachedDocs.length > 0) {
     for (const cd of cachedDocs) {
+      if (deletedDocIds.includes(cd._id) || (cd.docNumber && deletedDocIds.includes(cd.docNumber))) {
+        continue
+      }
       const idx = store.documents.findIndex(
         (d) => d._id === cd._id || (cd.docNumber && d.docNumber === cd.docNumber)
       )
@@ -1101,8 +1136,12 @@ export async function initAndSeedDriveStore() {
     const dbDocs = await DocumentModel.find({}).lean()
     if (dbDocs && dbDocs.length > 0) {
       for (const d of dbDocs) {
+        const dId = (d as any)._id?.toString() || (d as any).id
+        if (deletedDocIds.includes(dId) || (d.docNumber && deletedDocIds.includes(d.docNumber))) {
+          continue
+        }
         const mappedDoc: StoredDocument = {
-          _id: (d as any)._id?.toString() || (d as any).id,
+          _id: dId,
           docNumber: d.docNumber,
           name: d.name,
           category: d.category,
@@ -1150,6 +1189,11 @@ export async function initAndSeedDriveStore() {
     // MongoDB failure ignored safely
   }
 
+  // Filter one final time against deletedDocIds
+  store.documents = store.documents.filter(
+    (d) => !deletedDocIds.includes(d._id) && !deletedDocIds.includes(d.docNumber)
+  )
+
   writeLocalDocsCache(store.documents)
 
   store.notifications = [
@@ -1192,7 +1236,10 @@ export async function initAndSeedDriveStore() {
 export async function getDriveDocuments(query = '', status = '', category = '') {
   await initAndSeedDriveStore()
   const store = getStore()
-  let docs = [...store.documents]
+  const deletedDocIds = readLocalDeletedDocsCache()
+  let docs = store.documents.filter(
+    (d) => !deletedDocIds.includes(d._id) && !deletedDocIds.includes(d.docNumber)
+  )
 
   if (query) {
     const q = query.toLowerCase()
@@ -1221,12 +1268,21 @@ export async function getDriveDocuments(query = '', status = '', category = '') 
 export async function getDriveDocumentById(id: string) {
   await initAndSeedDriveStore()
   const store = getStore()
-  return store.documents.find((d) => d._id === id || d.docNumber === id) || null
+  const deletedDocIds = readLocalDeletedDocsCache()
+  if (deletedDocIds.includes(id)) return null
+  return store.documents.find((d) => (d._id === id || d.docNumber === id) && !deletedDocIds.includes(d._id) && !deletedDocIds.includes(d.docNumber)) || null
 }
 
 export async function saveDriveDocument(doc: StoredDocument) {
   await initAndSeedDriveStore()
   const store = getStore()
+  const deletedDocIds = readLocalDeletedDocsCache()
+  // Remove from deleted list if re-saving
+  if (deletedDocIds.includes(doc._id) || deletedDocIds.includes(doc.docNumber)) {
+    const updatedDeleted = deletedDocIds.filter((x) => x !== doc._id && x !== doc.docNumber)
+    writeLocalDeletedDocsCache(updatedDeleted)
+  }
+
   const idx = store.documents.findIndex((d) => d._id === doc._id || d.docNumber === doc.docNumber)
   if (idx >= 0) {
     store.documents[idx] = { ...doc, updatedAt: new Date().toISOString() }
@@ -1259,16 +1315,38 @@ export async function deleteDriveDocument(id: string) {
   await initAndSeedDriveStore()
   const store = getStore()
   const idx = store.documents.findIndex((d) => d._id === id || d.docNumber === id)
+  let docToDelete: StoredDocument | null = null
+
   if (idx >= 0) {
-    const [deleted] = store.documents.splice(idx, 1)
-    writeLocalDocsCache(store.documents)
-    try {
-      await connectToDatabase()
-      await DocumentModel.deleteOne({ $or: [{ _id: id }, { docNumber: id }] })
-    } catch {}
-    return true
+    docToDelete = store.documents.splice(idx, 1)[0]
   }
-  return false
+
+  // 1. Record in persistent deleted registry
+  const deletedDocIds = readLocalDeletedDocsCache()
+  deletedDocIds.push(id)
+  if (docToDelete) {
+    if (docToDelete._id) deletedDocIds.push(docToDelete._id)
+    if (docToDelete.docNumber) deletedDocIds.push(docToDelete.docNumber)
+  }
+  writeLocalDeletedDocsCache(deletedDocIds)
+  writeLocalDocsCache(store.documents)
+
+  // 2. Trash Google Drive folder
+  if (docToDelete) {
+    trashDocumentInGoogleDrive(docToDelete.driveFolderId || docToDelete.docNumber).catch((e) =>
+      console.error('[GDrive Trash Doc Error]', e)
+    )
+  } else {
+    trashDocumentInGoogleDrive(id).catch(() => {})
+  }
+
+  // 3. Delete from MongoDB
+  try {
+    await connectToDatabase()
+    await DocumentModel.deleteMany({ $or: [{ _id: id }, { docNumber: id }] })
+  } catch {}
+
+  return true
 }
 
 // ----------------------------------------------------

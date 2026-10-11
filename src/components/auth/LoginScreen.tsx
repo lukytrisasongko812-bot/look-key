@@ -99,7 +99,7 @@ export function LoginScreen({ skipIntro = false }: { skipIntro?: boolean } = {})
     }
 
     setLoading(true)
-    const res = await login(email.trim(), password)
+    const res = await login(email.trim(), password, rememberMe)
     setLoading(false)
 
     if (!res.success) {
@@ -177,7 +177,7 @@ export function LoginScreen({ skipIntro = false }: { skipIntro?: boolean } = {})
     }
 
     setLoading(true)
-    const res = await verifyOtp(pendingUserId, email, code, twoFactorTicket || undefined)
+    const res = await verifyOtp(pendingUserId, email, code, twoFactorTicket || undefined, rememberMe)
     setLoading(false)
 
     if (res.success) {

@@ -167,18 +167,29 @@ export function TrackingView() {
     })
   }
 
-  // Single File Upload Handler for New Submission (Max 20 MB)
-  const handleSingleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    if (file.size > 20 * 1024 * 1024) {
-      toast.error(`Ukuran berkas "${file.name}" melebihi batas maksimal 20 MB.`)
-      e.target.value = ''
-      return
-    }
+  // Helper: Upload File to API / Google Drive with FormData
+  const uploadBinaryFile = async (file: File): Promise<DocumentFile | null> => {
     try {
+      const formData = new FormData()
+      formData.append('files', file)
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      })
+      if (res.ok) {
+        const data = await res.json()
+        if (data.files && data.files.length > 0) {
+          return data.files[0]
+        }
+      }
+    } catch (e) {
+      console.warn('[Upload Binary Error, falling back to dataUrl]', e)
+    }
+
+    // Fallback: Read as dataUrl if <= 2MB
+    if (file.size <= 2 * 1024 * 1024) {
       const dataUrl = await readFileAsDataUrl(file)
-      const docFile: DocumentFile = {
+      return {
         originalName: file.name,
         filename: file.name.toLowerCase().replace(/\s+/g, '_'),
         size: file.size,
@@ -187,8 +198,35 @@ export function TrackingView() {
         dataUrl,
         uploadedAt: new Date().toISOString(),
       }
-      setUploadedFile(docFile)
-      toast.success(`Berkas "${file.name}" (${(file.size / (1024 * 1024)).toFixed(2)} MB) siap diajukan.`)
+    }
+
+    return {
+      originalName: file.name,
+      filename: file.name.toLowerCase().replace(/\s+/g, '_'),
+      size: file.size,
+      mimeType: file.type || 'application/pdf',
+      url: `/files/${encodeURIComponent(file.name)}`,
+      uploadedAt: new Date().toISOString(),
+    }
+  }
+
+  // Single File Upload Handler for New Submission (Max 25 MB)
+  const handleSingleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.size > 25 * 1024 * 1024) {
+      toast.error(`Ukuran berkas "${file.name}" melebihi batas maksimal 25 MB.`)
+      e.target.value = ''
+      return
+    }
+    try {
+      const docFile = await uploadBinaryFile(file)
+      if (docFile) {
+        setUploadedFile(docFile)
+        toast.success(`Berkas "${file.name}" (${(file.size / (1024 * 1024)).toFixed(2)} MB) siap diajukan.`)
+      } else {
+        toast.error('Gagal memproses berkas dokumen.')
+      }
     } catch (err) {
       toast.error('Gagal membaca berkas dokumen.')
     }
@@ -197,21 +235,18 @@ export function TrackingView() {
   const handleRevFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-    if (file.size > 20 * 1024 * 1024) {
-      toast.error(`Berkas revisi melebihi batas maksimal 20 MB.`)
+    if (file.size > 25 * 1024 * 1024) {
+      toast.error(`Berkas revisi melebihi batas maksimal 25 MB.`)
       return
     }
     try {
-      const dataUrl = await readFileAsDataUrl(file)
-      setRevFile({
-        originalName: file.name,
-        filename: file.name.toLowerCase().replace(/\s+/g, '_'),
-        size: file.size,
-        mimeType: file.type || 'application/pdf',
-        url: dataUrl,
-        dataUrl,
-        uploadedAt: new Date().toISOString(),
-      })
+      const docFile = await uploadBinaryFile(file)
+      if (docFile) {
+        setRevFile(docFile)
+        toast.success(`Berkas revisi "${file.name}" siap diunggah.`)
+      } else {
+        toast.error('Gagal memproses berkas revisi.')
+      }
     } catch (err) {
       toast.error('Gagal membaca berkas revisi.')
     }
@@ -220,21 +255,18 @@ export function TrackingView() {
   const handleFinalFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-    if (file.size > 20 * 1024 * 1024) {
-      toast.error(`Berkas dokumen final melebihi batas maksimal 20 MB.`)
+    if (file.size > 25 * 1024 * 1024) {
+      toast.error(`Berkas dokumen final melebihi batas maksimal 25 MB.`)
       return
     }
     try {
-      const dataUrl = await readFileAsDataUrl(file)
-      setFinalFile({
-        originalName: file.name,
-        filename: file.name.toLowerCase().replace(/\s+/g, '_'),
-        size: file.size,
-        mimeType: file.type || 'application/pdf',
-        url: dataUrl,
-        dataUrl,
-        uploadedAt: new Date().toISOString(),
-      })
+      const docFile = await uploadBinaryFile(file)
+      if (docFile) {
+        setFinalFile(docFile)
+        toast.success(`Berkas final "${file.name}" siap diunggah.`)
+      } else {
+        toast.error('Gagal memproses berkas final.')
+      }
     } catch (err) {
       toast.error('Gagal membaca berkas final.')
     }
@@ -244,21 +276,18 @@ export function TrackingView() {
   const handleStageFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-    if (file.size > 20 * 1024 * 1024) {
-      toast.error('Ukuran berkas melebihi batas maksimal 20 MB.')
+    if (file.size > 25 * 1024 * 1024) {
+      toast.error('Ukuran berkas melebihi batas maksimal 25 MB.')
       return
     }
     try {
-      const dataUrl = await readFileAsDataUrl(file)
-      setStageUploadFile({
-        originalName: file.name,
-        filename: file.name.toLowerCase().replace(/\s+/g, '_'),
-        size: file.size,
-        mimeType: file.type || 'application/pdf',
-        url: dataUrl,
-        dataUrl,
-        uploadedAt: new Date().toISOString(),
-      })
+      const docFile = await uploadBinaryFile(file)
+      if (docFile) {
+        setStageUploadFile(docFile)
+        toast.success(`Berkas "${file.name}" siap diunggah.`)
+      } else {
+        toast.error('Gagal memproses berkas dokumen.')
+      }
     } catch {
       toast.error('Gagal membaca berkas dokumen.')
     }

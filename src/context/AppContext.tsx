@@ -158,9 +158,9 @@ interface AppContextType {
   setIsSidebarCollapsed: (collapsed: boolean) => void
   searchQuery: string
   setSearchQuery: (query: string) => void
-  login: (email: string, pass: string) => Promise<{ success: boolean; requires2FA?: boolean; userId?: string; email?: string; twoFactorTicket?: string; error?: string }>
-  verifyOtp: (userId: string, email: string, code: string, ticket?: string) => Promise<{ success: boolean; error?: string }>
-  ssoLogin: (email: string) => Promise<{ success: boolean; error?: string }>
+  login: (email: string, pass: string, rememberMe?: boolean) => Promise<{ success: boolean; requires2FA?: boolean; userId?: string; email?: string; twoFactorTicket?: string; error?: string }>
+  verifyOtp: (userId: string, email: string, code: string, ticket?: string, rememberMe?: boolean) => Promise<{ success: boolean; error?: string }>
+  ssoLogin: (email: string, rememberMe?: boolean) => Promise<{ success: boolean; error?: string }>
   logout: () => void
   setCurrentView: (view: ViewType, subTab?: 'new' | 'progress') => void
   fetchDocuments: (query?: string, status?: string, category?: string) => Promise<void>
@@ -194,25 +194,8 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined)
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<UserProfile | null>(() => {
-    if (typeof window !== 'undefined') {
-      const savedUser = localStorage.getItem('ride_user') || localStorage.getItem('rise_user')
-      if (savedUser) {
-        try {
-          return JSON.parse(savedUser)
-        } catch {}
-      }
-    }
-    return null
-  })
-
-  const [token, setToken] = useState<string | null>(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('ride_token') || localStorage.getItem('rise_token') || null
-    }
-    return null
-  })
-
+  const [user, setUser] = useState<UserProfile | null>(null)
+  const [token, setToken] = useState<string | null>(null)
   const [authLoading, setAuthLoading] = useState(true)
   const [currentView, setCurrentView] = useState<ViewType>('dashboard')
   const [trackSubTab, setTrackSubTab] = useState<'new' | 'progress'>('progress')
@@ -225,11 +208,36 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
 
-  const userRef = useRef<UserProfile | null>(user)
+  const userRef = useRef<UserProfile | null>(null)
   userRef.current = user
 
-  const tokenRef = useRef<string | null>(token)
+  const tokenRef = useRef<string | null>(null)
   tokenRef.current = token
+
+  const lastSyncRef = useRef<number>(Date.now())
+
+  const getStoredAuthToken = useCallback((): string | null => {
+    if (typeof window === 'undefined') return null
+    return (
+      localStorage.getItem('ride_token') ||
+      sessionStorage.getItem('ride_token') ||
+      localStorage.getItem('rise_token') ||
+      sessionStorage.getItem('rise_token') ||
+      null
+    )
+  }, [])
+
+  const clearAllStoredAuth = useCallback(() => {
+    if (typeof window === 'undefined') return
+    localStorage.removeItem('ride_token')
+    localStorage.removeItem('rise_token')
+    localStorage.removeItem('ride_user')
+    localStorage.removeItem('rise_user')
+    sessionStorage.removeItem('ride_token')
+    sessionStorage.removeItem('rise_token')
+    sessionStorage.removeItem('ride_user')
+    sessionStorage.removeItem('rise_user')
+  }, [])
 
   // Fetch documents
   const fetchDocuments = useCallback(
@@ -241,7 +249,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (category) params.append('category', category)
 
         const headers: Record<string, string> = {}
-        const currentToken = tokenRef.current || localStorage.getItem('ride_token') || localStorage.getItem('rise_token')
+        const currentToken = tokenRef.current || getStoredAuthToken()
         if (currentToken) headers['Authorization'] = `Bearer ${currentToken}`
 
         const res = await fetch(`/api/documents?${params.toString()}`, { headers })
@@ -253,14 +261,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         console.error('Failed to fetch documents', e)
       }
     },
-    []
+    [getStoredAuthToken]
   )
 
   // Fetch notifications
   const fetchNotifications = useCallback(async () => {
     try {
       const headers: Record<string, string> = {}
-      const currentToken = tokenRef.current || localStorage.getItem('ride_token')
+      const currentToken = tokenRef.current || getStoredAuthToken()
       if (currentToken) headers['Authorization'] = `Bearer ${currentToken}`
       const res = await fetch('/api/notifications', { headers })
       if (res.ok) {
@@ -270,13 +278,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     } catch (e) {
       console.error('Failed to fetch notifications', e)
     }
-  }, [])
+  }, [getStoredAuthToken])
 
   // Fetch all users
   const fetchAllUsers = useCallback(async () => {
     try {
       const headers: Record<string, string> = {}
-      const currentToken = tokenRef.current || localStorage.getItem('ride_token')
+      const currentToken = tokenRef.current || getStoredAuthToken()
       if (currentToken) headers['Authorization'] = `Bearer ${currentToken}`
       const res = await fetch('/api/users', { headers })
       if (res.ok) {
@@ -289,125 +297,113 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       console.error('Failed to fetch users', e)
       setAllUsers([])
     }
-  }, [])
+  }, [getStoredAuthToken])
 
-  // Load and verify session on startup (runs strictly once)
+  // Strictly verify session on startup
   const isInitialized = useRef(false)
   useEffect(() => {
     if (isInitialized.current) return
     isInitialized.current = true
 
-    const savedToken = localStorage.getItem('ride_token') || localStorage.getItem('rise_token')
-    const savedUserStr = localStorage.getItem('ride_user')
-    if (savedUserStr) {
-      try {
-        const parsed = JSON.parse(savedUserStr)
-        const email = parsed?.email?.toLowerCase() || ''
-        const storedAvatar = (email ? localStorage.getItem(`ride_avatar_${email}`) : null) || parsed.avatarUrl
-        const storedCover = (email ? localStorage.getItem(`ride_cover_${email}`) : null) || parsed.coverUrl
-        const hydrated = {
-          ...parsed,
-          avatarUrl: storedAvatar || undefined,
-          coverUrl: storedCover || undefined,
-        }
-        setUser(hydrated)
-        userRef.current = hydrated
-      } catch (e) {
-        console.error('Failed to parse cached user', e)
-      }
-    }
+    const savedToken = getStoredAuthToken()
 
-    if (savedToken) {
-      setToken(savedToken)
-      tokenRef.current = savedToken
-      if (savedUserStr) {
-        setAuthLoading(false)
-        fetchDocuments()
-      }
-      fetch('/api/auth/me', {
-        headers: { Authorization: `Bearer ${savedToken}` },
-      })
-        .then((res) => res.json())
-        .then((data) => {
-          if (data.token) {
-            setToken(data.token)
-            tokenRef.current = data.token
-            try { localStorage.setItem('ride_token', data.token) } catch {}
-          }
-          if (data.user) {
-            let cachedUser: UserProfile | null = null
-            try {
-              const cachedUserStr = localStorage.getItem('ride_user')
-              cachedUser = cachedUserStr ? JSON.parse(cachedUserStr) : null
-            } catch {}
-
-            const userEmail = (data.user.email || cachedUser?.email || '').toLowerCase()
-            const liveAvatar = data.user.avatarUrl || (userEmail ? localStorage.getItem(`ride_avatar_${userEmail}`) : null) || cachedUser?.avatarUrl || undefined
-            const liveCover = data.user.coverUrl || (userEmail ? localStorage.getItem(`ride_cover_${userEmail}`) : null) || cachedUser?.coverUrl || undefined
-
-            if (userEmail) {
-              if (data.user.avatarUrl) {
-                try { localStorage.setItem(`ride_avatar_${userEmail}`, data.user.avatarUrl) } catch {}
-              }
-              if (data.user.coverUrl) {
-                try { localStorage.setItem(`ride_cover_${userEmail}`, data.user.coverUrl) } catch {}
-              }
-            }
-
-            const mergedUser: UserProfile = {
-              ...data.user,
-              avatarUrl: liveAvatar,
-              coverUrl: liveCover,
-            }
-            setUser(mergedUser)
-            userRef.current = mergedUser
-            localStorage.setItem('ride_user', JSON.stringify(mergedUser))
-          } else {
-            localStorage.removeItem('ride_token')
-            localStorage.removeItem('rise_token')
-            localStorage.removeItem('ride_user')
-            setUser(null)
-            setToken(null)
-          }
-        })
-        .catch(() => {
-          // If network error, retain existing offline state
-        })
-        .finally(() => {
-          setAuthLoading(false)
-          fetchDocuments()
-        })
-    } else {
+    if (!savedToken) {
+      setUser(null)
+      setToken(null)
       setAuthLoading(false)
       fetchDocuments()
+      return
     }
-  }, [fetchDocuments])
 
-  // Cross-device automatic synchronization when browser window/tab gains focus or becomes visible
+    // Verify token expiration before network request
+    try {
+      const parts = savedToken.split('.')
+      if (parts.length === 3) {
+        const payload = JSON.parse(atob(parts[1]))
+        if (payload.exp && payload.exp * 1000 < Date.now()) {
+          clearAllStoredAuth()
+          setUser(null)
+          setToken(null)
+          setAuthLoading(false)
+          fetchDocuments()
+          return
+        }
+      }
+    } catch {
+      clearAllStoredAuth()
+      setUser(null)
+      setToken(null)
+      setAuthLoading(false)
+      fetchDocuments()
+      return
+    }
+
+    fetch('/api/auth/me', {
+      headers: { Authorization: `Bearer ${savedToken}` },
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error('Unauthorized')
+        return res.json()
+      })
+      .then((data) => {
+        if (data.token && data.user) {
+          const verifiedToken = data.token
+          setToken(verifiedToken)
+          tokenRef.current = verifiedToken
+          setUser(data.user)
+          userRef.current = data.user
+
+          if (localStorage.getItem('ride_token')) {
+            localStorage.setItem('ride_token', verifiedToken)
+            localStorage.setItem('ride_user', JSON.stringify(data.user))
+          } else {
+            sessionStorage.setItem('ride_token', verifiedToken)
+            sessionStorage.setItem('ride_user', JSON.stringify(data.user))
+          }
+
+          fetchDocuments()
+          fetchNotifications()
+          fetchAllUsers()
+        } else {
+          clearAllStoredAuth()
+          setUser(null)
+          setToken(null)
+          fetchDocuments()
+        }
+      })
+      .catch(() => {
+        clearAllStoredAuth()
+        setUser(null)
+        setToken(null)
+        fetchDocuments()
+      })
+      .finally(() => {
+        setAuthLoading(false)
+      })
+  }, [getStoredAuthToken, clearAllStoredAuth, fetchDocuments, fetchNotifications, fetchAllUsers])
+
+  // Cross-device automatic synchronization when browser window/tab gains focus (debounced with 30s cooldown)
   useEffect(() => {
     const handleSyncOnFocus = () => {
-      const currentTok = tokenRef.current || localStorage.getItem('ride_token') || localStorage.getItem('rise_token')
+      const now = Date.now()
+      if (now - lastSyncRef.current < 30000) return
+      lastSyncRef.current = now
+
+      const currentTok = tokenRef.current || getStoredAuthToken()
       if (currentTok) {
         fetch('/api/auth/me', {
           headers: { Authorization: `Bearer ${currentTok}` },
         })
-          .then((r) => r.json())
+          .then((r) => {
+            if (!r.ok) throw new Error('Session invalid')
+            return r.json()
+          })
           .then((d) => {
             if (d.token) {
               setToken(d.token)
               tokenRef.current = d.token
-              try { localStorage.setItem('ride_token', d.token) } catch {}
             }
             if (d.user) {
-              const uEmail = (d.user.email || '').toLowerCase()
-              if (uEmail) {
-                if (d.user.avatarUrl) {
-                  try { localStorage.setItem(`ride_avatar_${uEmail}`, d.user.avatarUrl) } catch {}
-                }
-                if (d.user.coverUrl) {
-                  try { localStorage.setItem(`ride_cover_${uEmail}`, d.user.coverUrl) } catch {}
-                }
-              }
               setUser((prev) => {
                 if (!prev) return d.user
                 const updated = {
@@ -418,7 +414,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
                   coverUrl: d.user.coverUrl || prev.coverUrl,
                 }
                 userRef.current = updated
-                try { localStorage.setItem('ride_user', JSON.stringify(updated)) } catch {}
                 return updated
               })
             }
@@ -441,9 +436,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       window.removeEventListener('focus', handleSyncOnFocus)
       document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
-  }, [fetchDocuments])
+  }, [getStoredAuthToken, fetchDocuments])
 
-  // Refetch notifications, users, and scoped documents on token change
+  // Refetch notifications, users, and scoped documents when token changes
   useEffect(() => {
     if (token) {
       fetchNotifications()
@@ -452,7 +447,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, [token, fetchNotifications, fetchAllUsers, fetchDocuments])
 
-  const login = async (email: string, pass: string) => {
+  const login = async (email: string, pass: string, rememberMe = true) => {
     try {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
@@ -473,27 +468,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }
       }
       if (data.token && data.user) {
-        const uEmail = (data.user.email || email || '').toLowerCase()
-        const userAvatar = data.user.avatarUrl || (uEmail ? localStorage.getItem(`ride_avatar_${uEmail}`) : null) || undefined
-        const userCover = data.user.coverUrl || (uEmail ? localStorage.getItem(`ride_cover_${uEmail}`) : null) || undefined
-        if (uEmail) {
-          if (data.user.avatarUrl) {
-            try { localStorage.setItem(`ride_avatar_${uEmail}`, data.user.avatarUrl) } catch {}
-          }
-          if (data.user.coverUrl) {
-            try { localStorage.setItem(`ride_cover_${uEmail}`, data.user.coverUrl) } catch {}
-          }
-        }
-        const fullUser: UserProfile = {
-          ...data.user,
-          avatarUrl: userAvatar,
-          coverUrl: userCover,
-        }
         setToken(data.token)
-        setUser(fullUser)
-        userRef.current = fullUser
-        localStorage.setItem('ride_token', data.token)
-        localStorage.setItem('ride_user', JSON.stringify(fullUser))
+        setUser(data.user)
+        userRef.current = data.user
+
+        if (rememberMe) {
+          localStorage.setItem('ride_token', data.token)
+          localStorage.setItem('ride_user', JSON.stringify(data.user))
+          sessionStorage.removeItem('ride_token')
+          sessionStorage.removeItem('ride_user')
+        } else {
+          sessionStorage.setItem('ride_token', data.token)
+          sessionStorage.setItem('ride_user', JSON.stringify(data.user))
+          localStorage.removeItem('ride_token')
+          localStorage.removeItem('ride_user')
+        }
         return { success: true }
       }
       return { success: false, error: 'Respon otentikasi tidak valid' }
@@ -503,7 +492,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const verifyOtp = async (userId: string, email: string, code: string, ticket?: string) => {
+  const verifyOtp = async (userId: string, email: string, code: string, ticket?: string, rememberMe = true) => {
     try {
       const res = await fetch('/api/auth/verify-otp', {
         method: 'POST',
@@ -515,27 +504,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         return { success: false, error: data.error || 'Kode OTP tidak valid atau kadaluarsa' }
       }
       if (data.token && data.user) {
-        const uEmail = (data.user.email || email || '').toLowerCase()
-        const userAvatar = data.user.avatarUrl || (uEmail ? localStorage.getItem(`ride_avatar_${uEmail}`) : null) || undefined
-        const userCover = data.user.coverUrl || (uEmail ? localStorage.getItem(`ride_cover_${uEmail}`) : null) || undefined
-        if (uEmail) {
-          if (data.user.avatarUrl) {
-            try { localStorage.setItem(`ride_avatar_${uEmail}`, data.user.avatarUrl) } catch {}
-          }
-          if (data.user.coverUrl) {
-            try { localStorage.setItem(`ride_cover_${uEmail}`, data.user.coverUrl) } catch {}
-          }
-        }
-        const fullUser: UserProfile = {
-          ...data.user,
-          avatarUrl: userAvatar,
-          coverUrl: userCover,
-        }
         setToken(data.token)
-        setUser(fullUser)
-        userRef.current = fullUser
-        localStorage.setItem('ride_token', data.token)
-        localStorage.setItem('ride_user', JSON.stringify(fullUser))
+        setUser(data.user)
+        userRef.current = data.user
+
+        if (rememberMe) {
+          localStorage.setItem('ride_token', data.token)
+          localStorage.setItem('ride_user', JSON.stringify(data.user))
+          sessionStorage.removeItem('ride_token')
+          sessionStorage.removeItem('ride_user')
+        } else {
+          sessionStorage.setItem('ride_token', data.token)
+          sessionStorage.setItem('ride_user', JSON.stringify(data.user))
+          localStorage.removeItem('ride_token')
+          localStorage.removeItem('ride_user')
+        }
         return { success: true }
       }
       return { success: false, error: 'Otentikasi OTP gagal' }
@@ -545,7 +528,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const ssoLogin = async (email: string) => {
+  const ssoLogin = async (email: string, rememberMe = true) => {
     try {
       const res = await fetch('/api/auth/sso', {
         method: 'POST',
@@ -557,27 +540,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         return { success: false, error: data.error || 'SSO Login gagal' }
       }
       if (data.token && data.user) {
-        const uEmail = (data.user.email || email || '').toLowerCase()
-        const userAvatar = data.user.avatarUrl || (uEmail ? localStorage.getItem(`ride_avatar_${uEmail}`) : null) || undefined
-        const userCover = data.user.coverUrl || (uEmail ? localStorage.getItem(`ride_cover_${uEmail}`) : null) || undefined
-        if (uEmail) {
-          if (data.user.avatarUrl) {
-            try { localStorage.setItem(`ride_avatar_${uEmail}`, data.user.avatarUrl) } catch {}
-          }
-          if (data.user.coverUrl) {
-            try { localStorage.setItem(`ride_cover_${uEmail}`, data.user.coverUrl) } catch {}
-          }
-        }
-        const fullUser: UserProfile = {
-          ...data.user,
-          avatarUrl: userAvatar,
-          coverUrl: userCover,
-        }
         setToken(data.token)
-        setUser(fullUser)
-        userRef.current = fullUser
-        localStorage.setItem('ride_token', data.token)
-        localStorage.setItem('ride_user', JSON.stringify(fullUser))
+        setUser(data.user)
+        userRef.current = data.user
+
+        if (rememberMe) {
+          localStorage.setItem('ride_token', data.token)
+          localStorage.setItem('ride_user', JSON.stringify(data.user))
+          sessionStorage.removeItem('ride_token')
+          sessionStorage.removeItem('ride_user')
+        } else {
+          sessionStorage.setItem('ride_token', data.token)
+          sessionStorage.setItem('ride_user', JSON.stringify(data.user))
+          localStorage.removeItem('ride_token')
+          localStorage.removeItem('ride_user')
+        }
         return { success: true }
       }
       return { success: false, error: 'Respon SSO tidak valid' }
@@ -588,12 +565,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }
 
   const logout = () => {
-    localStorage.removeItem('ride_token')
-    localStorage.removeItem('rise_token')
-    localStorage.removeItem('ride_user')
-    localStorage.removeItem('rise_user')
+    clearAllStoredAuth()
     setUser(null)
     setToken(null)
+    userRef.current = null
+    tokenRef.current = null
     setDocuments([])
     setCurrentView('dashboard')
   }
@@ -601,19 +577,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const createDocument = async (docData: Partial<DocumentItem>): Promise<DocumentItem | null> => {
     try {
       const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-      const currentToken =
-        token ||
-        tokenRef.current ||
-        (typeof window !== 'undefined'
-          ? localStorage.getItem('ride_token') || localStorage.getItem('rise_token')
-          : null)
+      const currentToken = token || tokenRef.current || getStoredAuthToken()
       if (currentToken) headers['Authorization'] = `Bearer ${currentToken}`
 
       const payload: Partial<DocumentItem> = {
         ...docData,
         pic: docData.pic || user?.employeeName || 'Requester',
         picEmail: docData.picEmail || user?.email || '',
-        createdBy: docData.createdBy || user?.id || (user as any)?.userId || user?.email,
+        createdBy: docData.createdBy || user?.id || user?.email,
       }
 
       const res = await fetch('/api/documents', {
@@ -623,7 +594,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       })
       if (res.ok) {
         const created: DocumentItem = await res.json()
-        setDocuments((prev) => [created, ...prev.filter((d) => d._id !== created._id)])
+        setDocuments((prev) => [created, ...prev.filter((d) => d._id !== created._id && d.docNumber !== created.docNumber)])
         await fetchDocuments()
         await fetchNotifications()
         return created
@@ -640,8 +611,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const updateDocument = async (id: string, updates: Partial<DocumentItem>): Promise<boolean> => {
     try {
+      // Optimistic update
+      setDocuments((prev) =>
+        prev.map((d) => (d._id === id || d.docNumber === id ? { ...d, ...updates } : d))
+      )
+
       const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-      if (token) headers['Authorization'] = `Bearer ${token}`
+      const currentToken = token || tokenRef.current || getStoredAuthToken()
+      if (currentToken) headers['Authorization'] = `Bearer ${currentToken}`
 
       const res = await fetch(`/api/documents/${id}`, {
         method: 'PATCH',
@@ -652,29 +629,37 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         await fetchDocuments()
         return true
       }
+      await fetchDocuments()
       return false
     } catch (e) {
       console.error('Failed to update document', e)
+      await fetchDocuments()
       return false
     }
   }
 
   const deleteDocument = async (id: string): Promise<boolean> => {
     try {
+      // 1. Optimistically update local document list so UI doesn't flicker or wait
+      setDocuments((prev) => prev.filter((d) => d._id !== id && d.docNumber !== id))
+
       const headers: Record<string, string> = {}
-      if (token) headers['Authorization'] = `Bearer ${token}`
+      const currentToken = token || tokenRef.current || getStoredAuthToken()
+      if (currentToken) headers['Authorization'] = `Bearer ${currentToken}`
 
       const res = await fetch(`/api/documents/${id}`, {
         method: 'DELETE',
         headers,
       })
       if (res.ok) {
-        await fetchDocuments()
         return true
       }
+      // If delete failed on backend, restore list
+      await fetchDocuments()
       return false
     } catch (e) {
       console.error('Failed to delete document', e)
+      await fetchDocuments()
       return false
     }
   }
@@ -682,12 +667,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const transitionDocument = async (id: string, action: string, notes?: string): Promise<boolean> => {
     try {
       const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-      const currentToken =
-        token ||
-        tokenRef.current ||
-        (typeof window !== 'undefined'
-          ? localStorage.getItem('ride_token') || localStorage.getItem('rise_token')
-          : null)
+      const currentToken = token || tokenRef.current || getStoredAuthToken()
       if (currentToken) headers['Authorization'] = `Bearer ${currentToken}`
 
       const res = await fetch(`/api/documents/${id}/transition`, {
@@ -698,7 +678,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (res.ok) {
         const data = await res.json()
         if (data.document) {
-          setDocuments((prev) => [data.document, ...prev.filter((d) => d._id !== data.document._id)])
+          setDocuments((prev) => [data.document, ...prev.filter((d) => d._id !== data.document._id && d.docNumber !== data.document.docNumber)])
         }
         await fetchDocuments()
         await fetchNotifications()
@@ -724,12 +704,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   ): Promise<boolean> => {
     try {
       const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-      const currentToken =
-        token ||
-        tokenRef.current ||
-        (typeof window !== 'undefined'
-          ? localStorage.getItem('ride_token') || localStorage.getItem('rise_token')
-          : null)
+      const currentToken = token || tokenRef.current || getStoredAuthToken()
       if (currentToken) headers['Authorization'] = `Bearer ${currentToken}`
 
       const res = await fetch(`/api/documents/${id}/version`, {
@@ -748,7 +723,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (res.ok) {
         const data = await res.json()
         if (data.document) {
-          setDocuments((prev) => [data.document, ...prev.filter((d) => d._id !== data.document._id)])
+          setDocuments((prev) => [data.document, ...prev.filter((d) => d._id !== data.document._id && d.docNumber !== data.document.docNumber)])
         }
         await fetchDocuments()
         await fetchNotifications()
@@ -764,12 +739,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const uploadFinalDocument = async (id: string, file: DocumentFile, notes: string): Promise<boolean> => {
     try {
       const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-      const currentToken =
-        token ||
-        tokenRef.current ||
-        (typeof window !== 'undefined'
-          ? localStorage.getItem('ride_token') || localStorage.getItem('rise_token')
-          : null)
+      const currentToken = token || tokenRef.current || getStoredAuthToken()
       if (currentToken) headers['Authorization'] = `Bearer ${currentToken}`
 
       const res = await fetch(`/api/documents/${id}/version`, {
@@ -780,7 +750,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (res.ok) {
         const data = await res.json()
         if (data.document) {
-          setDocuments((prev) => [data.document, ...prev.filter((d) => d._id !== data.document._id)])
+          setDocuments((prev) => [data.document, ...prev.filter((d) => d._id !== data.document._id && d.docNumber !== data.document.docNumber)])
         }
         await fetchDocuments()
         await fetchNotifications()
@@ -799,7 +769,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   ): Promise<boolean> => {
     try {
       const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-      if (token) headers['Authorization'] = `Bearer ${token}`
+      const currentToken = token || tokenRef.current || getStoredAuthToken()
+      if (currentToken) headers['Authorization'] = `Bearer ${currentToken}`
 
       const res = await fetch(`/api/documents/${id}/decision`, {
         method: 'POST',
@@ -824,7 +795,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   ): Promise<boolean> => {
     try {
       const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-      if (token) headers['Authorization'] = `Bearer ${token}`
+      const currentToken = token || tokenRef.current || getStoredAuthToken()
+      if (currentToken) headers['Authorization'] = `Bearer ${currentToken}`
 
       const res = await fetch(`/api/documents/${id}/reminders`, {
         method: 'POST',
@@ -845,7 +817,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const markNotificationsRead = async () => {
     try {
       const headers: Record<string, string> = {}
-      if (token) headers['Authorization'] = `Bearer ${token}`
+      const currentToken = token || tokenRef.current || getStoredAuthToken()
+      if (currentToken) headers['Authorization'] = `Bearer ${currentToken}`
 
       await fetch('/api/notifications', { method: 'PATCH', headers })
       setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })))
@@ -856,33 +829,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const updateProfile = async (profileData: Partial<UserProfile>): Promise<boolean> => {
     try {
-      const activeEmail = (userRef.current?.email || user?.email || '').toLowerCase()
-      if (activeEmail) {
-        if (profileData.avatarUrl) {
-          try {
-            localStorage.setItem(`ride_avatar_${activeEmail}`, profileData.avatarUrl)
-          } catch {}
-        }
-        if (profileData.coverUrl) {
-          try {
-            localStorage.setItem(`ride_cover_${activeEmail}`, profileData.coverUrl)
-          } catch {}
-        }
-      }
-
       // Optimistic update
       setUser((prev) => {
         if (!prev) return null
         const updated = { ...prev, ...profileData }
         userRef.current = updated
-        try {
-          localStorage.setItem('ride_user', JSON.stringify(updated))
-        } catch {}
         return updated
       })
 
       const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-      if (token) headers['Authorization'] = `Bearer ${token}`
+      const currentToken = token || tokenRef.current || getStoredAuthToken()
+      if (currentToken) headers['Authorization'] = `Bearer ${currentToken}`
 
       const res = await fetch('/api/auth/me', {
         method: 'PATCH',
@@ -893,31 +850,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const data = await res.json()
         if (data.token) {
           setToken(data.token)
-          localStorage.setItem('ride_token', data.token)
+          tokenRef.current = data.token
         }
         if (data.user) {
-          const userEmail = (data.user.email || activeEmail).toLowerCase()
-          const liveAvatar = data.user.avatarUrl || profileData.avatarUrl || (userEmail ? localStorage.getItem(`ride_avatar_${userEmail}`) : null)
-          const liveCover = data.user.coverUrl || profileData.coverUrl || (userEmail ? localStorage.getItem(`ride_cover_${userEmail}`) : null)
-
-          if (userEmail) {
-            if (liveAvatar) {
-              try { localStorage.setItem(`ride_avatar_${userEmail}`, liveAvatar) } catch {}
-            }
-            if (liveCover) {
-              try { localStorage.setItem(`ride_cover_${userEmail}`, liveCover) } catch {}
-            }
+          setUser(data.user)
+          userRef.current = data.user
+          if (localStorage.getItem('ride_token')) {
+            localStorage.setItem('ride_token', data.token || currentToken || '')
+            localStorage.setItem('ride_user', JSON.stringify(data.user))
+          } else {
+            sessionStorage.setItem('ride_token', data.token || currentToken || '')
+            sessionStorage.setItem('ride_user', JSON.stringify(data.user))
           }
-
-          const mergedUser: UserProfile = {
-            ...data.user,
-            avatarUrl: liveAvatar || undefined,
-            coverUrl: liveCover || undefined,
-          }
-          setUser(mergedUser)
-          userRef.current = mergedUser
-          localStorage.setItem('ride_user', JSON.stringify(mergedUser))
         }
+        await fetchAllUsers()
         return true
       }
       return false
@@ -930,7 +876,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const updateUserRole = async (userId: string, newRole: UserRole): Promise<boolean> => {
     try {
       const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-      if (token) headers['Authorization'] = `Bearer ${token}`
+      const currentToken = token || tokenRef.current || getStoredAuthToken()
+      if (currentToken) headers['Authorization'] = `Bearer ${currentToken}`
 
       const res = await fetch(`/api/users/${userId}`, {
         method: 'PATCH',
@@ -951,7 +898,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const deleteUser = async (userId: string): Promise<{ success: boolean; error?: string }> => {
     try {
       const headers: Record<string, string> = {}
-      if (token) headers['Authorization'] = `Bearer ${token}`
+      const currentToken = token || tokenRef.current || getStoredAuthToken()
+      if (currentToken) headers['Authorization'] = `Bearer ${currentToken}`
 
       const res = await fetch(`/api/users/${userId}`, {
         method: 'DELETE',
@@ -972,7 +920,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const changePassword = async (currentPassword: string, newPassword: string) => {
     try {
       const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-      if (token) headers['Authorization'] = `Bearer ${token}`
+      const currentToken = token || tokenRef.current || getStoredAuthToken()
+      if (currentToken) headers['Authorization'] = `Bearer ${currentToken}`
 
       const res = await fetch('/api/auth/change-password', {
         method: 'POST',

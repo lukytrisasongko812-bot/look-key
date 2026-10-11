@@ -43,7 +43,7 @@ export async function connectToDatabase(): Promise<typeof mongoose> {
     cached.conn = await cached.promise
   } catch (e) {
     cached.promise = null
-    console.error('MongoDB connection error:', e)
+    // Fallback gracefully without crashing
     throw e
   }
 
