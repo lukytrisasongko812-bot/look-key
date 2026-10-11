@@ -576,6 +576,7 @@ Tautan Portal     : https://risetrack.id
       )
 
       // 2. Upload Profile Picture (avatarUrl)
+      let avatarFileId = user.avatarFileId
       if (user.avatarUrl && user.avatarUrl.startsWith('data:image/')) {
         const matches = user.avatarUrl.match(/^data:image\/([a-zA-Z0-9+]+);base64,(.+)$/)
         if (matches) {
@@ -584,6 +585,7 @@ Tautan Portal     : https://risetrack.id
           const buf = Buffer.from(matches[2], 'base64')
           const upRes = await uploadOrUpdateFileInFolder(folderId, `foto_profil.${ext}`, mime, buf)
           if (upRes) {
+            avatarFileId = upRes.fileId
             try {
               await drive.permissions.create({
                 fileId: upRes.fileId,
@@ -591,7 +593,7 @@ Tautan Portal     : https://risetrack.id
                 supportsAllDrives: true,
               })
             } catch {}
-            avatarDriveLink = upRes.webViewLink || `/api/users/${user._id}/avatar`
+            avatarDriveLink = `/api/users/${user._id}/avatar`
           }
         }
       } else if (user.avatarUrl && !user.avatarUrl.startsWith('data:')) {
@@ -633,7 +635,8 @@ Tautan Portal     : https://risetrack.id
         division: user.division || 'Direktorat Umum',
         role: user.role,
         phone: user.phone || '',
-        avatarUrl: avatarDriveLink || (user.avatarUrl?.startsWith('data:') ? `/api/users/${user._id}/avatar` : user.avatarUrl) || '',
+        avatarUrl: avatarDriveLink || (avatarFileId ? `/api/users/${user._id}/avatar` : (user.avatarUrl?.startsWith('data:') ? `/api/users/${user._id}/avatar` : user.avatarUrl)) || '',
+        avatarFileId: avatarFileId || undefined,
         coverUrl: coverDriveLink || (user.coverUrl?.startsWith('data:') ? '' : user.coverUrl) || '',
         twoFactorEnabled: user.twoFactorEnabled ?? true,
         twoFactorSecret: user.twoFactorSecret || null,
@@ -744,6 +747,7 @@ export async function getUsersFromGoogleDriveRegistry(): Promise<StoredUser[]> {
           role: data.role || 'Reviewer',
           phone: data.phone || '',
           avatarUrl: data.avatarUrl || undefined,
+          avatarFileId: data.avatarFileId || undefined,
           coverUrl: data.coverUrl || undefined,
           twoFactorEnabled: data.twoFactorEnabled ?? true,
           twoFactorSecret: data.twoFactorSecret || undefined,
@@ -857,4 +861,189 @@ export async function deleteUserFromGoogleDrive(id: string, email?: string): Pro
     return false
   }
 }
+
+/**
+ * Fetch direct image binary buffer of user avatar from Google Drive
+ */
+export async function getUserAvatarBufferFromGoogleDrive(
+  userIdOrEmail: string,
+  avatarFileId?: string
+): Promise<{ buffer: Buffer; mimeType: string } | null> {
+  try {
+    if (avatarFileId) {
+      const downloaded = await downloadFileFromGoogleDrive(avatarFileId)
+      if (downloaded && downloaded.buffer.length > 0) {
+        return downloaded
+      }
+    }
+
+    const drive = getDriveClient()
+    const clean = userIdOrEmail.toLowerCase().trim()
+
+    // Find the user's folder in USERS_REGISTRY_FOLDER_ID
+    const listRes = await drive.files.list({
+      q: `'${USERS_REGISTRY_FOLDER_ID}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
+      fields: 'files(id, name, description)',
+      supportsAllDrives: true,
+      includeItemsFromAllDrives: true,
+    })
+
+    let userFolderId: string | undefined
+    for (const f of listRes.data.files || []) {
+      if (f.name && f.name.toLowerCase().includes(clean)) {
+        userFolderId = f.id || undefined
+        break
+      }
+      if (f.description) {
+        try {
+          const d = JSON.parse(f.description)
+          if (
+            d._id === clean ||
+            d.id === clean ||
+            (d.email && d.email.toLowerCase() === clean)
+          ) {
+            userFolderId = f.id || undefined
+            if (d.avatarFileId) {
+              const dl = await downloadFileFromGoogleDrive(d.avatarFileId)
+              if (dl && dl.buffer.length > 0) return dl
+            }
+            break
+          }
+        } catch {}
+      }
+    }
+
+    if (!userFolderId) return null
+
+    // Look for foto_profil.* inside user folder
+    const filesRes = await drive.files.list({
+      q: `'${userFolderId}' in parents and name contains 'foto_profil' and trashed = false`,
+      fields: 'files(id, name, mimeType)',
+      supportsAllDrives: true,
+      includeItemsFromAllDrives: true,
+    })
+
+    const avatarFile = filesRes.data.files?.[0]
+    if (avatarFile && avatarFile.id) {
+      const dl = await downloadFileFromGoogleDrive(avatarFile.id)
+      if (dl && dl.buffer.length > 0) return dl
+    }
+  } catch (err) {
+    console.warn('[getUserAvatarBufferFromGoogleDrive Warning]', err)
+  }
+  return null
+}
+
+const DELETED_DOCS_REGISTRY_FILE = '__ride_deleted_docs_registry.json'
+const DOCUMENTS_REGISTRY_FILE = '__ride_documents_registry.json'
+
+/**
+ * Get blacklist of deleted document IDs directly from Google Drive parent archive
+ */
+export async function getDeletedDocsFromGoogleDriveRegistry(): Promise<string[]> {
+  try {
+    const drive = getDriveClient()
+    const res = await drive.files.list({
+      q: `'${DEFAULT_PARENT_FOLDER_ID}' in parents and name = '${DELETED_DOCS_REGISTRY_FILE}' and trashed = false`,
+      fields: 'files(id, name)',
+      supportsAllDrives: true,
+      includeItemsFromAllDrives: true,
+    })
+    const file = res.data.files?.[0]
+    if (!file || !file.id) return []
+
+    const downloaded = await downloadFileFromGoogleDrive(file.id)
+    if (downloaded && downloaded.buffer) {
+      const parsed = JSON.parse(downloaded.buffer.toString('utf-8'))
+      if (Array.isArray(parsed)) return parsed
+    }
+  } catch (e) {
+    console.warn('[GDrive getDeletedDocsRegistry Warning]', e)
+  }
+  return []
+}
+
+/**
+ * Record document deletions permanently to Google Drive registry
+ */
+export async function addDeletedDocsToGoogleDriveRegistry(docIds: string[]): Promise<boolean> {
+  if (!docIds || docIds.length === 0) return true
+  try {
+    const existing = await getDeletedDocsFromGoogleDriveRegistry()
+    const combined = Array.from(new Set([...existing, ...docIds.filter(Boolean)]))
+    const buf = Buffer.from(JSON.stringify(combined, null, 2), 'utf-8')
+    await uploadOrUpdateFileInFolder(
+      DEFAULT_PARENT_FOLDER_ID,
+      DELETED_DOCS_REGISTRY_FILE,
+      'application/json',
+      buf
+    )
+    return true
+  } catch (e) {
+    console.error('[GDrive addDeletedDocsRegistry Error]', e)
+    return false
+  }
+}
+
+/**
+ * Get active documents registry directly from Google Drive
+ */
+export async function getDocumentsFromGoogleDriveRegistry(): Promise<StoredDocument[]> {
+  try {
+    const drive = getDriveClient()
+    const res = await drive.files.list({
+      q: `'${DEFAULT_PARENT_FOLDER_ID}' in parents and name = '${DOCUMENTS_REGISTRY_FILE}' and trashed = false`,
+      fields: 'files(id, name)',
+      supportsAllDrives: true,
+      includeItemsFromAllDrives: true,
+    })
+    const file = res.data.files?.[0]
+    if (!file || !file.id) return []
+
+    const downloaded = await downloadFileFromGoogleDrive(file.id)
+    if (downloaded && downloaded.buffer) {
+      const parsed = JSON.parse(downloaded.buffer.toString('utf-8'))
+      if (Array.isArray(parsed)) return parsed
+    }
+  } catch (e) {
+    console.warn('[GDrive getDocumentsRegistry Warning]', e)
+  }
+  return []
+}
+
+/**
+ * Save active documents registry directly to Google Drive
+ */
+export async function saveDocumentsToGoogleDriveRegistry(docs: StoredDocument[]): Promise<boolean> {
+  try {
+    const sanitized = docs.map((d) => ({
+      ...d,
+      files: (d.files || []).map((f) => ({ ...f, dataUrl: undefined })),
+      versions: (d.versions || []).map((v) => ({
+        ...v,
+        file: v.file ? { ...v.file, dataUrl: undefined } : v.file,
+      })),
+      initialDocument: d.initialDocument ? { ...d.initialDocument, dataUrl: undefined } : d.initialDocument,
+      finalDocument: d.finalDocument ? { ...d.finalDocument, dataUrl: undefined } : d.finalDocument,
+      revisionDocuments: (d.revisionDocuments || []).map((r) => ({
+        ...r,
+        file: r.file ? { ...r.file, dataUrl: undefined } : r.file,
+      })),
+      supportingDocuments: (d.supportingDocuments || []).map((s) => ({ ...s, dataUrl: undefined })),
+    }))
+
+    const buf = Buffer.from(JSON.stringify(sanitized, null, 2), 'utf-8')
+    await uploadOrUpdateFileInFolder(
+      DEFAULT_PARENT_FOLDER_ID,
+      DOCUMENTS_REGISTRY_FILE,
+      'application/json',
+      buf
+    )
+    return true
+  } catch (e) {
+    console.error('[GDrive saveDocumentsRegistry Error]', e)
+    return false
+  }
+}
+
 

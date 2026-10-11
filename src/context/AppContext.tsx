@@ -255,7 +255,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const res = await fetch(`/api/documents?${params.toString()}`, { headers })
         if (res.ok) {
           const data: DocumentItem[] = await res.json()
-          setDocuments(data)
+          setDocuments((prev) => {
+            if (prev.length === data.length) {
+              const isSame = prev.every((p, idx) => {
+                const d = data[idx]
+                return (
+                  d &&
+                  p._id === d._id &&
+                  p.docNumber === d.docNumber &&
+                  p.updatedAt === d.updatedAt &&
+                  p.stage === d.stage &&
+                  p.stageStatus === d.stageStatus
+                )
+              })
+              if (isSame) return prev
+            }
+            return data
+          })
         }
       } catch (e) {
         console.error('Failed to fetch documents', e)
@@ -565,6 +581,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }
 
   const logout = () => {
+    fetch('/api/auth/logout', { method: 'POST' }).catch(() => {})
     clearAllStoredAuth()
     setUser(null)
     setToken(null)

@@ -147,11 +147,6 @@ export async function GET(
       }
     }
 
-    // If Google Drive link exists and requested file has webViewLink, redirect to Drive preview
-    if (foundFile?.driveViewUrl && foundFile.driveViewUrl.startsWith('https://')) {
-      return NextResponse.redirect(foundFile.driveViewUrl)
-    }
-
     const viewFileName =
       foundFile?.originalName ||
       fileNameParam ||
@@ -159,7 +154,7 @@ export async function GET(
 
     const mimeType = foundFile?.mimeType || getMimeType(viewFileName)
 
-    // Option 1: Base64 dataUrl
+    // Option 1: Base64 dataUrl (stream directly to browser)
     if (foundFile?.dataUrl && foundFile.dataUrl.includes('base64,')) {
       const base64Data = foundFile.dataUrl.split('base64,')[1]
       const buffer = Buffer.from(base64Data, 'base64')
@@ -172,7 +167,7 @@ export async function GET(
       })
     }
 
-    // Option 2: Google Drive
+    // Option 2: Download directly from Google Drive via Service Account and stream inline
     const targetDriveId = foundFile?.driveFileId || fileIdParam
     if (targetDriveId) {
       const driveFile = await downloadFileFromGoogleDrive(targetDriveId)
@@ -185,6 +180,11 @@ export async function GET(
           },
         })
       }
+    }
+
+    // Option 3: If driveViewUrl exists, fallback redirect to Drive preview
+    if (foundFile?.driveViewUrl && foundFile.driveViewUrl.startsWith('https://')) {
+      return NextResponse.redirect(foundFile.driveViewUrl)
     }
 
     // Option 3: Local file in public/files

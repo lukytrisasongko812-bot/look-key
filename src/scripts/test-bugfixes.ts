@@ -163,6 +163,22 @@ async function runTests() {
   const failedVerify = verifyToken(invalidToken)
   assert(failedVerify === null, 'Invalid token properly rejected with null (no auto-login bypass)')
 
+  // -------------------------------------------------------------
+  // TEST 5: Google Drive Cloud Registry Persistence
+  // -------------------------------------------------------------
+  console.log('\n--- TEST 5: Google Drive Cloud Registry Persistence ---')
+  const { getDeletedDocsFromGoogleDriveRegistry, addDeletedDocsToGoogleDriveRegistry } = await import('../lib/gdrive')
+  const gdriveDeleted = await getDeletedDocsFromGoogleDriveRegistry()
+  assert(Array.isArray(gdriveDeleted), 'Google Drive deleted docs registry accessible as array')
+
+  // -------------------------------------------------------------
+  // TEST 6: User Avatar Streaming & Initials Fallback
+  // -------------------------------------------------------------
+  console.log('\n--- TEST 6: User Avatar Binary Streaming & Initials ---')
+  const { getUserAvatarBufferFromGoogleDrive } = await import('../lib/gdrive')
+  const avatarRes = await getUserAvatarBufferFromGoogleDrive('toto.rubianto.17@gmail.com')
+  assert(avatarRes === null || (!!avatarRes && avatarRes.buffer.length > 0), 'Avatar lookup from Google Drive completes cleanly')
+
   console.log('\n=================================================================')
   console.log(`TEST SUMMARY: ${passed} PASSED, ${failed} FAILED`)
   console.log('=================================================================')

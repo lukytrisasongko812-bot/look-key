@@ -10,6 +10,10 @@ import {
   getUserFromGoogleDriveById,
   deleteUserFromGoogleDrive,
   trashDocumentInGoogleDrive,
+  getDeletedDocsFromGoogleDriveRegistry,
+  addDeletedDocsToGoogleDriveRegistry,
+  getDocumentsFromGoogleDriveRegistry,
+  saveDocumentsToGoogleDriveRegistry,
 } from './gdrive'
 import { connectToDatabase } from './db'
 import { User } from '@/models/User'
@@ -184,6 +188,7 @@ export interface StoredUser {
   role: UserRole
   phone?: string
   avatarUrl?: string
+  avatarFileId?: string
   coverUrl?: string
   twoFactorEnabled: boolean
   twoFactorSecret?: string
@@ -1105,13 +1110,44 @@ export async function initAndSeedDriveStore() {
     },
   ]
 
-  // Restore any persisted documents from local disk cache (/tmp)
-  const deletedDocIds = readLocalDeletedDocsCache()
+  // Restore persistent deleted docs registry from Google Drive + local disk cache (/tmp)
+  let deletedDocIds = readLocalDeletedDocsCache()
+  try {
+    const driveDeleted = await getDeletedDocsFromGoogleDriveRegistry()
+    if (driveDeleted && driveDeleted.length > 0) {
+      deletedDocIds = Array.from(new Set([...deletedDocIds, ...driveDeleted]))
+      writeLocalDeletedDocsCache(deletedDocIds)
+    }
+  } catch (e) {
+    console.warn('[GDrive getDeletedDocsRegistry in init warning]', e)
+  }
 
-  // Filter out any documents that have been deleted
+  // Filter seed documents immediately against persistent deletion blacklist
   store.documents = store.documents.filter(
     (d) => !deletedDocIds.includes(d._id) && !deletedDocIds.includes(d.docNumber)
   )
+
+  // Load active documents from Google Drive Registry (Cloud Source of Truth)
+  try {
+    const driveDocs = await getDocumentsFromGoogleDriveRegistry()
+    if (driveDocs && driveDocs.length > 0) {
+      for (const dd of driveDocs) {
+        if (deletedDocIds.includes(dd._id) || (dd.docNumber && deletedDocIds.includes(dd.docNumber))) {
+          continue
+        }
+        const idx = store.documents.findIndex(
+          (d) => d._id === dd._id || (dd.docNumber && d.docNumber === dd.docNumber)
+        )
+        if (idx >= 0) {
+          store.documents[idx] = { ...store.documents[idx], ...dd }
+        } else {
+          store.documents.unshift(dd)
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('[GDrive getDocumentsRegistry in init warning]', e)
+  }
 
   const cachedDocs = readLocalDocsCache()
   if (cachedDocs && cachedDocs.length > 0) {
@@ -1293,8 +1329,11 @@ export async function saveDriveDocument(doc: StoredDocument) {
   // 1. Persist to local disk cache (/tmp)
   writeLocalDocsCache(store.documents)
 
-  // 2. Synchronize to Google Drive in background
+  // 2. Synchronize to Google Drive folder and registry in background (Cloud source of truth)
   syncDocumentToGoogleDrive(doc).catch((e) => console.error('[Background GDrive Sync Doc Error]', e))
+  saveDocumentsToGoogleDriveRegistry(store.documents).catch((e) =>
+    console.error('[Background GDrive Save Documents Registry Error]', e)
+  )
 
   // 3. Graceful MongoDB persistence
   try {
@@ -1321,17 +1360,26 @@ export async function deleteDriveDocument(id: string) {
     docToDelete = store.documents.splice(idx, 1)[0]
   }
 
-  // 1. Record in persistent deleted registry
+  // 1. Record in persistent deleted registry locally
   const deletedDocIds = readLocalDeletedDocsCache()
   deletedDocIds.push(id)
   if (docToDelete) {
     if (docToDelete._id) deletedDocIds.push(docToDelete._id)
     if (docToDelete.docNumber) deletedDocIds.push(docToDelete.docNumber)
   }
-  writeLocalDeletedDocsCache(deletedDocIds)
+  const cleanDeleted = Array.from(new Set(deletedDocIds.filter(Boolean)))
+  writeLocalDeletedDocsCache(cleanDeleted)
   writeLocalDocsCache(store.documents)
 
-  // 2. Trash Google Drive folder
+  // 2. Persist deleted IDs to Google Drive registry and update active documents registry
+  addDeletedDocsToGoogleDriveRegistry(cleanDeleted).catch((e) =>
+    console.error('[GDrive addDeletedDocsRegistry Error]', e)
+  )
+  saveDocumentsToGoogleDriveRegistry(store.documents).catch((e) =>
+    console.error('[GDrive saveDocumentsRegistry After Delete Error]', e)
+  )
+
+  // 3. Trash Google Drive folder
   if (docToDelete) {
     trashDocumentInGoogleDrive(docToDelete.driveFolderId || docToDelete.docNumber).catch((e) =>
       console.error('[GDrive Trash Doc Error]', e)
@@ -1340,7 +1388,7 @@ export async function deleteDriveDocument(id: string) {
     trashDocumentInGoogleDrive(id).catch(() => {})
   }
 
-  // 3. Delete from MongoDB
+  // 4. Delete from MongoDB
   try {
     await connectToDatabase()
     await DocumentModel.deleteMany({ $or: [{ _id: id }, { docNumber: id }] })
@@ -1628,6 +1676,7 @@ export async function saveDriveUser(user: StoredUser) {
       ...existing,
       ...user,
       avatarUrl: user.avatarUrl !== undefined ? user.avatarUrl : existing.avatarUrl,
+      avatarFileId: user.avatarFileId !== undefined ? user.avatarFileId : existing.avatarFileId,
       coverUrl: user.coverUrl !== undefined ? user.coverUrl : existing.coverUrl,
       updatedAt: new Date().toISOString(),
     }

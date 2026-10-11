@@ -143,16 +143,9 @@ export function MyDocumentsView() {
   }
 
   const handleViewFile = (doc: DocumentItem, file: DocumentFile) => {
-    if (file.driveViewUrl && file.driveViewUrl.startsWith('https://')) {
-      window.open(file.driveViewUrl, '_blank', 'noopener,noreferrer')
-      return
-    }
-    if (file.dataUrl && file.dataUrl.startsWith('data:')) {
-      window.open(file.dataUrl, '_blank')
-      return
-    }
     const fileName = file.originalName || file.filename || 'dokumen'
-    window.open(`/api/documents/${doc.docNumber || doc._id}/view?name=${encodeURIComponent(fileName)}`, '_blank')
+    const viewUrl = `/api/documents/${doc.docNumber || doc._id}/view?name=${encodeURIComponent(fileName)}`
+    window.open(viewUrl, '_blank')
   }
 
   return (

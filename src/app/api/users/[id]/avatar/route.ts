@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getDriveUserById, getDriveUserByEmail } from '@/lib/drive-store'
+import { getUserAvatarBufferFromGoogleDrive, downloadFileFromGoogleDrive } from '@/lib/gdrive'
 
 export const dynamic = 'force-dynamic'
 
@@ -46,6 +47,7 @@ export async function GET(
       })
     }
 
+    // 1. Direct Base64 dataUrl if stored locally
     if (user.avatarUrl && user.avatarUrl.startsWith('data:image/')) {
       const matches = user.avatarUrl.match(/^data:image\/([a-zA-Z0-9+]+);base64,(.+)$/)
       if (matches) {
@@ -60,10 +62,30 @@ export async function GET(
       }
     }
 
-    if (user.avatarUrl && user.avatarUrl.startsWith('http')) {
+    // 2. Fetch image binary from Google Drive via avatarFileId or user folder
+    try {
+      const driveImage = await getUserAvatarBufferFromGoogleDrive(
+        user._id || user.email,
+        user.avatarFileId
+      )
+      if (driveImage && driveImage.buffer && driveImage.buffer.length > 0) {
+        return new NextResponse(new Uint8Array(driveImage.buffer), {
+          headers: {
+            'Content-Type': driveImage.mimeType || 'image/jpeg',
+            'Cache-Control': 'public, max-age=86400, stale-while-revalidate=604800',
+          },
+        })
+      }
+    } catch (gErr) {
+      console.warn('[Avatar GDrive Stream Warning]', gErr)
+    }
+
+    // 3. If external image url (excluding non-image Google Drive html viewers)
+    if (user.avatarUrl && user.avatarUrl.startsWith('http') && !user.avatarUrl.includes('drive.google.com')) {
       return NextResponse.redirect(user.avatarUrl, { status: 307 })
     }
 
+    // 4. Default fallback: SVG initials
     const svg = generateInitialsSvg(user.employeeName || 'User')
     return new NextResponse(svg, {
       headers: {
