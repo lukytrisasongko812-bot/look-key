@@ -209,12 +209,12 @@ export function isDocumentOwnerOrPic(
   const dPicName = (doc.pic || '').toLowerCase().trim()
 
   // 1. Match by Creator User ID
-  if (uId && dCreatedBy && (uId === dCreatedBy || uId.toLowerCase() === dCreatedBy.toLowerCase())) {
+  if (uId && dCreatedBy && (uId === dCreatedBy || uId.toLowerCase() === dCreatedBy.toLowerCase() || dCreatedBy.includes(uId) || uId.includes(dCreatedBy))) {
     return true
   }
 
   // 2. Match by Creator Email
-  if (uEmail && dCreatedBy && uEmail === dCreatedBy.toLowerCase()) {
+  if (uEmail && dCreatedBy && (uEmail === dCreatedBy.toLowerCase() || dCreatedBy.toLowerCase().includes(uEmail) || uEmail.includes(dCreatedBy.toLowerCase()))) {
     return true
   }
 
@@ -233,18 +233,26 @@ export function isDocumentOwnerOrPic(
     return true
   }
 
+  // 6. Match if user is recorded as contributor in any document version
+  if (doc.versions && Array.isArray(doc.versions)) {
+    const isVersionContributor = doc.versions.some((v: any) => {
+      const upBy = (v.uploadedBy || '').toLowerCase().trim()
+      return (uName && upBy && (upBy === uName || upBy.includes(uName) || uName.includes(upBy))) ||
+             (uEmail && upBy && upBy.includes(uEmail))
+    })
+    if (isVersionContributor) return true
+  }
+
   return false
 }
 
 /**
  * Check if the user has authority to access (view/download/track) the document based on their role and ownership matrix:
  * 1. System Administrator: Global access to all documents across the corporate database.
- * 2. Document Owner / PIC: Full access to their own submitted documents regardless of role.
- * 3. Board of Directors: Access to their own documents + documents in executive approval stage (stage >= 2 or Urgent/Critical priority or stageStatus completed).
- * 4. Legal Management: Access to their own documents + documents across all active pipeline stages (stage >= 0, final document, contract expiry).
- * 5. Legal Officer: Access to their own documents + documents in review/revision/drafting queue (stage 0 to 3, revision requested, or legal division).
- * 6. User: Strictly only their own documents (where they are creator or PIC).
- * 7. Guest: Strictly only their own documents or non-confidential public internal documents.
+ * 2. Document Owner / PIC / Contributor: Full access to their own submitted documents regardless of role.
+ * 3. Legal Officer, Legal Management, and Board of Directors: Full tracking visibility across all stages (0 to 6).
+ * 4. User (Pemohon / Unit Kerja): Sesuai ketentuan Matriks Kewenangan RIDE, seluruh dokumen operasional/internal dapat diakses, dilacak, dan diunduh. Jika dokumen ditandai Rahasia (Confidential/Restricted), dibatasi untuk PIC/pemilik atau divisi yang sama.
+ * 5. Guest (Peninjau Tamu): Akses penelusuran status berkas (read-only) untuk seluruh dokumen internal.
  */
 export function canUserAccessDocument(
   user: UserIdentity | null | undefined,
@@ -270,7 +278,7 @@ export function canUserAccessDocument(
   // 1. System Administrator has full global access
   if (role === 'System Administrator') return true
 
-  // 2. Document Owner / PIC always has access to their own document across all roles
+  // 2. Document Owner / PIC / Contributor always has access to their own document across all roles
   const isOwner = isDocumentOwnerOrPic(user, doc)
   if (isOwner) return true
 
@@ -279,18 +287,19 @@ export function canUserAccessDocument(
     return true
   }
 
-  // 4. User role: Access their own documents, or documents within their same division
-  if (role === 'User') {
-    if (doc.division && user.division && doc.division.toLowerCase() === user.division.toLowerCase()) {
+  // 4. Confidentiality check for User & Guest:
+  // If document is explicitly Confidential or Restricted, only Owner/PIC, same division, Legal, and BOD can access.
+  if (doc.confidentiality === 'Confidential' || doc.confidentiality === 'Restricted') {
+    if (doc.division && user.division && (
+      doc.division.toLowerCase() === user.division.toLowerCase() ||
+      doc.division.toLowerCase().includes(user.division.toLowerCase()) ||
+      user.division.toLowerCase().includes(doc.division.toLowerCase())
+    )) {
       return true
     }
     return false
   }
 
-  // 5. Guest is confined to their own documents or non-confidential public internal documents
-  if (role === 'Guest') {
-    return Boolean(doc.confidentiality === 'Internal' && (doc.stage ?? 0) >= 4)
-  }
-
-  return false
+  // 5. Standard Internal documents are accessible to all verified users & guests sesuai Matriks Kewenangan RIDE
+  return true
 }

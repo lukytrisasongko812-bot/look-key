@@ -179,6 +179,74 @@ async function runTests() {
   const avatarRes = await getUserAvatarBufferFromGoogleDrive('toto.rubianto.17@gmail.com')
   assert(avatarRes === null || (!!avatarRes && avatarRes.buffer.length > 0), 'Avatar lookup from Google Drive completes cleanly')
 
+  // -------------------------------------------------------------
+  // TEST 7: All 6 Role Matrices Document Detection & Upload Authority
+  // -------------------------------------------------------------
+  console.log('\n--- TEST 7: All 6 Role Matrices Document Detection & Upload Authority ---')
+  const {
+    canUserAccessDocument,
+    isDocumentOwnerOrPic,
+    canUploadLegalDraft,
+    canUploadLegalApproval,
+    canUploadBodSigned,
+    canUploadFinalDocument,
+  } = await import('../lib/roles')
+
+  const sampleUploadedDoc = {
+    _id: 'doc_matrix_test',
+    docNumber: 'RIDE-2026-9999',
+    name: 'Dokumen Pengujian Matriks Multi-Peran',
+    division: 'Direktorat Operasional',
+    confidentiality: 'Internal',
+    createdBy: 'usr_pemohon_01',
+    pic: 'Budi Pemohon',
+    picEmail: 'budi@risetrack.id',
+    stage: 0,
+    versions: [
+      {
+        version: 'V0',
+        uploadedBy: 'Budi Pemohon',
+        file: { originalName: 'draf.pdf' },
+      },
+      {
+        version: 'Rev.01',
+        uploadedBy: 'Siti Legal',
+        file: { originalName: 'kajian_legal.pdf' },
+      },
+    ],
+  }
+
+  const roleUsers = [
+    { role: 'User', userId: 'usr_other', employeeName: 'Joko User', division: 'Divisi Lain' },
+    { role: 'Legal Officer', userId: 'usr_legal_off', employeeName: 'Siti Legal', division: 'Legal' },
+    { role: 'Legal Management', userId: 'usr_legal_mgr', employeeName: 'Rudi Manager', division: 'Legal' },
+    { role: 'Board of Directors', userId: 'usr_bod', employeeName: 'Direktur Utama', division: 'BOD' },
+    { role: 'System Administrator', userId: 'usr_sysadmin', employeeName: 'Admin RIDE', division: 'IT' },
+    { role: 'Guest', userId: 'usr_guest', employeeName: 'Tamu', division: 'Umum' },
+  ]
+
+  // Verify all 6 roles can detect & read standard internal uploaded documents
+  for (const ru of roleUsers) {
+    const canAccess = canUserAccessDocument(ru, sampleUploadedDoc)
+    assert(canAccess, `Role "${ru.role}" can detect and read newly uploaded internal document`)
+  }
+
+  // Verify version contributor detection
+  const isContributor = isDocumentOwnerOrPic(
+    { role: 'Legal Officer', employeeName: 'Siti Legal', userId: 'usr_legal_off' },
+    sampleUploadedDoc
+  )
+  assert(isContributor, 'Document version contributor recognized as owner/PIC')
+
+  // Verify upload authority matrix functions
+  assert(canUploadLegalDraft('Legal Officer'), 'Legal Officer authorized to upload legal draft')
+  assert(canUploadLegalDraft('Legal Management'), 'Legal Management authorized to upload legal draft')
+  assert(canUploadLegalApproval('Legal Management'), 'Legal Management authorized to upload legal clearance')
+  assert(canUploadBodSigned('Board of Directors'), 'Board of Directors authorized to upload BOD signed')
+  assert(canUploadFinalDocument('Legal Management'), 'Legal Management authorized to upload final document')
+  assert(canUploadFinalDocument('Board of Directors'), 'Board of Directors authorized to upload final document')
+  assert(canUploadFinalDocument('System Administrator'), 'System Administrator authorized to upload final document')
+
   console.log('\n=================================================================')
   console.log(`TEST SUMMARY: ${passed} PASSED, ${failed} FAILED`)
   console.log('=================================================================')
