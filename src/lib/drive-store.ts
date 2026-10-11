@@ -358,7 +358,14 @@ export async function initAndSeedDriveStore() {
         }
         const idx = store.users.findIndex((x) => x.email.toLowerCase() === mappedUser.email.toLowerCase())
         if (idx >= 0) {
-          store.users[idx] = { ...store.users[idx], ...mappedUser }
+          const prev = store.users[idx]
+          store.users[idx] = {
+            ...prev,
+            ...mappedUser,
+            avatarUrl: prev.avatarUrl || mappedUser.avatarUrl || (prev.avatarFileId ? `/api/users/${prev._id}/avatar` : undefined),
+            avatarFileId: prev.avatarFileId || undefined,
+            coverUrl: prev.coverUrl || mappedUser.coverUrl || undefined,
+          }
         } else {
           store.users.push(mappedUser)
         }
@@ -1329,11 +1336,13 @@ export async function saveDriveDocument(doc: StoredDocument) {
   // 1. Persist to local disk cache (/tmp)
   writeLocalDocsCache(store.documents)
 
-  // 2. Synchronize to Google Drive folder and registry in background (Cloud source of truth)
+  // 2. Synchronize to Google Drive folder and registry (Cloud source of truth)
+  try {
+    await saveDocumentsToGoogleDriveRegistry(store.documents)
+  } catch (e) {
+    console.error('[GDrive Save Documents Registry Error]', e)
+  }
   syncDocumentToGoogleDrive(doc).catch((e) => console.error('[Background GDrive Sync Doc Error]', e))
-  saveDocumentsToGoogleDriveRegistry(store.documents).catch((e) =>
-    console.error('[Background GDrive Save Documents Registry Error]', e)
-  )
 
   // 3. Graceful MongoDB persistence
   try {
@@ -1371,13 +1380,15 @@ export async function deleteDriveDocument(id: string) {
   writeLocalDeletedDocsCache(cleanDeleted)
   writeLocalDocsCache(store.documents)
 
-  // 2. Persist deleted IDs to Google Drive registry and update active documents registry
-  addDeletedDocsToGoogleDriveRegistry(cleanDeleted).catch((e) =>
-    console.error('[GDrive addDeletedDocsRegistry Error]', e)
-  )
-  saveDocumentsToGoogleDriveRegistry(store.documents).catch((e) =>
-    console.error('[GDrive saveDocumentsRegistry After Delete Error]', e)
-  )
+  // 2. Persist deleted IDs to Google Drive registry and update active documents registry (Awaited for serverless persistence)
+  try {
+    await Promise.all([
+      addDeletedDocsToGoogleDriveRegistry(cleanDeleted),
+      saveDocumentsToGoogleDriveRegistry(store.documents),
+    ])
+  } catch (e) {
+    console.error('[GDrive Sync Deletion Registry Error]', e)
+  }
 
   // 3. Trash Google Drive folder
   if (docToDelete) {
@@ -1475,27 +1486,28 @@ export async function getDriveUserByEmail(email: string) {
       (clean === 'lukytrissasongko812@gmail.com' && u.email.toLowerCase() === 'lukytrisasongko812@gmail.com') ||
       (clean === 'luckytrisasongko812@gmail.com' && u.email.toLowerCase().includes('luckytrisasongko812'))
   )
-  if (user) return user
+  if (user && (user.avatarUrl || user.avatarFileId)) return user
 
   // 2. Local disk cache lookup
   const cachedUsers = readLocalUsersCache()
   if (cachedUsers && cachedUsers.length > 0) {
-    user = cachedUsers.find(
+    const cachedUser = cachedUsers.find(
       (u) =>
         u.email.toLowerCase() === clean ||
         (clean === 'lukytrisasongko812@gmail.com' && u.email.toLowerCase() === 'lukytrissasongko812@gmail.com') ||
         (clean === 'lukytrissasongko812@gmail.com' && u.email.toLowerCase() === 'lukytrisasongko812@gmail.com') ||
         (clean === 'luckytrisasongko812@gmail.com' && u.email.toLowerCase().includes('luckytrisasongko812'))
     )
-    if (user) {
-      if (!store.users.some((u) => u.email.toLowerCase() === user!.email.toLowerCase())) {
-        store.users.push(user)
+    if (cachedUser) {
+      if (!store.users.some((u) => u.email.toLowerCase() === cachedUser.email.toLowerCase())) {
+        store.users.push(cachedUser)
       }
-      return user
+      if (cachedUser.avatarUrl || cachedUser.avatarFileId) return cachedUser
+      user = cachedUser
     }
   }
 
-  // 3. Live Google Drive query
+  // 3. Live Google Drive query (authoritative for multi-device avatar changes)
   try {
     const driveUser = await getUserFromGoogleDriveByEmail(clean)
     if (driveUser) {
@@ -1511,6 +1523,8 @@ export async function getDriveUserByEmail(email: string) {
   } catch (driveErr) {
     console.warn('[GDrive live getDriveUserByEmail warning]', driveErr)
   }
+
+  if (user) return user
 
   // 4. Try MongoDB
   try {
@@ -1577,23 +1591,24 @@ export async function getDriveUserById(id: string) {
   let user = store.users.find(
     (u) => u._id === cleanId || u.id === cleanId || u.email.toLowerCase() === cleanId.toLowerCase()
   )
-  if (user) return user
+  if (user && (user.avatarUrl || user.avatarFileId)) return user
 
   // 2. Local disk cache check
   const cachedUsers = readLocalUsersCache()
   if (cachedUsers && cachedUsers.length > 0) {
-    user = cachedUsers.find(
+    const cachedUser = cachedUsers.find(
       (u) => u._id === cleanId || u.id === cleanId || u.email.toLowerCase() === cleanId.toLowerCase()
     )
-    if (user) {
-      if (!store.users.some((u) => u._id === user!._id)) {
-        store.users.push(user)
+    if (cachedUser) {
+      if (!store.users.some((u) => u._id === cachedUser._id)) {
+        store.users.push(cachedUser)
       }
-      return user
+      if (cachedUser.avatarUrl || cachedUser.avatarFileId) return cachedUser
+      user = cachedUser
     }
   }
 
-  // 3. Live Google Drive query
+  // 3. Live Google Drive query (authoritative for multi-device avatar changes)
   try {
     const driveUser = await getUserFromGoogleDriveById(cleanId)
     if (driveUser) {
@@ -1609,6 +1624,8 @@ export async function getDriveUserById(id: string) {
   } catch (driveErr) {
     console.warn('[GDrive live getDriveUserById warning]', driveErr)
   }
+
+  if (user) return user
 
   // 4. Try MongoDB
   try {

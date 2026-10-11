@@ -594,6 +594,8 @@ Tautan Portal     : https://risetrack.id
               })
             } catch {}
             avatarDriveLink = `/api/users/${user._id}/avatar`
+            user.avatarFileId = avatarFileId
+            user.avatarUrl = avatarDriveLink
           }
         }
       } else if (user.avatarUrl && !user.avatarUrl.startsWith('data:')) {
@@ -746,7 +748,7 @@ export async function getUsersFromGoogleDriveRegistry(): Promise<StoredUser[]> {
           division: data.division || 'Direktorat Umum',
           role: data.role || 'Reviewer',
           phone: data.phone || '',
-          avatarUrl: data.avatarUrl || undefined,
+          avatarUrl: data.avatarUrl || (data.avatarFileId ? `/api/users/${id}/avatar` : undefined),
           avatarFileId: data.avatarFileId || undefined,
           coverUrl: data.coverUrl || undefined,
           twoFactorEnabled: data.twoFactorEnabled ?? true,

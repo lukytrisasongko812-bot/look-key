@@ -124,17 +124,20 @@ export function TrackingView() {
   const [reqNoDuration, setReqNoDuration] = useState(false)
   const [reqNotes, setReqNotes] = useState('')
   const [uploadedFile, setUploadedFile] = useState<DocumentFile | null>(null)
+  const [isUploadingMainFile, setIsUploadingMainFile] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   // Upload Revision Modal State
   const [isRevModalOpen, setIsRevModalOpen] = useState(false)
   const [revFile, setRevFile] = useState<DocumentFile | null>(null)
+  const [isUploadingRevFile, setIsUploadingRevFile] = useState(false)
   const [revNotes, setRevNotes] = useState('')
   const [revLoading, setRevLoading] = useState(false)
 
   // Upload Final Document Modal State
   const [isFinalModalOpen, setIsFinalModalOpen] = useState(false)
   const [finalFile, setFinalFile] = useState<DocumentFile | null>(null)
+  const [isUploadingFinalFile, setIsUploadingFinalFile] = useState(false)
   const [finalNotes, setFinalNotes] = useState('')
   const [finalLoading, setFinalLoading] = useState(false)
 
@@ -148,6 +151,7 @@ export function TrackingView() {
     'legal_draft' | 'legal_approval' | 'bod_signed' | 'requester_revision' | 'final'
   >('legal_draft')
   const [stageUploadFile, setStageUploadFile] = useState<DocumentFile | null>(null)
+  const [isUploadingStageFile, setIsUploadingStageFile] = useState(false)
   const [stageUploadTag, setStageUploadTag] = useState('')
   const [stageUploadNotes, setStageUploadNotes] = useState('')
   const [stageUploadAdvance, setStageUploadAdvance] = useState(true)
@@ -219,6 +223,7 @@ export function TrackingView() {
       e.target.value = ''
       return
     }
+    setIsUploadingMainFile(true)
     try {
       const docFile = await uploadBinaryFile(file)
       if (docFile) {
@@ -229,6 +234,8 @@ export function TrackingView() {
       }
     } catch (err) {
       toast.error('Gagal membaca berkas dokumen.')
+    } finally {
+      setIsUploadingMainFile(false)
     }
   }
 
@@ -239,6 +246,7 @@ export function TrackingView() {
       toast.error(`Berkas revisi melebihi batas maksimal 25 MB.`)
       return
     }
+    setIsUploadingRevFile(true)
     try {
       const docFile = await uploadBinaryFile(file)
       if (docFile) {
@@ -249,6 +257,8 @@ export function TrackingView() {
       }
     } catch (err) {
       toast.error('Gagal membaca berkas revisi.')
+    } finally {
+      setIsUploadingRevFile(false)
     }
   }
 
@@ -259,6 +269,7 @@ export function TrackingView() {
       toast.error(`Berkas dokumen final melebihi batas maksimal 25 MB.`)
       return
     }
+    setIsUploadingFinalFile(true)
     try {
       const docFile = await uploadBinaryFile(file)
       if (docFile) {
@@ -269,6 +280,8 @@ export function TrackingView() {
       }
     } catch (err) {
       toast.error('Gagal membaca berkas final.')
+    } finally {
+      setIsUploadingFinalFile(false)
     }
   }
 
@@ -280,6 +293,7 @@ export function TrackingView() {
       toast.error('Ukuran berkas melebihi batas maksimal 25 MB.')
       return
     }
+    setIsUploadingStageFile(true)
     try {
       const docFile = await uploadBinaryFile(file)
       if (docFile) {
@@ -290,6 +304,8 @@ export function TrackingView() {
       }
     } catch {
       toast.error('Gagal membaca berkas dokumen.')
+    } finally {
+      setIsUploadingStageFile(false)
     }
   }
 
@@ -884,31 +900,45 @@ export function TrackingView() {
                 </div>
 
                 {!uploadedFile ? (
-                  <label
-                    htmlFor="main-file-upload"
-                    className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#CBD5E1] p-6 text-center hover:border-[#163A70] hover:bg-[#F8FAFC] transition-all bg-[#F8FAFC]/50 cursor-pointer group"
-                  >
-                    <div className="h-12 w-12 rounded-2xl bg-[#EBF2FF] text-[#163A70] group-hover:bg-[#163A70] group-hover:text-white transition-all flex items-center justify-center mb-2.5">
-                      <Upload className="h-6 w-6" />
+                  isUploadingMainFile ? (
+                    <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#163A70]/40 p-6 text-center bg-[#F8FAFC]">
+                      <div className="h-12 w-12 rounded-2xl bg-[#EBF2FF] text-[#163A70] flex items-center justify-center mb-2.5 animate-spin">
+                        <RefreshCw className="h-6 w-6" />
+                      </div>
+                      <div className="text-xs font-bold text-[#0F172A]">
+                        Sedang mengunggah dan memproses berkas...
+                      </div>
+                      <p className="text-[11px] text-[#64748B] mt-0.5">
+                        Mohon tunggu, berkas sedang divalidasi dan disiapkan untuk transmisi ke Google Drive.
+                      </p>
                     </div>
-                    <div className="text-xs font-bold text-[#0F172A]">
-                      Pilih atau seret berkas ke sini
-                    </div>
-                    <p className="text-[11px] text-[#64748B] mt-0.5 mb-3">
-                      Format: PDF, Word, Excel, Gambar (Maks. 20 MB)
-                    </p>
-                    <div className="px-4 py-2 rounded-xl bg-[#163A70] hover:bg-[#0B2147] text-white font-bold text-xs shadow-2xs inline-flex items-center gap-2">
-                      <Upload className="h-3.5 w-3.5" />
-                      <span>Pilih Berkas</span>
-                    </div>
-                    <input
-                      id="main-file-upload"
-                      type="file"
-                      accept=".pdf,.doc,.docx,.xlsx,.xls,.jpg,.jpeg,.png"
-                      onChange={handleSingleFileUpload}
-                      className="hidden"
-                    />
-                  </label>
+                  ) : (
+                    <label
+                      htmlFor="main-file-upload"
+                      className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#CBD5E1] p-6 text-center hover:border-[#163A70] hover:bg-[#F8FAFC] transition-all bg-[#F8FAFC]/50 cursor-pointer group"
+                    >
+                      <div className="h-12 w-12 rounded-2xl bg-[#EBF2FF] text-[#163A70] group-hover:bg-[#163A70] group-hover:text-white transition-all flex items-center justify-center mb-2.5">
+                        <Upload className="h-6 w-6" />
+                      </div>
+                      <div className="text-xs font-bold text-[#0F172A]">
+                        Pilih atau seret berkas ke sini
+                      </div>
+                      <p className="text-[11px] text-[#64748B] mt-0.5 mb-3">
+                        Format: PDF, Word, Excel, Gambar (Maks. 20 MB)
+                      </p>
+                      <div className="px-4 py-2 rounded-xl bg-[#163A70] hover:bg-[#0B2147] text-white font-bold text-xs shadow-2xs inline-flex items-center gap-2">
+                        <Upload className="h-3.5 w-3.5" />
+                        <span>Pilih Berkas</span>
+                      </div>
+                      <input
+                        id="main-file-upload"
+                        type="file"
+                        accept=".pdf,.doc,.docx,.xlsx,.xls,.jpg,.jpeg,.png"
+                        onChange={handleSingleFileUpload}
+                        className="hidden"
+                      />
+                    </label>
+                  )
                 ) : (
                   <div className="flex items-center justify-between p-3 rounded-2xl border border-[#A7F3D0] bg-[#ECFDF5] text-xs">
                     <div className="flex items-center gap-2.5 truncate">
@@ -941,10 +971,22 @@ export function TrackingView() {
               <div className="pt-3 flex justify-end gap-3 border-t border-[#F1F5F9]">
                 <Button
                   type="submit"
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || isUploadingMainFile}
                   className="h-10 px-6 bg-[#163A70] hover:bg-[#0B2147] text-white font-bold text-xs rounded-xl shadow-xs cursor-pointer"
                 >
-                  {isSubmitting ? 'Mengirim...' : 'Kirim Pengajuan'}
+                  {isSubmitting ? (
+                    <span className="flex items-center gap-2">
+                      <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                      Mengirim...
+                    </span>
+                  ) : isUploadingMainFile ? (
+                    <span className="flex items-center gap-2">
+                      <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                      Mengunggah Berkas...
+                    </span>
+                  ) : (
+                    'Kirim Pengajuan'
+                  )}
                 </Button>
               </div>
             </form>
@@ -1712,22 +1754,30 @@ export function TrackingView() {
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold">Pilih Berkas Revisi (PDF / DOCX) <span className="text-[#DC2626]">*</span></Label>
               {!revFile ? (
-                <label
-                  htmlFor="rev-file-upload"
-                  className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#CBD5E1] p-4 text-center hover:border-[#D97706] hover:bg-[#FFFBEB]/40 transition-all bg-[#F8FAFC] cursor-pointer"
-                >
-                  <FileUp className="h-6 w-6 text-[#D97706] mb-1" />
-                  <span className="text-xs font-bold text-[#0F172A]">Klik untuk Memilih Berkas Revisi</span>
-                  <span className="text-[10px] text-[#64748B]">Maksimal 20 MB</span>
-                  <input
-                    id="rev-file-upload"
-                    type="file"
-                    required
-                    accept=".pdf,.doc,.docx"
-                    onChange={handleRevFileUpload}
-                    className="hidden"
-                  />
-                </label>
+                isUploadingRevFile ? (
+                  <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#D97706]/50 p-5 text-center bg-[#FFFBEB]/40">
+                    <RefreshCw className="h-6 w-6 text-[#D97706] mb-1.5 animate-spin" />
+                    <span className="text-xs font-bold text-[#92400E]">Sedang memproses berkas revisi...</span>
+                    <span className="text-[10px] text-[#B45309]">Mempersiapkan berkas untuk transmisi</span>
+                  </div>
+                ) : (
+                  <label
+                    htmlFor="rev-file-upload"
+                    className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#CBD5E1] p-4 text-center hover:border-[#D97706] hover:bg-[#FFFBEB]/40 transition-all bg-[#F8FAFC] cursor-pointer"
+                  >
+                    <FileUp className="h-6 w-6 text-[#D97706] mb-1" />
+                    <span className="text-xs font-bold text-[#0F172A]">Klik untuk Memilih Berkas Revisi</span>
+                    <span className="text-[10px] text-[#64748B]">Maksimal 20 MB</span>
+                    <input
+                      id="rev-file-upload"
+                      type="file"
+                      required
+                      accept=".pdf,.doc,.docx"
+                      onChange={handleRevFileUpload}
+                      className="hidden"
+                    />
+                  </label>
+                )
               ) : (
                 <div className="flex items-center justify-between p-2.5 rounded-xl border border-[#FDE68A] bg-[#FFFBEB] text-xs">
                   <div className="flex items-center gap-2 truncate">
@@ -1767,10 +1817,22 @@ export function TrackingView() {
               </Button>
               <Button
                 type="submit"
-                disabled={revLoading}
+                disabled={revLoading || isUploadingRevFile || !revFile}
                 className="bg-[#D97706] hover:bg-[#B45309] text-white font-bold"
               >
-                {revLoading ? 'Mengunggah...' : 'Simpan & Terbitkan Revisi'}
+                {revLoading ? (
+                  <span className="flex items-center gap-1.5">
+                    <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                    Mengunggah...
+                  </span>
+                ) : isUploadingRevFile ? (
+                  <span className="flex items-center gap-1.5">
+                    <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                    Memproses...
+                  </span>
+                ) : (
+                  'Simpan & Terbitkan Revisi'
+                )}
               </Button>
             </DialogFooter>
           </form>
@@ -1794,22 +1856,30 @@ export function TrackingView() {
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold">Pilih Berkas Dokumen Final Sah (PDF) <span className="text-[#DC2626]">*</span></Label>
               {!finalFile ? (
-                <label
-                  htmlFor="final-file-upload"
-                  className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#CBD5E1] p-4 text-center hover:border-[#059669] hover:bg-[#ECFDF5]/40 transition-all bg-[#F8FAFC] cursor-pointer"
-                >
-                  <ShieldCheck className="h-6 w-6 text-[#059669] mb-1" />
-                  <span className="text-xs font-bold text-[#0F172A]">Klik untuk Memilih Berkas Final</span>
-                  <span className="text-[10px] text-[#64748B]">Maksimal 20 MB (PDF)</span>
-                  <input
-                    id="final-file-upload"
-                    type="file"
-                    required
-                    accept=".pdf"
-                    onChange={handleFinalFileUpload}
-                    className="hidden"
-                  />
-                </label>
+                isUploadingFinalFile ? (
+                  <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#059669]/50 p-5 text-center bg-[#ECFDF5]/40">
+                    <RefreshCw className="h-6 w-6 text-[#059669] mb-1.5 animate-spin" />
+                    <span className="text-xs font-bold text-[#065F46]">Sedang memproses berkas final...</span>
+                    <span className="text-[10px] text-[#047857]">Mempersiapkan berkas untuk transmisi</span>
+                  </div>
+                ) : (
+                  <label
+                    htmlFor="final-file-upload"
+                    className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#CBD5E1] p-4 text-center hover:border-[#059669] hover:bg-[#ECFDF5]/40 transition-all bg-[#F8FAFC] cursor-pointer"
+                  >
+                    <ShieldCheck className="h-6 w-6 text-[#059669] mb-1" />
+                    <span className="text-xs font-bold text-[#0F172A]">Klik untuk Memilih Berkas Final</span>
+                    <span className="text-[10px] text-[#64748B]">Maksimal 20 MB (PDF)</span>
+                    <input
+                      id="final-file-upload"
+                      type="file"
+                      required
+                      accept=".pdf"
+                      onChange={handleFinalFileUpload}
+                      className="hidden"
+                    />
+                  </label>
+                )
               ) : (
                 <div className="flex items-center justify-between p-2.5 rounded-xl border border-[#A7F3D0] bg-[#ECFDF5] text-xs">
                   <div className="flex items-center gap-2 truncate">
@@ -1848,10 +1918,22 @@ export function TrackingView() {
               </Button>
               <Button
                 type="submit"
-                disabled={finalLoading}
+                disabled={finalLoading || isUploadingFinalFile || !finalFile}
                 className="bg-[#059669] hover:bg-[#047857] text-white font-bold"
               >
-                {finalLoading ? 'Menerbitkan...' : 'Terbitkan Dokumen Final'}
+                {finalLoading ? (
+                  <span className="flex items-center gap-1.5">
+                    <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                    Menerbitkan...
+                  </span>
+                ) : isUploadingFinalFile ? (
+                  <span className="flex items-center gap-1.5">
+                    <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                    Memproses...
+                  </span>
+                ) : (
+                  'Terbitkan Dokumen Final'
+                )}
               </Button>
             </DialogFooter>
           </form>
@@ -2183,6 +2265,14 @@ export function TrackingView() {
                       <X className="h-4 w-4" />
                     </Button>
                   </div>
+                ) : isUploadingStageFile ? (
+                  <div className="py-4">
+                    <RefreshCw className="h-7 w-7 mx-auto text-[#163A70] mb-2 animate-spin" />
+                    <p className="text-xs font-bold text-[#0F172A]">Sedang memproses berkas dokumen...</p>
+                    <p className="text-[10.5px] text-[#64748B] mt-0.5">
+                      Mempersiapkan berkas untuk transmisi
+                    </p>
+                  </div>
                 ) : (
                   <div>
                     <FileUp className="h-7 w-7 mx-auto text-[#94A3B8] mb-1.5" />
@@ -2245,14 +2335,26 @@ export function TrackingView() {
               </Button>
               <Button
                 type="submit"
-                disabled={stageUploadLoading || !stageUploadFile}
+                disabled={stageUploadLoading || isUploadingStageFile || !stageUploadFile}
                 className={`font-bold text-white ${
                   stageUploadMode === 'final'
                     ? 'bg-[#16A34A] hover:bg-[#15803D]'
                     : 'bg-[#163A70] hover:bg-[#0B2147]'
                 }`}
               >
-                {stageUploadLoading ? 'Mengunggah...' : 'Unggah & Simpan'}
+                {stageUploadLoading ? (
+                  <span className="flex items-center gap-1.5">
+                    <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                    Mengunggah...
+                  </span>
+                ) : isUploadingStageFile ? (
+                  <span className="flex items-center gap-1.5">
+                    <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                    Memproses...
+                  </span>
+                ) : (
+                  'Unggah & Simpan'
+                )}
               </Button>
             </DialogFooter>
           </form>

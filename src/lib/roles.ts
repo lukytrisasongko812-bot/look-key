@@ -182,6 +182,7 @@ export interface UserIdentity {
   _id?: string
   email?: string
   employeeName?: string
+  division?: string
   role?: string | null
 }
 
@@ -273,42 +274,22 @@ export function canUserAccessDocument(
   const isOwner = isDocumentOwnerOrPic(user, doc)
   if (isOwner) return true
 
-  // 3. User role is strictly confined to their own documents
-  if (role === 'User') return false
+  // 3. Legal Officer, Legal Management, and Board of Directors have full tracking visibility across all stages
+  if (role === 'Legal Officer' || role === 'Legal Management' || role === 'Board of Directors') {
+    return true
+  }
 
-  // 4. Guest is confined to their own documents (or non-confidential public documents)
+  // 4. User role: Access their own documents, or documents within their same division
+  if (role === 'User') {
+    if (doc.division && user.division && doc.division.toLowerCase() === user.division.toLowerCase()) {
+      return true
+    }
+    return false
+  }
+
+  // 5. Guest is confined to their own documents or non-confidential public internal documents
   if (role === 'Guest') {
     return Boolean(doc.confidentiality === 'Internal' && (doc.stage ?? 0) >= 4)
-  }
-
-  // 5. Legal Officer (Reviewer)
-  if (role === 'Legal Officer') {
-    return Boolean(
-      (doc.stage ?? 0) <= 3 ||
-      Boolean(doc.revisionRequested) ||
-      doc.stageStatus === 'revision' ||
-      (doc.division && doc.division.toLowerCase().includes('legal'))
-    )
-  }
-
-  // 6. Legal Management (Tata Kelola / Kustodian / Manager)
-  if (role === 'Legal Management') {
-    return Boolean(
-      (doc.stage ?? 0) >= 0 ||
-      Boolean(doc.finalDocument) ||
-      Boolean(doc.contractEnd) ||
-      doc.stageStatus === 'completed'
-    )
-  }
-
-  // 7. Board of Directors (Direksi / BOD)
-  if (role === 'Board of Directors') {
-    return Boolean(
-      (doc.stage ?? 0) >= 2 ||
-      doc.priority === 'Urgent' ||
-      doc.priority === 'Critical' ||
-      doc.stageStatus === 'completed'
-    )
   }
 
   return false
