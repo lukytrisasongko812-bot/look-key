@@ -43,7 +43,7 @@ const DEFAULT_PARENT_FOLDER_ID =
 
 const USERS_REGISTRY_FOLDER_ID = '1JRjTJOGlGs0S0iE1HYIBaI0nIcqDXugf'
 
-function getDriveClient() {
+export function getDriveClient() {
   const auth = new google.auth.JWT({
     email: DEFAULT_SERVICE_EMAIL,
     key: DEFAULT_PRIVATE_KEY,
@@ -983,6 +983,28 @@ export async function addDeletedDocsToGoogleDriveRegistry(docIds: string[]): Pro
     return true
   } catch (e) {
     console.error('[GDrive addDeletedDocsRegistry Error]', e)
+    return false
+  }
+}
+
+/**
+ * Remove document IDs from Google Drive deleted registry
+ */
+export async function removeDeletedDocsFromGoogleDriveRegistry(docIds: string[]): Promise<boolean> {
+  if (!docIds || docIds.length === 0) return true
+  try {
+    const existing = await getDeletedDocsFromGoogleDriveRegistry()
+    const updated = existing.filter((id) => !docIds.includes(id))
+    const buf = Buffer.from(JSON.stringify(updated, null, 2), 'utf-8')
+    await uploadOrUpdateFileInFolder(
+      DEFAULT_PARENT_FOLDER_ID,
+      DELETED_DOCS_REGISTRY_FILE,
+      'application/json',
+      buf
+    )
+    return true
+  } catch (e) {
+    console.error('[GDrive removeDeletedDocsRegistry Error]', e)
     return false
   }
 }

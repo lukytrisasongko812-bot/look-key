@@ -14,6 +14,7 @@ import {
   addDeletedDocsToGoogleDriveRegistry,
   getDocumentsFromGoogleDriveRegistry,
   saveDocumentsToGoogleDriveRegistry,
+  removeDeletedDocsFromGoogleDriveRegistry,
 } from './gdrive'
 import { connectToDatabase } from './db'
 import { User } from '@/models/User'
@@ -1123,6 +1124,8 @@ export async function initAndSeedDriveStore() {
     const driveDeleted = await getDeletedDocsFromGoogleDriveRegistry()
     if (driveDeleted && driveDeleted.length > 0) {
       deletedDocIds = Array.from(new Set([...deletedDocIds, ...driveDeleted]))
+      // Sanitize: never blacklist human-readable docNumbers (RIDE-XXXX) so future documents never get suppressed
+      deletedDocIds = deletedDocIds.filter((id) => !id.startsWith('RIDE-'))
       writeLocalDeletedDocsCache(deletedDocIds)
     }
   } catch (e) {
@@ -1131,7 +1134,7 @@ export async function initAndSeedDriveStore() {
 
   // Filter seed documents immediately against persistent deletion blacklist
   store.documents = store.documents.filter(
-    (d) => !deletedDocIds.includes(d._id) && !deletedDocIds.includes(d.docNumber)
+    (d) => !deletedDocIds.includes(d._id)
   )
 
   // Load active documents from Google Drive Registry (Cloud Source of Truth)
@@ -1139,8 +1142,11 @@ export async function initAndSeedDriveStore() {
     const driveDocs = await getDocumentsFromGoogleDriveRegistry()
     if (driveDocs && driveDocs.length > 0) {
       for (const dd of driveDocs) {
-        if (deletedDocIds.includes(dd._id) || (dd.docNumber && deletedDocIds.includes(dd.docNumber))) {
-          continue
+        // Any document stored in Google Drive's active documents registry is an active document!
+        // Never blacklist active documents from Google Drive registry:
+        if (deletedDocIds.includes(dd._id)) {
+          deletedDocIds = deletedDocIds.filter((x) => x !== dd._id)
+          writeLocalDeletedDocsCache(deletedDocIds)
         }
         const idx = store.documents.findIndex(
           (d) => d._id === dd._id || (dd.docNumber && d.docNumber === dd.docNumber)
@@ -1159,7 +1165,7 @@ export async function initAndSeedDriveStore() {
   const cachedDocs = readLocalDocsCache()
   if (cachedDocs && cachedDocs.length > 0) {
     for (const cd of cachedDocs) {
-      if (deletedDocIds.includes(cd._id) || (cd.docNumber && deletedDocIds.includes(cd.docNumber))) {
+      if (deletedDocIds.includes(cd._id)) {
         continue
       }
       const idx = store.documents.findIndex(
@@ -1180,7 +1186,7 @@ export async function initAndSeedDriveStore() {
     if (dbDocs && dbDocs.length > 0) {
       for (const d of dbDocs) {
         const dId = (d as any)._id?.toString() || (d as any).id
-        if (deletedDocIds.includes(dId) || (d.docNumber && deletedDocIds.includes(d.docNumber))) {
+        if (deletedDocIds.includes(dId)) {
           continue
         }
         const mappedDoc: StoredDocument = {
@@ -1234,7 +1240,7 @@ export async function initAndSeedDriveStore() {
 
   // Filter one final time against deletedDocIds
   store.documents = store.documents.filter(
-    (d) => !deletedDocIds.includes(d._id) && !deletedDocIds.includes(d.docNumber)
+    (d) => !deletedDocIds.includes(d._id)
   )
 
   writeLocalDocsCache(store.documents)
@@ -1281,7 +1287,7 @@ export async function getDriveDocuments(query = '', status = '', category = '') 
   const store = getStore()
   const deletedDocIds = readLocalDeletedDocsCache()
   let docs = store.documents.filter(
-    (d) => !deletedDocIds.includes(d._id) && !deletedDocIds.includes(d.docNumber)
+    (d) => !deletedDocIds.includes(d._id)
   )
 
   if (query) {
@@ -1313,7 +1319,7 @@ export async function getDriveDocumentById(id: string) {
   const store = getStore()
   const deletedDocIds = readLocalDeletedDocsCache()
   if (deletedDocIds.includes(id)) return null
-  return store.documents.find((d) => (d._id === id || d.docNumber === id) && !deletedDocIds.includes(d._id) && !deletedDocIds.includes(d.docNumber)) || null
+  return store.documents.find((d) => (d._id === id || d.docNumber === id) && !deletedDocIds.includes(d._id)) || null
 }
 
 export async function saveDriveDocument(doc: StoredDocument) {
@@ -1321,9 +1327,12 @@ export async function saveDriveDocument(doc: StoredDocument) {
   const store = getStore()
   const deletedDocIds = readLocalDeletedDocsCache()
   // Remove from deleted list if re-saving
-  if (deletedDocIds.includes(doc._id) || deletedDocIds.includes(doc.docNumber)) {
-    const updatedDeleted = deletedDocIds.filter((x) => x !== doc._id && x !== doc.docNumber)
+  if (deletedDocIds.includes(doc._id)) {
+    const updatedDeleted = deletedDocIds.filter((x) => x !== doc._id)
     writeLocalDeletedDocsCache(updatedDeleted)
+    removeDeletedDocsFromGoogleDriveRegistry([doc._id]).catch((e) =>
+      console.warn('[GDrive removeDeletedDocs Error]', e)
+    )
   }
 
   const idx = store.documents.findIndex((d) => d._id === doc._id || d.docNumber === doc.docNumber)
@@ -1369,21 +1378,20 @@ export async function deleteDriveDocument(id: string) {
     docToDelete = store.documents.splice(idx, 1)[0]
   }
 
-  // 1. Record in persistent deleted registry locally
+  // 1. Record in persistent deleted registry locally (ONLY track unique _id, never blacklist docNumber globally!)
   const deletedDocIds = readLocalDeletedDocsCache()
-  deletedDocIds.push(id)
-  if (docToDelete) {
-    if (docToDelete._id) deletedDocIds.push(docToDelete._id)
-    if (docToDelete.docNumber) deletedDocIds.push(docToDelete.docNumber)
+  const targetId = docToDelete?._id || id
+  if (targetId && !deletedDocIds.includes(targetId)) {
+    deletedDocIds.push(targetId)
   }
-  const cleanDeleted = Array.from(new Set(deletedDocIds.filter(Boolean)))
+  const cleanDeleted = Array.from(new Set(deletedDocIds.filter((x) => Boolean(x) && !x.startsWith('RIDE-'))))
   writeLocalDeletedDocsCache(cleanDeleted)
   writeLocalDocsCache(store.documents)
 
   // 2. Persist deleted IDs to Google Drive registry and update active documents registry (Awaited for serverless persistence)
   try {
     await Promise.all([
-      addDeletedDocsToGoogleDriveRegistry(cleanDeleted),
+      addDeletedDocsToGoogleDriveRegistry([targetId]),
       saveDocumentsToGoogleDriveRegistry(store.documents),
     ])
   } catch (e) {

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getDriveDocuments, saveDriveDocument, StoredDocument } from '@/lib/drive-store'
 import { sendNotificationEmail } from '@/lib/email'
-import { generateDocumentTxtLog, syncDocumentToGoogleDrive } from '@/lib/gdrive'
+import { generateDocumentTxtLog, syncDocumentToGoogleDrive, getDocumentsFromGoogleDriveRegistry } from '@/lib/gdrive'
 import { getUserFromRequest } from '@/lib/auth'
 import { canUserAccessDocument, isDocumentOwnerOrPic } from '@/lib/roles'
 
@@ -68,9 +68,23 @@ export async function POST(request: NextRequest) {
     const creatorId = tokenUser?.userId || createdBy || tokenUser?.email || 'usr_' + Math.random().toString(36).substring(2, 8)
 
     const existingDocs = await getDriveDocuments()
-    let nextNum = 150 + existingDocs.length
+    let driveDocs: StoredDocument[] = []
+    try {
+      driveDocs = await getDocumentsFromGoogleDriveRegistry()
+    } catch {}
+    const allKnownDocs = [...existingDocs, ...driveDocs]
+
+    let maxNum = 149
+    for (const d of allKnownDocs) {
+      const match = d.docNumber?.match(/RIDE-\d{4}-(\d+)/)
+      if (match) {
+        const num = parseInt(match[1], 10)
+        if (!isNaN(num) && num > maxNum) maxNum = num
+      }
+    }
+    let nextNum = maxNum + 1
     let docNumber = `RIDE-2026-${nextNum.toString().padStart(4, '0')}`
-    while (existingDocs.some((d) => d.docNumber === docNumber)) {
+    while (allKnownDocs.some((d) => d.docNumber === docNumber)) {
       nextNum++
       docNumber = `RIDE-2026-${nextNum.toString().padStart(4, '0')}`
     }
