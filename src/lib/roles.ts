@@ -247,12 +247,12 @@ export function isDocumentOwnerOrPic(
 }
 
 /**
- * Check if the user has authority to access (view/download/track) the document based on their role and ownership matrix:
- * 1. System Administrator: Global access to all documents across the corporate database.
- * 2. Document Owner / PIC / Contributor: Full access to their own submitted documents regardless of role.
- * 3. Legal Officer, Legal Management, and Board of Directors: Full tracking visibility across all stages (0 to 6).
- * 4. User (Pemohon / Unit Kerja): Sesuai ketentuan Matriks Kewenangan RIDE, seluruh dokumen operasional/internal dapat diakses, dilacak, dan diunduh. Jika dokumen ditandai Rahasia (Confidential/Restricted), dibatasi untuk PIC/pemilik atau divisi yang sama.
- * 5. Guest (Peninjau Tamu): Akses penelusuran status berkas (read-only) untuk seluruh dokumen internal.
+ * Check if the user has authority to access (view/download/track) the document:
+ * 1. System Administrator: Global access across all documents.
+ * 2. Legal Officer & Legal Management: Full access to view and process all submissions from all users.
+ * 3. Board of Directors: Executive access to review and approve corporate documents.
+ * 4. User & Guest: STRICT ISOLATION. Setiap user hanya dapat melihat dokumen yang diajukannya sendiri (Owner / PIC / Contributor).
+ *    User TIDAK BISA melihat pengajuan dokumen milik pengguna lain.
  */
 export function canUserAccessDocument(
   user: UserIdentity | null | undefined,
@@ -278,28 +278,97 @@ export function canUserAccessDocument(
   // 1. System Administrator has full global access
   if (role === 'System Administrator') return true
 
-  // 2. Document Owner / PIC / Contributor always has access to their own document across all roles
-  const isOwner = isDocumentOwnerOrPic(user, doc)
-  if (isOwner) return true
-
-  // 3. Legal Officer, Legal Management, and Board of Directors have full tracking visibility across all stages
+  // 2. Legal Officer, Legal Management, and Board of Directors have full visibility to view all submissions
   if (role === 'Legal Officer' || role === 'Legal Management' || role === 'Board of Directors') {
     return true
   }
 
-  // 4. Confidentiality check for User & Guest:
-  // If document is explicitly Confidential or Restricted, only Owner/PIC, same division, Legal, and BOD can access.
-  if (doc.confidentiality === 'Confidential' || doc.confidentiality === 'Restricted') {
-    if (doc.division && user.division && (
-      doc.division.toLowerCase() === user.division.toLowerCase() ||
-      doc.division.toLowerCase().includes(user.division.toLowerCase()) ||
-      user.division.toLowerCase().includes(doc.division.toLowerCase())
-    )) {
-      return true
-    }
+  // 3. User & Guest: STRICT ISOLATION
+  // Masing-masing user HANYA dapat melihat pengajuan dokumen miliknya sendiri
+  return isDocumentOwnerOrPic(user, doc)
+}
+
+/**
+ * Check if the user has authority to edit document metadata:
+ * - System Administrator, Legal Management, Legal Officer: Can view and edit submissions from users.
+ * - User: Can only edit their OWN document (isDocumentOwnerOrPic) while it is not yet finalized/archived (stage < 5 and not rejected).
+ * - Guest: Cannot edit.
+ */
+export function canUserEditDocument(
+  user: UserIdentity | null | undefined,
+  doc: any
+): boolean {
+  if (!user || !doc) return false
+  const role = normalizeRole(user.role)
+
+  if (role === 'System Administrator' || role === 'Legal Management' || role === 'Legal Officer') {
+    return true
+  }
+
+  if (role === 'User') {
+    const isOwner = isDocumentOwnerOrPic(user, doc)
+    const isCompleted = (doc.stage ?? 0) >= 5 || doc.stageStatus === 'completed'
+    return isOwner && !isCompleted && !doc.rejected
+  }
+
+  return false
+}
+
+/**
+ * Check if the user has authority to delete the document:
+ * - System Administrator & Legal Management: Authorized to manage/delete documents.
+ * - User: Can only delete their OWN document if it is still at initial submission (stage 0) and not yet processed.
+ * - Other: Cannot delete.
+ */
+export function canUserDeleteDocument(
+  user: UserIdentity | null | undefined,
+  doc: any
+): boolean {
+  if (!user || !doc) return false
+  const role = normalizeRole(user.role)
+
+  if (role === 'System Administrator' || role === 'Legal Management') {
+    return true
+  }
+
+  if (role === 'User') {
+    const isOwner = isDocumentOwnerOrPic(user, doc)
+    return isOwner && ((doc.stage ?? 0) === 0) && !doc.rejected
+  }
+
+  return false
+}
+
+/**
+ * Check if the user has authority to process workflow transitions:
+ * - System Administrator & Legal Management: Full workflow processing across all stages.
+ * - Legal Officer: Authorized to process stages 0-2 (Telaah & Drafting), request revision, or reject.
+ * - Board of Directors: Authorized to approve stage 4 (BOD Signed), request revision, or reject.
+ * - User & Guest: Cannot process stage transitions.
+ */
+export function canUserProcessWorkflow(
+  user: UserIdentity | null | undefined,
+  doc: any,
+  action: string
+): boolean {
+  if (!user || !doc) return false
+  const role = normalizeRole(user.role)
+
+  if (role === 'System Administrator' || role === 'Legal Management') {
+    return true
+  }
+
+  if (role === 'Legal Officer') {
+    if (['revision', 'reject', 'resolve_revision'].includes(action)) return true
+    if (['approve', 'advance'].includes(action) && (doc.stage ?? 0) <= 2) return true
     return false
   }
 
-  // 5. Standard Internal documents are accessible to all verified users & guests sesuai Matriks Kewenangan RIDE
-  return true
+  if (role === 'Board of Directors') {
+    if (['approve', 'advance'].includes(action) && (doc.stage ?? 0) === 4) return true
+    if (['revision', 'reject'].includes(action)) return true
+    return false
+  }
+
+  return false
 }

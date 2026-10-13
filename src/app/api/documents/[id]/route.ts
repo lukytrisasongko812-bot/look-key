@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getDriveDocumentById, saveDriveDocument, deleteDriveDocument } from '@/lib/drive-store'
 import { getUserFromRequest } from '@/lib/auth'
-import { canUserAccessDocument, isDocumentOwnerOrPic, isSystemAdmin } from '@/lib/roles'
+import {
+  canUserAccessDocument,
+  canUserEditDocument,
+  canUserDeleteDocument,
+} from '@/lib/roles'
 
 export const dynamic = 'force-dynamic'
 
@@ -18,7 +22,7 @@ export async function GET(
     }
 
     // Periksa kewenangan akses berdasarkan Role & PIC Pemohon
-    if (tokenUser && !canUserAccessDocument(tokenUser, doc)) {
+    if (!tokenUser || !canUserAccessDocument(tokenUser, doc)) {
       return NextResponse.json(
         { error: 'Akses ditolak: Anda tidak memiliki kewenangan untuk melihat dokumen ini.' },
         { status: 403 }
@@ -46,9 +50,9 @@ export async function PATCH(
       return NextResponse.json({ error: 'Dokumen tidak ditemukan' }, { status: 404 })
     }
 
-    if (tokenUser && !canUserAccessDocument(tokenUser, doc)) {
+    if (!tokenUser || !canUserEditDocument(tokenUser, doc)) {
       return NextResponse.json(
-        { error: 'Akses ditolak: Anda tidak memiliki kewenangan untuk memperbarui dokumen ini.' },
+        { error: 'Akses ditolak: Hanya Legal Officer, Legal Management, System Administrator, atau Pemilik Pengajuan awal yang dapat memperbarui dokumen ini.' },
         { status: 403 }
       )
     }
@@ -79,9 +83,9 @@ export async function DELETE(
       return NextResponse.json({ error: 'Dokumen tidak ditemukan' }, { status: 404 })
     }
 
-    if (tokenUser && !isSystemAdmin(tokenUser.role) && !isDocumentOwnerOrPic(tokenUser, doc)) {
+    if (!tokenUser || !canUserDeleteDocument(tokenUser, doc)) {
       return NextResponse.json(
-        { error: 'Akses ditolak: Hanya Administrator atau Pemilik Pengajuan yang dapat menghapus dokumen ini.' },
+        { error: 'Akses ditolak: Hanya Administrator, Legal Management, atau Pemilik Pengajuan tahap awal yang dapat menghapus dokumen ini.' },
         { status: 403 }
       )
     }

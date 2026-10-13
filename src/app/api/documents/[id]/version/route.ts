@@ -14,6 +14,7 @@ import {
   canUploadBodSigned,
   canUploadLegalApproval,
   canUploadLegalDraft,
+  canApproveCurrentStage,
   isDocumentOwnerOrPic,
 } from '@/lib/roles'
 
@@ -224,7 +225,7 @@ export async function POST(
       doc.revisionRequested = false
       doc.rejected = false
 
-      if (advanceStage && doc.stage < 5) {
+      if (advanceStage && canApproveCurrentStage(userRole, doc.stage) && doc.stage < 5) {
         doc.stage += 1
         doc.stageStatus = doc.stage >= 5 ? 'completed' : 'active'
         doc.statusLabel = STAGE_NAMES[doc.stage]

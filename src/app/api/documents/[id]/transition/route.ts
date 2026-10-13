@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getDriveDocumentById, saveDriveDocument, addDriveNotification } from '@/lib/drive-store'
 import { sendNotificationEmail } from '@/lib/email'
 import { getUserFromRequest } from '@/lib/auth'
+import { canUserProcessWorkflow } from '@/lib/roles'
 
 export const dynamic = 'force-dynamic'
 
@@ -26,20 +27,17 @@ export async function POST(
 
     const { action, notes } = await request.json()
 
-    // Role-based authorization for workflow transitions
-    const userRole = tokenUser?.role || 'Reviewer'
-    if (userRole === 'Requester' || userRole === 'User') {
-      if (['approve', 'advance', 'revision', 'reject', 'resolve_revision'].includes(action)) {
-        return NextResponse.json(
-          { error: `Peran ${userRole} tidak memiliki wewenang untuk aksi workflow "${action}".` },
-          { status: 403 }
-        )
-      }
-    }
-
     const doc = await getDriveDocumentById(id)
     if (!doc) {
       return NextResponse.json({ error: 'Dokumen tidak ditemukan.' }, { status: 404 })
+    }
+
+    // Role-based authorization for workflow transitions (Only Legal Officer, Legal Management, Admin, or BOD for Stage 4)
+    if (!tokenUser || !canUserProcessWorkflow(tokenUser, doc, action)) {
+      return NextResponse.json(
+        { error: `Peran ${tokenUser?.role || 'Guest'} tidak memiliki wewenang untuk memproses alur "${action}" pada dokumen ini.` },
+        { status: 403 }
+      )
     }
 
     let actionLabel = ''

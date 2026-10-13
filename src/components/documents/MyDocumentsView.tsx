@@ -2,12 +2,20 @@
 
 import React, { useState } from 'react'
 import { useApp, DocumentItem, DocumentFile } from '@/context/AppContext'
-import { normalizeRole, isDocumentOwnerOrPic, isStandardUser, isGuest } from '@/lib/roles'
+import {
+  normalizeRole,
+  isDocumentOwnerOrPic,
+  isStandardUser,
+  isGuest,
+  canUserEditDocument,
+  canUserDeleteDocument,
+} from '@/lib/roles'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import {
   Dialog,
   DialogContent,
@@ -59,6 +67,10 @@ export function MyDocumentsView() {
   const [editModalDoc, setEditModalDoc] = useState<DocumentItem | null>(null)
   const [editName, setEditName] = useState('')
   const [editPic, setEditPic] = useState('')
+  const [editCategory, setEditCategory] = useState('')
+  const [editDivision, setEditDivision] = useState('')
+  const [editPriority, setEditPriority] = useState<'Normal' | 'Urgent' | 'Critical'>('Normal')
+  const [editNotes, setEditNotes] = useState('')
 
   const userRole = normalizeRole(user?.role)
   const isPrivileged = userRole !== 'User' && userRole !== 'Guest'
@@ -103,7 +115,14 @@ export function MyDocumentsView() {
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!editModalDoc) return
-    const ok = await updateDocument(editModalDoc._id, { name: editName, pic: editPic })
+    const ok = await updateDocument(editModalDoc._id, {
+      name: editName,
+      pic: editPic,
+      category: editCategory,
+      division: editDivision,
+      priority: editPriority,
+      notes: editNotes,
+    })
     if (ok) {
       toast.success('Data pengajuan berhasil diperbarui.')
       setEditModalDoc(null)
@@ -399,24 +418,32 @@ export function MyDocumentsView() {
                             >
                               <Eye className="h-4 w-4" />
                             </button>
-                            <button
-                              onClick={() => {
-                                setEditModalDoc(doc)
-                                setEditName(doc.name)
-                                setEditPic(doc.pic)
-                              }}
-                              className="p-1.5 rounded-lg text-[#475569] hover:bg-[#F1F5F9] cursor-pointer"
-                              title="Edit Data"
-                            >
-                              <Edit3 className="h-4 w-4" />
-                            </button>
-                            <button
-                              onClick={() => handleDelete(doc)}
-                              className="p-1.5 rounded-lg text-[#DC2626] hover:bg-[#FEF2F2] cursor-pointer"
-                              title="Hapus"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
+                            {canUserEditDocument(user, doc) && (
+                              <button
+                                onClick={() => {
+                                  setEditModalDoc(doc)
+                                  setEditName(doc.name)
+                                  setEditPic(doc.pic)
+                                  setEditCategory(doc.category)
+                                  setEditDivision(doc.division)
+                                  setEditPriority(doc.priority || 'Normal')
+                                  setEditNotes(doc.notes || '')
+                                }}
+                                className="p-1.5 rounded-lg text-[#475569] hover:bg-[#F1F5F9] cursor-pointer"
+                                title="Edit Data"
+                              >
+                                <Edit3 className="h-4 w-4" />
+                              </button>
+                            )}
+                            {canUserDeleteDocument(user, doc) && (
+                              <button
+                                onClick={() => handleDelete(doc)}
+                                className="p-1.5 rounded-lg text-[#DC2626] hover:bg-[#FEF2F2] cursor-pointer"
+                                title="Hapus"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -508,6 +535,32 @@ export function MyDocumentsView() {
                           <Eye className="h-3.5 w-3.5" />
                           <span>Detail</span>
                         </button>
+                        {canUserEditDocument(user, doc) && (
+                          <button
+                            onClick={() => {
+                              setEditModalDoc(doc)
+                              setEditName(doc.name)
+                              setEditPic(doc.pic)
+                              setEditCategory(doc.category)
+                              setEditDivision(doc.division)
+                              setEditPriority(doc.priority || 'Normal')
+                              setEditNotes(doc.notes || '')
+                            }}
+                            className="flex items-center gap-1 text-xs font-semibold p-1.5 rounded-xl bg-[#F1F5F9] text-[#475569]"
+                            title="Edit"
+                          >
+                            <Edit3 className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                        {canUserDeleteDocument(user, doc) && (
+                          <button
+                            onClick={() => handleDelete(doc)}
+                            className="flex items-center gap-1 text-xs font-semibold p-1.5 rounded-xl bg-[#FEF2F2] text-[#DC2626]"
+                            title="Hapus"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        )}
                       </div>
 
                       <Button
@@ -686,13 +739,67 @@ export function MyDocumentsView() {
               />
             </div>
 
+            <div className="grid grid-cols-2 gap-2.5">
+              <div className="space-y-1">
+                <Label className="text-xs font-semibold">Kategori</Label>
+                <select
+                  value={editCategory}
+                  onChange={(e) => setEditCategory(e.target.value)}
+                  className="w-full h-10 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-3 text-xs font-semibold text-[#0F172A] focus:border-[#163A70] focus:outline-none"
+                >
+                  <option value="Kontrak Hukum">Kontrak Hukum</option>
+                  <option value="NDA">NDA</option>
+                  <option value="MoU">MoU</option>
+                  <option value="Legal Opinion / Analyst">Legal Opinion / Analyst</option>
+                  <option value="Perizinan">Perizinan</option>
+                  <option value="Surat Menyurat Resmi">Surat Menyurat Resmi</option>
+                  <option value="Dokumen Lainnya">Dokumen Lainnya</option>
+                </select>
+              </div>
+
+              <div className="space-y-1">
+                <Label className="text-xs font-semibold">Prioritas</Label>
+                <select
+                  value={editPriority}
+                  onChange={(e) => setEditPriority(e.target.value as any)}
+                  className="w-full h-10 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-3 text-xs font-semibold text-[#0F172A] focus:border-[#163A70] focus:outline-none"
+                >
+                  <option value="Normal">Normal (15 Hari)</option>
+                  <option value="Urgent">Mendesak (10 Hari)</option>
+                  <option value="Critical">Kritis (5 Hari)</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2.5">
+              <div className="space-y-1">
+                <Label className="text-xs font-semibold">Divisi</Label>
+                <Input
+                  value={editDivision}
+                  onChange={(e) => setEditDivision(e.target.value)}
+                  className="h-10 text-xs rounded-xl"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <Label className="text-xs font-semibold">PIC</Label>
+                <Input
+                  value={editPic}
+                  onChange={(e) => setEditPic(e.target.value)}
+                  required
+                  className="h-10 text-xs rounded-xl"
+                />
+              </div>
+            </div>
+
             <div className="space-y-1">
-              <Label className="text-xs font-semibold">Penanggung Jawab (PIC)</Label>
-              <Input
-                value={editPic}
-                onChange={(e) => setEditPic(e.target.value)}
-                required
-                className="h-10 text-xs rounded-xl"
+              <Label className="text-xs font-semibold">Catatan</Label>
+              <Textarea
+                value={editNotes}
+                onChange={(e) => setEditNotes(e.target.value)}
+                rows={2}
+                className="text-xs rounded-xl resize-none"
+                placeholder="Catatan tambahan dokumen..."
               />
             </div>
 

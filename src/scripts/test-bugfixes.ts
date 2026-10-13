@@ -180,11 +180,14 @@ async function runTests() {
   assert(avatarRes === null || (!!avatarRes && avatarRes.buffer.length > 0), 'Avatar lookup from Google Drive completes cleanly')
 
   // -------------------------------------------------------------
-  // TEST 7: All 6 Role Matrices Document Detection & Upload Authority
+  // TEST 7: Strict User Document Isolation & Full Legal/Admin Control
   // -------------------------------------------------------------
-  console.log('\n--- TEST 7: All 6 Role Matrices Document Detection & Upload Authority ---')
+  console.log('\n--- TEST 7: Strict User Document Isolation & Full Legal/Admin Control ---')
   const {
     canUserAccessDocument,
+    canUserEditDocument,
+    canUserDeleteDocument,
+    canUserProcessWorkflow,
     isDocumentOwnerOrPic,
     canUploadLegalDraft,
     canUploadLegalApproval,
@@ -202,49 +205,64 @@ async function runTests() {
     pic: 'Budi Pemohon',
     picEmail: 'budi@risetrack.id',
     stage: 0,
+    stageStatus: 'active',
+    rejected: false,
+    revisionRequested: false,
     versions: [
       {
         version: 'V0',
         uploadedBy: 'Budi Pemohon',
         file: { originalName: 'draf.pdf' },
       },
-      {
-        version: 'Rev.01',
-        uploadedBy: 'Siti Legal',
-        file: { originalName: 'kajian_legal.pdf' },
-      },
     ],
   }
 
-  const roleUsers = [
-    { role: 'User', userId: 'usr_other', employeeName: 'Joko User', division: 'Divisi Lain' },
-    { role: 'Legal Officer', userId: 'usr_legal_off', employeeName: 'Siti Legal', division: 'Legal' },
-    { role: 'Legal Management', userId: 'usr_legal_mgr', employeeName: 'Rudi Manager', division: 'Legal' },
-    { role: 'Board of Directors', userId: 'usr_bod', employeeName: 'Direktur Utama', division: 'BOD' },
-    { role: 'System Administrator', userId: 'usr_sysadmin', employeeName: 'Admin RIDE', division: 'IT' },
-    { role: 'Guest', userId: 'usr_guest', employeeName: 'Tamu', division: 'Umum' },
-  ]
+  const budiOwner = { role: 'User', userId: 'usr_pemohon_01', email: 'budi@risetrack.id', employeeName: 'Budi Pemohon' }
+  const jokoOtherUser = { role: 'User', userId: 'usr_other_02', email: 'joko@risetrack.id', employeeName: 'Joko User' }
+  const legalOfficer = { role: 'Legal Officer', userId: 'usr_legal_off', email: 'legal@risetrack.id', employeeName: 'Siti Legal' }
+  const legalManagement = { role: 'Legal Management', userId: 'usr_legal_mgr', email: 'manager@risetrack.id', employeeName: 'Rudi Manager' }
+  const sysAdmin = { role: 'System Administrator', userId: 'usr_sysadmin', email: 'admin@risetrack.id', employeeName: 'Admin RIDE' }
+  const guestUser = { role: 'Guest', userId: 'usr_guest', email: 'guest@risetrack.id', employeeName: 'Tamu' }
 
-  // Verify all 6 roles can detect & read standard internal uploaded documents
-  for (const ru of roleUsers) {
-    const canAccess = canUserAccessDocument(ru, sampleUploadedDoc)
-    assert(canAccess, `Role "${ru.role}" can detect and read newly uploaded internal document`)
-  }
+  // 1. Strict Isolation Check: User can only access own document
+  assert(canUserAccessDocument(budiOwner, sampleUploadedDoc), 'Document Owner (User Budi) can access own document')
+  assert(!canUserAccessDocument(jokoOtherUser, sampleUploadedDoc), 'Other User (Joko) is strictly isolated and CANNOT access Budi document')
+  assert(!canUserAccessDocument(guestUser, sampleUploadedDoc), 'Guest User is strictly isolated and CANNOT access Budi document')
 
-  // Verify version contributor detection
-  const isContributor = isDocumentOwnerOrPic(
-    { role: 'Legal Officer', employeeName: 'Siti Legal', userId: 'usr_legal_off' },
-    sampleUploadedDoc
-  )
-  assert(isContributor, 'Document version contributor recognized as owner/PIC')
+  // 2. Legal & Admin Full Visibility
+  assert(canUserAccessDocument(legalOfficer, sampleUploadedDoc), 'Legal Officer can access submission from any user')
+  assert(canUserAccessDocument(legalManagement, sampleUploadedDoc), 'Legal Management can access submission from any user')
+  assert(canUserAccessDocument(sysAdmin, sampleUploadedDoc), 'System Administrator can access submission from any user')
 
-  // Verify upload authority matrix functions
+  // 3. Edit Authority (canUserEditDocument)
+  assert(canUserEditDocument(legalOfficer, sampleUploadedDoc), 'Legal Officer is authorized to edit user document')
+  assert(canUserEditDocument(legalManagement, sampleUploadedDoc), 'Legal Management is authorized to edit user document')
+  assert(canUserEditDocument(sysAdmin, sampleUploadedDoc), 'System Administrator is authorized to edit user document')
+  assert(canUserEditDocument(budiOwner, sampleUploadedDoc), 'Document Owner is authorized to edit own initial document')
+  assert(!canUserEditDocument(jokoOtherUser, sampleUploadedDoc), 'Other User is NOT authorized to edit Budi document')
+
+  // 4. Delete Authority (canUserDeleteDocument)
+  assert(canUserDeleteDocument(sysAdmin, sampleUploadedDoc), 'System Administrator is authorized to delete document')
+  assert(canUserDeleteDocument(legalManagement, sampleUploadedDoc), 'Legal Management is authorized to delete document')
+  assert(canUserDeleteDocument(budiOwner, sampleUploadedDoc), 'Document Owner is authorized to delete initial submission')
+  assert(!canUserDeleteDocument(jokoOtherUser, sampleUploadedDoc), 'Other User is NOT authorized to delete Budi document')
+
+  // 5. Workflow Processing Authority (canUserProcessWorkflow)
+  assert(canUserProcessWorkflow(legalOfficer, sampleUploadedDoc, 'approve'), 'Legal Officer can approve Stage 0-2 (Telaah & Draft)')
+  assert(canUserProcessWorkflow(legalOfficer, sampleUploadedDoc, 'revision'), 'Legal Officer can request revision')
+  assert(canUserProcessWorkflow(legalOfficer, sampleUploadedDoc, 'reject'), 'Legal Officer can reject document')
+  assert(!canUserProcessWorkflow(legalOfficer, { ...sampleUploadedDoc, stage: 3 }, 'approve'), 'Legal Officer CANNOT approve Stage 3 (Reserved for Legal Management)')
+  assert(canUserProcessWorkflow(legalManagement, { ...sampleUploadedDoc, stage: 3 }, 'approve'), 'Legal Management can approve Stage 3 (Legal Clearance)')
+  assert(canUserProcessWorkflow(sysAdmin, sampleUploadedDoc, 'approve'), 'System Administrator can process any workflow stage')
+  assert(!canUserProcessWorkflow(budiOwner, sampleUploadedDoc, 'approve'), 'Standard User CANNOT advance/approve workflow stage')
+  assert(!canUserProcessWorkflow(jokoOtherUser, sampleUploadedDoc, 'approve'), 'Other User CANNOT advance/approve workflow stage')
+
+  // 6. Upload Authority Matrix
   assert(canUploadLegalDraft('Legal Officer'), 'Legal Officer authorized to upload legal draft')
   assert(canUploadLegalDraft('Legal Management'), 'Legal Management authorized to upload legal draft')
   assert(canUploadLegalApproval('Legal Management'), 'Legal Management authorized to upload legal clearance')
   assert(canUploadBodSigned('Board of Directors'), 'Board of Directors authorized to upload BOD signed')
   assert(canUploadFinalDocument('Legal Management'), 'Legal Management authorized to upload final document')
-  assert(canUploadFinalDocument('Board of Directors'), 'Board of Directors authorized to upload final document')
   assert(canUploadFinalDocument('System Administrator'), 'System Administrator authorized to upload final document')
 
   console.log('\n=================================================================')

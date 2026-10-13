@@ -26,8 +26,8 @@ export async function GET(request: NextRequest) {
         docs = docs.filter((d) => canUserAccessDocument(tokenUser, d))
       }
     } else {
-      // Fallback untuk request internal demo/publik
-      docs = docs.filter((d) => d.confidentiality === 'Internal')
+      // Unauthenticated requests receive empty list (Strict Privacy Protection)
+      docs = []
     }
 
     return NextResponse.json(docs)
