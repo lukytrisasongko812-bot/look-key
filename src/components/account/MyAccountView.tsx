@@ -36,6 +36,7 @@ import {
 } from '@/components/ui/dialog'
 import { toast } from 'sonner'
 import { RideSpinner } from '@/components/common/RideSpinner'
+import { CORPORATE_DIVISION_GROUPS, ALL_CORPORATE_DIVISIONS } from '@/lib/divisions'
 
 function compressImage(file: File, maxWidth: number, maxHeight: number, quality = 0.85): Promise<string> {
   return new Promise((resolve) => {
@@ -408,13 +409,25 @@ export function MyAccountView() {
                       <Building className="h-3.5 w-3.5 text-[#163A70]" />
                       <span>Divisi</span>
                     </Label>
-                    <Input
+                    <select
                       value={department}
                       onChange={(e) => setDepartment(e.target.value)}
                       required
-                      placeholder="Direktorat Legal & Governance"
-                      className="h-11 text-xs rounded-xl border-[#CBD5E1] focus:border-[#163A70] bg-[#F8FAFC]/50 focus:bg-white"
-                    />
+                      className="w-full h-11 rounded-xl border border-[#CBD5E1] bg-[#F8FAFC]/50 px-3 text-xs font-semibold text-[#0F172A] focus:border-[#163A70] focus:bg-white focus:outline-none transition-colors cursor-pointer"
+                    >
+                      {department && !ALL_CORPORATE_DIVISIONS.includes(department) && (
+                        <option value={department}>{department}</option>
+                      )}
+                      {CORPORATE_DIVISION_GROUPS.map((grp) => (
+                        <optgroup key={grp.groupLabel} label={grp.groupLabel}>
+                          {grp.options.map((opt) => (
+                            <option key={opt.value} value={opt.value}>
+                              {opt.label}
+                            </option>
+                          ))}
+                        </optgroup>
+                      ))}
+                    </select>
                   </div>
 
                   <div className="space-y-1.5">

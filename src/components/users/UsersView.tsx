@@ -34,6 +34,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { RideSpinner } from '@/components/common/RideSpinner'
+import { CORPORATE_DIVISION_GROUPS, ALL_CORPORATE_DIVISIONS } from '@/lib/divisions'
 
 export function UsersView() {
   const {
@@ -60,7 +61,7 @@ export function UsersView() {
   const [inviteName, setInviteName] = useState('')
   const [inviteEmail, setInviteEmail] = useState('')
   const [invitePosition, setInvitePosition] = useState('Legal Officer')
-  const [inviteDivision, setInviteDivision] = useState('Direktorat Legal & Compliance')
+  const [inviteDivision, setInviteDivision] = useState('Corsec, Legal & Compliance')
   const [inviteRole, setInviteRole] = useState<UserRole>('Legal Officer')
   const [invitePassword, setInvitePassword] = useState('Password123!')
   const [inviteLoading, setInviteLoading] = useState(false)
@@ -425,12 +426,25 @@ export function UsersView() {
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <Label className="text-xs font-semibold">Divisi</Label>
-                <Input
+                <select
                   value={inviteDivision}
                   onChange={(e) => setInviteDivision(e.target.value)}
                   required
-                  className="h-10 text-xs rounded-xl"
-                />
+                  className="w-full h-10 rounded-xl border border-[#CBD5E1] bg-[#F8FAFC] px-3 text-xs font-semibold text-[#0B2147] focus:border-[#163A70] focus:outline-none cursor-pointer"
+                >
+                  {inviteDivision && !ALL_CORPORATE_DIVISIONS.includes(inviteDivision) && (
+                    <option value={inviteDivision}>{inviteDivision}</option>
+                  )}
+                  {CORPORATE_DIVISION_GROUPS.map((grp) => (
+                    <optgroup key={grp.groupLabel} label={grp.groupLabel}>
+                      {grp.options.map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ))}
+                </select>
               </div>
 
               <div className="space-y-1">

@@ -75,6 +75,7 @@ import {
 import { toast } from 'sonner'
 import { ContractReminderConfig } from '@/context/AppContext'
 import { RideSpinner } from '@/components/common/RideSpinner'
+import { CORPORATE_DIVISION_GROUPS, ALL_CORPORATE_DIVISIONS } from '@/lib/divisions'
 
 const STAGES = [
   { key: 'submitted', label: 'Pengajuan', desc: 'Pengajuan kontrak / dokumen awal beserta lampiran berkas pendukung oleh User.', icon: Send },
@@ -845,12 +846,24 @@ export function TrackingView() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <Label className="text-xs font-semibold">Divisi</Label>
-                  <Input
+                  <select
                     value={reqDivision}
                     onChange={(e) => setReqDivision(e.target.value)}
-                    className="h-10 text-xs rounded-xl"
-                    placeholder="Contoh: Direktorat Operasi"
-                  />
+                    className="w-full h-10 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-3 text-xs font-semibold text-[#0F172A] focus:border-[#163A70] focus:outline-none cursor-pointer"
+                  >
+                    {reqDivision && !ALL_CORPORATE_DIVISIONS.includes(reqDivision) && (
+                      <option value={reqDivision}>{reqDivision}</option>
+                    )}
+                    {CORPORATE_DIVISION_GROUPS.map((grp) => (
+                      <optgroup key={grp.groupLabel} label={grp.groupLabel}>
+                        {grp.options.map((opt) => (
+                          <option key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </option>
+                        ))}
+                      </optgroup>
+                    ))}
+                  </select>
                 </div>
 
                 <div className="space-y-1">
