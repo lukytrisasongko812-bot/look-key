@@ -7,13 +7,13 @@ import { canUserProcessWorkflow } from '@/lib/roles'
 export const dynamic = 'force-dynamic'
 
 const STAGE_NAMES = [
-  'Pengajuan User',
-  'Drafting Legal',
-  'Cek Draf & Revisi',
-  'Paraf Legal Manager',
-  'TTD Direksi',
-  'Arsip Kontrak',
-  'Notifikasi Masa Berlaku',
+  'Inisiasi Kontrak',
+  'Penyusunan Draf Legal',
+  'Harmonisasi & Review',
+  'Legal Clearance (Paraf)',
+  'Eksekusi Direksi (TTD)',
+  'Registrasi Arsip Resmi',
+  'Monitoring Masa Berlaku',
 ]
 
 export async function POST(
