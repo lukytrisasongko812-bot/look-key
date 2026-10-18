@@ -27,6 +27,7 @@ import {
 import { useApp, UserRole, UserProfile } from '@/context/AppContext'
 import { normalizeRole, canAccessAuthorityMatrix } from '@/lib/roles'
 import { toast } from 'sonner'
+import { RideSpinner } from '@/components/common/RideSpinner'
 
 export function AuthorityMatrixView() {
   const {
@@ -663,7 +664,11 @@ export function AuthorityMatrixView() {
               onClick={handleDeleteConfirm}
               className="h-10 text-xs bg-[#DC2626] hover:bg-[#B91C1C] text-white font-bold rounded-xl gap-1.5"
             >
-              <Trash2 className="h-4 w-4" />
+              {deleteLoading ? (
+                <RideSpinner size="xs" speed="fast" showGlow={false} />
+              ) : (
+                <Trash2 className="h-4 w-4" />
+              )}
               {deleteLoading ? 'Menghapus...' : 'Ya, Hapus'}
             </Button>
           </DialogFooter>

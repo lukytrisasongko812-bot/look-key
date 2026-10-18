@@ -33,6 +33,7 @@ import {
   AlertTriangle,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { RideSpinner } from '@/components/common/RideSpinner'
 
 export function UsersView() {
   const {
@@ -477,9 +478,16 @@ export function UsersView() {
               <Button
                 type="submit"
                 disabled={inviteLoading}
-                className="bg-[#163A70] hover:bg-[#0B2147] text-white font-bold"
+                className="bg-[#163A70] hover:bg-[#0B2147] text-white font-bold gap-2"
               >
-                {inviteLoading ? 'Mengirim...' : 'Kirim Undangan'}
+                {inviteLoading ? (
+                  <>
+                    <RideSpinner size="xs" speed="fast" showGlow={false} />
+                    <span>Mengirim...</span>
+                  </>
+                ) : (
+                  'Kirim Undangan'
+                )}
               </Button>
             </DialogFooter>
           </form>
@@ -576,7 +584,11 @@ export function UsersView() {
               onClick={handleDeleteConfirm}
               className="h-10 text-xs bg-[#DC2626] hover:bg-[#B91C1C] text-white font-bold rounded-xl gap-1.5"
             >
-              <Trash2 className="h-4 w-4" />
+              {deleteLoading ? (
+                <RideSpinner size="xs" speed="fast" showGlow={false} />
+              ) : (
+                <Trash2 className="h-4 w-4" />
+              )}
               {deleteLoading ? 'Menghapus...' : 'Ya, Hapus'}
             </Button>
           </DialogFooter>

@@ -74,6 +74,7 @@ import {
 } from '@/components/ui/dialog'
 import { toast } from 'sonner'
 import { ContractReminderConfig } from '@/context/AppContext'
+import { RideSpinner } from '@/components/common/RideSpinner'
 
 const STAGES = [
   { key: 'submitted', label: 'Inisiasi Kontrak', desc: 'Registrasi permohonan & kelengkapan berkas pendukung dari Divisi Pemohon.', icon: Send },
@@ -547,6 +548,19 @@ export function TrackingView() {
     }
   }
 
+  const [transitionLoading, setTransitionLoading] = useState(false)
+
+  const handleStageTransition = async (
+    docId: string,
+    action: 'approve' | 'advance' | 'revision' | 'reject',
+    notes?: string
+  ) => {
+    setTransitionLoading(true)
+    const ok = await transitionDocument(docId, action, notes)
+    setTransitionLoading(false)
+    return ok
+  }
+
   // Submit Request Revision Action
   const handleRequestRevisionSubmit = async () => {
     if (!activeDoc) return
@@ -555,7 +569,7 @@ export function TrackingView() {
       return
     }
 
-    const ok = await transitionDocument(activeDoc._id, 'revision', requestRevReason)
+    const ok = await handleStageTransition(activeDoc._id, 'revision', requestRevReason)
     if (ok) {
       toast.success('Permintaan revisi berhasil dikirim ke pengaju.')
       setIsRequestRevOpen(false)
@@ -918,8 +932,8 @@ export function TrackingView() {
                 {!uploadedFile ? (
                   isUploadingMainFile ? (
                     <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#163A70]/40 p-6 text-center bg-[#F8FAFC]">
-                      <div className="h-12 w-12 rounded-2xl bg-[#EBF2FF] text-[#163A70] flex items-center justify-center mb-2.5 animate-spin">
-                        <RefreshCw className="h-6 w-6" />
+                      <div className="mb-3">
+                        <RideSpinner size="lg" speed="normal" showGlow={false} />
                       </div>
                       <div className="text-xs font-bold text-[#0F172A]">
                         Sedang mengunggah dan memproses berkas...
@@ -992,12 +1006,12 @@ export function TrackingView() {
                 >
                   {isSubmitting ? (
                     <span className="flex items-center gap-2">
-                      <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-                      Mengirim...
+                      <RideSpinner size="xs" speed="fast" showGlow={false} />
+                      Mengirim Pengajuan...
                     </span>
                   ) : isUploadingMainFile ? (
                     <span className="flex items-center gap-2">
-                      <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                      <RideSpinner size="xs" speed="fast" showGlow={false} />
                       Mengunggah Berkas...
                     </span>
                   ) : (
@@ -1235,11 +1249,12 @@ export function TrackingView() {
                         {userCanReview && (
                           <Button
                             size="sm"
-                            onClick={() => transitionDocument(activeDoc._id, 'approve', 'Perbaikan draf kontrak terverifikasi, proses hukum dilanjutkan')}
+                            disabled={transitionLoading}
+                            onClick={() => handleStageTransition(activeDoc._id, 'approve', 'Perbaikan draf kontrak terverifikasi, proses hukum dilanjutkan')}
                             className="h-7 text-[11px] bg-[#059669] hover:bg-[#047857] text-white font-bold rounded-lg cursor-pointer"
                           >
-                            <Check className="h-3 w-3 mr-1" />
-                            Verifikasi &amp; Lanjutkan
+                            {transitionLoading ? <RideSpinner size="xs" speed="fast" showGlow={false} className="mr-1.5" /> : <Check className="h-3 w-3 mr-1" />}
+                            {transitionLoading ? 'Memproses...' : 'Verifikasi & Lanjutkan'}
                           </Button>
                         )}
                       </>
@@ -1253,11 +1268,12 @@ export function TrackingView() {
                           <>
                             <Button
                               size="sm"
-                              onClick={() => transitionDocument(activeDoc._id, 'approve', 'Inisiasi kontrak diverifikasi oleh Divisi Legal untuk tahap Penyusunan Draf Legal')}
+                              disabled={transitionLoading}
+                              onClick={() => handleStageTransition(activeDoc._id, 'approve', 'Inisiasi kontrak diverifikasi oleh Divisi Legal untuk tahap Penyusunan Draf Legal')}
                               className="h-7 text-[11px] bg-[#163A70] hover:bg-[#0B2147] text-white font-bold rounded-lg cursor-pointer"
                             >
-                              <PenTool className="h-3 w-3 mr-1" />
-                              Mulai Penyusunan Draf Legal
+                              {transitionLoading ? <RideSpinner size="xs" speed="fast" showGlow={false} className="mr-1.5" /> : <PenTool className="h-3 w-3 mr-1" />}
+                              {transitionLoading ? 'Memproses...' : 'Mulai Penyusunan Draf Legal'}
                             </Button>
                             <Button
                               size="sm"
@@ -1284,11 +1300,12 @@ export function TrackingView() {
                             </Button>
                             <Button
                               size="sm"
-                              onClick={() => transitionDocument(activeDoc._id, 'approve', 'Draf hukum diteruskan ke tahap Harmonisasi & Review bersama Divisi Pemohon dan Mitra')}
+                              disabled={transitionLoading}
+                              onClick={() => handleStageTransition(activeDoc._id, 'approve', 'Draf hukum diteruskan ke tahap Harmonisasi & Review bersama Divisi Pemohon dan Mitra')}
                               className="h-7 text-[11px] bg-[#059669] hover:bg-[#047857] text-white font-bold rounded-lg cursor-pointer"
                             >
-                              <Check className="h-3 w-3 mr-1" />
-                              Teruskan ke Harmonisasi &amp; Review
+                              {transitionLoading ? <RideSpinner size="xs" speed="fast" showGlow={false} className="mr-1.5" /> : <Check className="h-3 w-3 mr-1" />}
+                              {transitionLoading ? 'Memproses...' : 'Teruskan ke Harmonisasi & Review'}
                             </Button>
                           </>
                         )}
@@ -1306,11 +1323,12 @@ export function TrackingView() {
                             </Button>
                             <Button
                               size="sm"
-                              onClick={() => transitionDocument(activeDoc._id, 'approve', 'Harmonisasi klausul selesai, draf dikembalikan ke Divisi Legal untuk proses Legal Clearance (Paraf Legal Manager)')}
+                              disabled={transitionLoading}
+                              onClick={() => handleStageTransition(activeDoc._id, 'approve', 'Harmonisasi klausul selesai, draf dikembalikan ke Divisi Legal untuk proses Legal Clearance (Paraf Legal Manager)')}
                               className="h-7 text-[11px] bg-[#059669] hover:bg-[#047857] text-white font-bold rounded-lg cursor-pointer"
                             >
-                              <Check className="h-3 w-3 mr-1" />
-                              Ajukan Legal Clearance (Paraf)
+                              {transitionLoading ? <RideSpinner size="xs" speed="fast" showGlow={false} className="mr-1.5" /> : <Check className="h-3 w-3 mr-1" />}
+                              {transitionLoading ? 'Memproses...' : 'Ajukan Legal Clearance (Paraf)'}
                             </Button>
                           </>
                         )}
@@ -1328,11 +1346,12 @@ export function TrackingView() {
                             </Button>
                             <Button
                               size="sm"
-                              onClick={() => transitionDocument(activeDoc._id, 'approve', 'Legal Clearance (Paraf Legal Manager) disetujui, diteruskan ke tahap Eksekusi Direksi (TTD)')}
+                              disabled={transitionLoading}
+                              onClick={() => handleStageTransition(activeDoc._id, 'approve', 'Legal Clearance (Paraf Legal Manager) disetujui, diteruskan ke tahap Eksekusi Direksi (TTD)')}
                               className="h-7 text-[11px] bg-[#059669] hover:bg-[#047857] text-white font-bold rounded-lg cursor-pointer"
                             >
-                              <Check className="h-3 w-3 mr-1" />
-                              Setujui Paraf &amp; Ajukan ke Direksi
+                              {transitionLoading ? <RideSpinner size="xs" speed="fast" showGlow={false} className="mr-1.5" /> : <Check className="h-3 w-3 mr-1" />}
+                              {transitionLoading ? 'Memproses...' : 'Setujui Paraf & Ajukan ke Direksi'}
                             </Button>
                           </>
                         )}
@@ -1350,11 +1369,12 @@ export function TrackingView() {
                             </Button>
                             <Button
                               size="sm"
-                              onClick={() => transitionDocument(activeDoc._id, 'approve', 'Eksekusi tanda tangan Dewan Direksi selesai, kontrak dicatat ke Registrasi Arsip Resmi')}
+                              disabled={transitionLoading}
+                              onClick={() => handleStageTransition(activeDoc._id, 'approve', 'Eksekusi tanda tangan Dewan Direksi selesai, kontrak dicatat ke Registrasi Arsip Resmi')}
                               className="h-7 text-[11px] bg-[#059669] hover:bg-[#047857] text-white font-bold rounded-lg cursor-pointer"
                             >
-                              <Check className="h-3 w-3 mr-1" />
-                              Sahkan &amp; Registrasi Arsip
+                              {transitionLoading ? <RideSpinner size="xs" speed="fast" showGlow={false} className="mr-1.5" /> : <Check className="h-3 w-3 mr-1" />}
+                              {transitionLoading ? 'Memproses...' : 'Sahkan & Registrasi Arsip'}
                             </Button>
                           </>
                         )}
@@ -1708,7 +1728,9 @@ export function TrackingView() {
               {!revFile ? (
                 isUploadingRevFile ? (
                   <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#D97706]/50 p-5 text-center bg-[#FFFBEB]/40">
-                    <RefreshCw className="h-6 w-6 text-[#D97706] mb-1.5 animate-spin" />
+                    <div className="mb-2">
+                      <RideSpinner size="md" speed="normal" showGlow={false} />
+                    </div>
                     <span className="text-xs font-bold text-[#92400E]">Sedang memproses berkas revisi...</span>
                     <span className="text-[10px] text-[#B45309]">Mempersiapkan berkas untuk transmisi</span>
                   </div>
@@ -1774,12 +1796,12 @@ export function TrackingView() {
               >
                 {revLoading ? (
                   <span className="flex items-center gap-1.5">
-                    <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                    <RideSpinner size="xs" speed="fast" showGlow={false} />
                     Mengunggah...
                   </span>
                 ) : isUploadingRevFile ? (
                   <span className="flex items-center gap-1.5">
-                    <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                    <RideSpinner size="xs" speed="fast" showGlow={false} />
                     Memproses...
                   </span>
                 ) : (
@@ -1810,7 +1832,9 @@ export function TrackingView() {
               {!finalFile ? (
                 isUploadingFinalFile ? (
                   <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#059669]/50 p-5 text-center bg-[#ECFDF5]/40">
-                    <RefreshCw className="h-6 w-6 text-[#059669] mb-1.5 animate-spin" />
+                    <div className="mb-2">
+                      <RideSpinner size="md" speed="normal" showGlow={false} />
+                    </div>
                     <span className="text-xs font-bold text-[#065F46]">Sedang memproses berkas final...</span>
                     <span className="text-[10px] text-[#047857]">Mempersiapkan berkas untuk transmisi</span>
                   </div>
@@ -1875,12 +1899,12 @@ export function TrackingView() {
               >
                 {finalLoading ? (
                   <span className="flex items-center gap-1.5">
-                    <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                    <RideSpinner size="xs" speed="fast" showGlow={false} />
                     Menerbitkan...
                   </span>
                 ) : isUploadingFinalFile ? (
                   <span className="flex items-center gap-1.5">
-                    <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                    <RideSpinner size="xs" speed="fast" showGlow={false} />
                     Memproses...
                   </span>
                 ) : (
@@ -1921,10 +1945,18 @@ export function TrackingView() {
               Batal
             </Button>
             <Button
+              disabled={transitionLoading}
               onClick={handleRequestRevisionSubmit}
               className="bg-[#D97706] hover:bg-[#B45309] text-white font-bold"
             >
-              Minta Revisi
+              {transitionLoading ? (
+                <span className="flex items-center gap-1.5">
+                  <RideSpinner size="xs" speed="fast" showGlow={false} />
+                  Mengirim...
+                </span>
+              ) : (
+                'Minta Revisi'
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1962,7 +1994,14 @@ export function TrackingView() {
                 disabled={rejectLoading}
                 className="bg-[#DC2626] hover:bg-[#B91C1C] text-white font-bold cursor-pointer"
               >
-                {rejectLoading ? 'Menolak...' : 'Tolak Dokumen'}
+                {rejectLoading ? (
+                  <span className="flex items-center gap-1.5">
+                    <RideSpinner size="xs" speed="fast" showGlow={false} />
+                    Menolak...
+                  </span>
+                ) : (
+                  'Tolak Dokumen'
+                )}
               </Button>
             </DialogFooter>
           </form>
@@ -2047,7 +2086,14 @@ export function TrackingView() {
                 Batal
               </Button>
               <Button type="submit" disabled={submittingDecision} className="bg-[#163A70] hover:bg-[#0B2147] text-white font-bold">
-                {submittingDecision ? 'Menyimpan...' : 'Kirim Justifikasi'}
+                {submittingDecision ? (
+                  <span className="flex items-center gap-1.5">
+                    <RideSpinner size="xs" speed="fast" showGlow={false} />
+                    Menyimpan...
+                  </span>
+                ) : (
+                  'Kirim Justifikasi'
+                )}
               </Button>
             </DialogFooter>
           </form>
@@ -2106,7 +2152,14 @@ export function TrackingView() {
                 Batal
               </Button>
               <Button type="submit" disabled={savingReminder} className="bg-[#163A70] hover:bg-[#0B2147] text-white font-bold">
-                {savingReminder ? 'Menyimpan...' : 'Simpan Pengingat'}
+                {savingReminder ? (
+                  <span className="flex items-center gap-1.5">
+                    <RideSpinner size="xs" speed="fast" showGlow={false} />
+                    Menyimpan...
+                  </span>
+                ) : (
+                  'Simpan Pengingat'
+                )}
               </Button>
             </DialogFooter>
           </form>
@@ -2218,8 +2271,10 @@ export function TrackingView() {
                     </Button>
                   </div>
                 ) : isUploadingStageFile ? (
-                  <div className="py-4">
-                    <RefreshCw className="h-7 w-7 mx-auto text-[#163A70] mb-2 animate-spin" />
+                  <div className="py-4 flex flex-col items-center">
+                    <div className="mb-2">
+                      <RideSpinner size="md" speed="normal" showGlow={false} />
+                    </div>
                     <p className="text-xs font-bold text-[#0F172A]">Sedang memproses berkas dokumen...</p>
                     <p className="text-[10.5px] text-[#64748B] mt-0.5">
                       Mempersiapkan berkas untuk transmisi
@@ -2296,12 +2351,12 @@ export function TrackingView() {
               >
                 {stageUploadLoading ? (
                   <span className="flex items-center gap-1.5">
-                    <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                    <RideSpinner size="xs" speed="fast" showGlow={false} />
                     Mengunggah...
                   </span>
                 ) : isUploadingStageFile ? (
                   <span className="flex items-center gap-1.5">
-                    <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                    <RideSpinner size="xs" speed="fast" showGlow={false} />
                     Memproses...
                   </span>
                 ) : (

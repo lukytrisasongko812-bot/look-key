@@ -35,6 +35,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog'
 import { toast } from 'sonner'
+import { RideSpinner } from '@/components/common/RideSpinner'
 
 function compressImage(file: File, maxWidth: number, maxHeight: number, quality = 0.85): Promise<string> {
   return new Promise((resolve) => {
@@ -448,10 +449,13 @@ export function MyAccountView() {
                   <Button
                     type="submit"
                     disabled={savingProfile}
-                    className="h-11 px-7 bg-[#163A70] hover:bg-[#0B2147] text-white font-bold text-xs rounded-xl cursor-pointer shadow-sm active:scale-95 transition-all"
+                    className="h-11 px-7 bg-[#163A70] hover:bg-[#0B2147] text-white font-bold text-xs rounded-xl cursor-pointer shadow-sm active:scale-95 transition-all gap-2"
                   >
                     {savingProfile ? (
-                      'Menyimpan...'
+                      <>
+                        <RideSpinner size="xs" speed="fast" showGlow={false} />
+                        <span>Menyimpan...</span>
+                      </>
                     ) : isSaved ? (
                       <>
                         <Check className="h-4 w-4 mr-1.5" /> Tersimpan!
@@ -602,8 +606,15 @@ export function MyAccountView() {
               <Button type="button" variant="outline" onClick={() => setIsPasswordModalOpen(false)} className="rounded-xl text-xs font-bold">
                 Batal
               </Button>
-              <Button type="submit" disabled={pwLoading} className="bg-[#163A70] hover:bg-[#0B2147] text-white font-bold rounded-xl text-xs">
-                {pwLoading ? 'Menyimpan...' : 'Simpan Sandi'}
+              <Button type="submit" disabled={pwLoading} className="bg-[#163A70] hover:bg-[#0B2147] text-white font-bold rounded-xl text-xs gap-2">
+                {pwLoading ? (
+                  <>
+                    <RideSpinner size="xs" speed="fast" showGlow={false} />
+                    <span>Menyimpan...</span>
+                  </>
+                ) : (
+                  'Simpan Sandi'
+                )}
               </Button>
             </DialogFooter>
           </form>
