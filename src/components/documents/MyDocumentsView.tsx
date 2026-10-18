@@ -426,7 +426,7 @@ export function MyDocumentsView() {
                                   setEditPic(doc.pic)
                                   setEditCategory(doc.category)
                                   setEditDivision(doc.division)
-                                  setEditPriority(doc.priority || 'Normal')
+                                  setEditPriority(doc.priority === 'Critical' ? 'Urgent' : (doc.priority || 'Normal'))
                                   setEditNotes(doc.notes || '')
                                 }}
                                 className="p-1.5 rounded-lg text-[#475569] hover:bg-[#F1F5F9] cursor-pointer"
@@ -543,7 +543,7 @@ export function MyDocumentsView() {
                               setEditPic(doc.pic)
                               setEditCategory(doc.category)
                               setEditDivision(doc.division)
-                              setEditPriority(doc.priority || 'Normal')
+                              setEditPriority(doc.priority === 'Critical' ? 'Urgent' : (doc.priority || 'Normal'))
                               setEditNotes(doc.notes || '')
                             }}
                             className="flex items-center gap-1 text-xs font-semibold p-1.5 rounded-xl bg-[#F1F5F9] text-[#475569]"
@@ -600,7 +600,7 @@ export function MyDocumentsView() {
                 <div><b>Kategori:</b> {viewModalDoc.category}</div>
                 <div><b>Divisi:</b> {viewModalDoc.division}</div>
                 <div><b>PIC:</b> {viewModalDoc.pic}</div>
-                <div><b>Prioritas (SLA):</b> {viewModalDoc.priority === 'Critical' ? 'Kritis (5 Hari)' : viewModalDoc.priority === 'Urgent' ? 'Mendesak (10 Hari)' : 'Normal (15 Hari)'}</div>
+                <div><b>Prioritas (Target SLA):</b> {viewModalDoc.priority === 'Urgent' || viewModalDoc.priority === 'Critical' ? 'Executive Fast-Track SLA (5 Hari Kerja)' : 'Standard Corporate SLA (10 Hari Kerja)'}</div>
                 <div><b>Status:</b> {viewModalDoc.statusLabel || getDocStatusLabel(viewModalDoc)}</div>
               </div>
 
@@ -758,15 +758,14 @@ export function MyDocumentsView() {
               </div>
 
               <div className="space-y-1">
-                <Label className="text-xs font-semibold">Prioritas</Label>
+                <Label className="text-xs font-semibold">Tingkat Prioritas (Target SLA)</Label>
                 <select
-                  value={editPriority}
+                  value={editPriority === 'Critical' ? 'Urgent' : editPriority}
                   onChange={(e) => setEditPriority(e.target.value as any)}
                   className="w-full h-10 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-3 text-xs font-semibold text-[#0F172A] focus:border-[#163A70] focus:outline-none"
                 >
-                  <option value="Normal">Normal (15 Hari)</option>
-                  <option value="Urgent">Mendesak (10 Hari)</option>
-                  <option value="Critical">Kritis (5 Hari)</option>
+                  <option value="Normal">Standard Corporate SLA (10 Hari Kerja)</option>
+                  <option value="Urgent">Executive Fast-Track SLA (5 Hari Kerja)</option>
                 </select>
               </div>
             </div>

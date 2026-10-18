@@ -132,7 +132,7 @@ Nomor Tiket Dokumen : ${doc.docNumber}
 Nama Dokumen        : ${doc.name}
 Kategori            : ${doc.category}
 Divisi Pemohon      : ${doc.division}
-Tingkat Prioritas   : ${doc.priority}
+Tingkat Prioritas   : ${doc.priority === 'Urgent' || doc.priority === 'Critical' ? 'Executive Fast-Track SLA (5 Hari Kerja)' : 'Standard Corporate SLA (10 Hari Kerja)'}
 Kerahasiaan         : ${doc.confidentiality}
 Penanggung Jawab    : ${doc.pic} (${doc.picEmail || '-'})
 Tanggal Pengajuan   : ${createdDateStr}

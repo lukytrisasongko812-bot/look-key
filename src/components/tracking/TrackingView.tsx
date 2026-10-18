@@ -799,15 +799,14 @@ export function TrackingView() {
                 </div>
 
                 <div className="space-y-1">
-                  <Label className="text-xs font-semibold">Tingkat Prioritas</Label>
+                  <Label className="text-xs font-semibold">Tingkat Prioritas (Target SLA)</Label>
                   <select
-                    value={reqPriority}
+                    value={reqPriority === 'Critical' ? 'Urgent' : reqPriority}
                     onChange={(e) => setReqPriority(e.target.value as 'Normal' | 'Urgent' | 'Critical')}
                     className="w-full h-10 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-3 text-xs font-semibold text-[#0F172A] focus:border-[#163A70] focus:outline-none"
                   >
-                    <option value="Normal">Normal (15 Hari)</option>
-                    <option value="Urgent">Mendesak (10 Hari)</option>
-                    <option value="Critical">Kritis (5 Hari)</option>
+                    <option value="Normal">Standard Corporate SLA (10 Hari Kerja)</option>
+                    <option value="Urgent">Executive Fast-Track SLA (5 Hari Kerja)</option>
                   </select>
                 </div>
               </div>
@@ -1089,14 +1088,14 @@ export function TrackingView() {
                         <Badge
                           variant="outline"
                           className={`text-[10px] sm:text-[10.5px] font-bold ${
-                            activeDoc.priority === 'Critical'
-                              ? 'bg-[#FEF2F2] text-[#DC2626] border-[#FCA5A5]'
-                              : activeDoc.priority === 'Urgent'
+                            activeDoc.priority === 'Urgent' || activeDoc.priority === 'Critical'
                               ? 'bg-[#FFFBEB] text-[#D97706] border-[#FDE68A]'
                               : 'bg-[#F1F5F9] text-[#475569]'
                           }`}
                         >
-                          {activeDoc.priority === 'Critical' ? 'Kritis (5 Hari)' : activeDoc.priority === 'Urgent' ? 'Mendesak (10 Hari)' : 'Normal (15 Hari)'}
+                          {activeDoc.priority === 'Urgent' || activeDoc.priority === 'Critical'
+                            ? 'Executive Fast-Track SLA (5 Hari Kerja)'
+                            : 'Standard Corporate SLA (10 Hari Kerja)'}
                         </Badge>
                       </div>
 
