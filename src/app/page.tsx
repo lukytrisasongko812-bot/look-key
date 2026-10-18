@@ -16,6 +16,7 @@ import { UsersView } from '@/components/users/UsersView'
 import { AuthorityMatrixView } from '@/components/matrix/AuthorityMatrixView'
 import { AppMenuView } from '@/components/menu/AppMenuView'
 import { MobileBottomNav } from '@/components/layout/MobileBottomNav'
+import { BilingualDomTranslator } from '@/components/common/LanguageSwitcher'
 
 export default function HomePage() {
   const { isAuthenticated, authLoading, currentView } = useApp()
@@ -82,11 +83,17 @@ export default function HomePage() {
   }
 
   if (!isAuthenticated) {
-    return <LoginScreen skipIntro={true} />
+    return (
+      <>
+        <BilingualDomTranslator />
+        <LoginScreen skipIntro={true} />
+      </>
+    )
   }
 
   return (
     <div className="min-h-screen flex flex-col bg-[#F5F7FA]">
+      <BilingualDomTranslator />
       <Header />
       <div className="flex flex-1 relative items-start">
         <Sidebar />

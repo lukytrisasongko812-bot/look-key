@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { useApp } from '@/context/AppContext'
 import { RideLogo } from '@/components/common/RideLogo'
 import { RideSpinner } from '@/components/common/RideSpinner'
+import { LanguageSwitcher } from '@/components/common/LanguageSwitcher'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -239,6 +240,11 @@ export function LoginScreen({ skipIntro = false }: { skipIntro?: boolean } = {})
       {/* Soft translucent gradient overlay for comfortable contrast without over-dimming */}
       <div className="absolute inset-0 bg-black/20" />
       <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/30" />
+
+      {/* Top Right Bilingual Switcher */}
+      <div className="absolute top-4 right-4 sm:top-6 sm:right-6 z-30">
+        <LanguageSwitcher variant="login" />
+      </div>
 
       {/* 2-Second Clean Intro: Rotating RIDE Kincir Logo + Clean Text Only */}
       {showIntro ? (

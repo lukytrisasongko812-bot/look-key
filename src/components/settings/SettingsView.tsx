@@ -18,8 +18,10 @@ import {
   Smartphone,
   Layers,
   Database,
+  Globe,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { LanguageSwitcher } from '@/components/common/LanguageSwitcher'
 
 export function SettingsView() {
   const {
@@ -43,6 +45,24 @@ export function SettingsView() {
           Konfigurasi notifikasi, integrasi Drive, dan basis data.
         </p>
       </div>
+
+      {/* 0. Bilingual Language Preference */}
+      <Card className="border-[#E2E8F0] shadow-sm">
+        <CardContent className="p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#EBF2FF] text-[#163A70] shrink-0">
+              <Globe className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="text-sm font-bold text-[#0B2147]">Bahasa Antarmuka (Bilingual)</h2>
+              <p className="text-[11px] text-[#64748B]">
+                Pilih bahasa tampilan untuk seluruh menu, formulir, dan alur kerja.
+              </p>
+            </div>
+          </div>
+          <LanguageSwitcher variant="card" />
+        </CardContent>
+      </Card>
 
       {/* 1. Notification Preferences */}
       <Card className="border-[#E2E8F0] shadow-sm">

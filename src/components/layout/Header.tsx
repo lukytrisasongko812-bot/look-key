@@ -4,6 +4,7 @@ import React, { useState } from 'react'
 import { useApp } from '@/context/AppContext'
 import { normalizeRole, isSystemAdmin, isBoardOfDirectors, canAccessAuthorityMatrix } from '@/lib/roles'
 import { RideLogo } from '@/components/common/RideLogo'
+import { LanguageSwitcher } from '@/components/common/LanguageSwitcher'
 import {
   Menu,
   Search,
@@ -96,8 +97,11 @@ export function Header() {
         </div>
       </div>
 
-      {/* Right side: Role badge, Notification Bell, User Chip */}
-      <div className="flex items-center gap-2.5 sm:gap-3.5">
+      {/* Right side: Bilingual Language Switcher, Role badge, Notification Bell, User Chip */}
+      <div className="flex items-center gap-2 sm:gap-3">
+        {/* Bilingual Switcher (ID / EN) */}
+        <LanguageSwitcher variant="header" />
+
         {/* User Role Badge */}
         <div className="hidden lg:flex items-center gap-1.5 rounded-full bg-[#EBF2FF] px-2.5 py-1 text-[11px] font-bold text-[#163A70] border border-[#BFDBFE]">
           <Shield className="h-3 w-3" />

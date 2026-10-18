@@ -158,6 +158,8 @@ interface AppContextType {
   setIsSidebarCollapsed: (collapsed: boolean) => void
   searchQuery: string
   setSearchQuery: (query: string) => void
+  language: 'id' | 'en'
+  setLanguage: (lang: 'id' | 'en') => void
   login: (email: string, pass: string, rememberMe?: boolean) => Promise<{ success: boolean; requires2FA?: boolean; userId?: string; email?: string; twoFactorTicket?: string; error?: string }>
   verifyOtp: (userId: string, email: string, code: string, ticket?: string, rememberMe?: boolean) => Promise<{ success: boolean; error?: string }>
   ssoLogin: (email: string, rememberMe?: boolean) => Promise<{ success: boolean; error?: string }>
@@ -207,6 +209,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const [language, setLanguageState] = useState<'id' | 'en'>('id')
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedLang = localStorage.getItem('ride_lang')
+      if (savedLang === 'en' || savedLang === 'id') {
+        setLanguageState(savedLang)
+      }
+    }
+  }, [])
+
+  const setLanguage = useCallback((lang: 'id' | 'en') => {
+    setLanguageState(lang)
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('ride_lang', lang)
+    }
+  }, [])
 
   const userRef = useRef<UserProfile | null>(null)
   userRef.current = user
@@ -983,6 +1002,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         isMobileSidebarOpen,
         isSidebarCollapsed,
         searchQuery,
+        language,
+        setLanguage,
         login,
         verifyOtp,
         ssoLogin,
