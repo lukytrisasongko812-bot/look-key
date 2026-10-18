@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
       division: user.division,
     })
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       token,
       user: {
@@ -96,9 +96,20 @@ export async function POST(request: NextRequest) {
         phone: user.phone,
         avatarUrl: user.avatarUrl,
         coverUrl: user.coverUrl,
+        mood: user.mood,
         twoFactorEnabled: user.twoFactorEnabled,
       },
     })
+
+    response.cookies.set('ride_token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 7 * 24 * 60 * 60,
+    })
+
+    return response
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'OTP verification failed'
     return NextResponse.json({ error: message }, { status: 500 })

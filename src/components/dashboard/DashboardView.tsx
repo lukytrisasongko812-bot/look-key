@@ -201,11 +201,12 @@ export function DashboardView() {
     setCurrentView,
     setSelectedDocNumber,
     submitDecision,
+    updateProfile,
   } = useApp()
 
   const canManageExpiry = isLegalManagement(user?.role) || isSystemAdmin(user?.role) || isBoardOfDirectors(user?.role)
 
-  // Mood state
+  // Mood state (persisted both in server user profile across devices and in localStorage)
   const [isMoodModalOpen, setIsMoodModalOpen] = useState(false)
   const [greetingMood, setGreetingMood] = useState<MoodOption | null>(null)
   const userMoodKey = `ride_user_mood_${user?.id || user?.email || 'default'}`
@@ -213,13 +214,17 @@ export function DashboardView() {
 
   useEffect(() => {
     try {
-      const saved = localStorage.getItem(userMoodKey)
+      const serverMoodId = user?.mood
+      const saved = serverMoodId || localStorage.getItem(userMoodKey)
       if (saved) {
         const found = MOOD_OPTIONS.find((m) => m.id === saved)
-        if (found) setCurrentMood(found)
+        if (found) {
+          setCurrentMood(found)
+          localStorage.setItem(userMoodKey, found.id)
+        }
       }
     } catch {}
-  }, [userMoodKey])
+  }, [userMoodKey, user?.mood])
 
   const handleSelectMood = (mood: MoodOption) => {
     setCurrentMood(mood)
@@ -228,6 +233,7 @@ export function DashboardView() {
     } catch {}
     setIsMoodModalOpen(false)
     setGreetingMood(mood)
+    updateProfile({ mood: mood.id }).catch(() => {})
   }
 
   // State for Decision Modal

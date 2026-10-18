@@ -6,6 +6,7 @@ import {
   syncUserToGoogleDrive,
   syncDocumentToGoogleDrive,
   getUsersFromGoogleDriveRegistry,
+  saveUsersToGoogleDriveRegistry,
   getUserFromGoogleDriveByEmail,
   getUserFromGoogleDriveById,
   deleteUserFromGoogleDrive,
@@ -112,7 +113,7 @@ export interface StoredVersion {
   uploadedBy: string
   uploadedAt: string
   isFinal: boolean
-  fileType: 'initial' | 'revision' | 'supporting' | 'final'
+  fileType: 'initial' | 'revision' | 'supporting' | 'final' | 'legal_draft' | 'legal_approval' | 'bod_signed'
 }
 
 export interface StoredHistory {
@@ -191,6 +192,8 @@ export interface StoredUser {
   avatarUrl?: string
   avatarFileId?: string
   coverUrl?: string
+  coverFileId?: string
+  mood?: string
   twoFactorEnabled: boolean
   twoFactorSecret?: string
   twoFactorExpires?: string | null
@@ -214,6 +217,7 @@ interface GlobalDriveStore {
   users: StoredUser[]
   notifications: StoredNotification[]
   isInitialized: boolean
+  initPromise?: Promise<void> | null
 }
 
 declare global {
@@ -227,157 +231,226 @@ function getStore(): GlobalDriveStore {
       users: [],
       notifications: [],
       isInitialized: false,
+      initPromise: null,
     }
   }
   return globalThis.__rideDriveStore
 }
 
+function normalizeUserMediaUrls(user: StoredUser): StoredUser {
+  const uid = encodeURIComponent(user._id || user.id || user.email)
+  let { avatarUrl, avatarFileId, coverUrl, coverFileId } = user
+
+  // Convert legacy Google Drive HTML viewer URLs to direct binary streaming endpoints
+  if (avatarUrl && avatarUrl.includes('drive.google.com/file/d/')) {
+    const match = avatarUrl.match(/\/file\/d\/([a-zA-Z0-9_-]+)/)
+    if (match && !avatarFileId) avatarFileId = match[1]
+    avatarUrl = `/api/users/${uid}/avatar`
+  } else if (!avatarUrl && avatarFileId) {
+    avatarUrl = `/api/users/${uid}/avatar`
+  }
+
+  if (coverUrl && coverUrl.includes('drive.google.com/file/d/')) {
+    const match = coverUrl.match(/\/file\/d\/([a-zA-Z0-9_-]+)/)
+    if (match && !coverFileId) coverFileId = match[1]
+    coverUrl = `/api/users/${uid}/avatar?type=cover`
+  } else if (!coverUrl && coverFileId) {
+    coverUrl = `/api/users/${uid}/avatar?type=cover`
+  }
+
+  return {
+    ...user,
+    avatarUrl,
+    avatarFileId,
+    coverUrl,
+    coverFileId,
+  }
+}
+
+function mergeUserRecords(existing: StoredUser, incoming: StoredUser): StoredUser {
+  const normExisting = normalizeUserMediaUrls(existing)
+  const normIncoming = normalizeUserMediaUrls(incoming)
+  const existingTime = normExisting.updatedAt ? new Date(normExisting.updatedAt).getTime() : 0
+  const incomingTime = normIncoming.updatedAt ? new Date(normIncoming.updatedAt).getTime() : 0
+
+  const primary = incomingTime >= existingTime ? normIncoming : normExisting
+  const secondary = incomingTime >= existingTime ? normExisting : normIncoming
+
+  return normalizeUserMediaUrls({
+    ...secondary,
+    ...primary,
+    _id: normExisting._id || normIncoming._id,
+    id: normExisting.id || normExisting._id || normIncoming.id || normIncoming._id,
+    avatarUrl: primary.avatarUrl || secondary.avatarUrl,
+    avatarFileId: primary.avatarFileId || secondary.avatarFileId,
+    coverUrl: primary.coverUrl || secondary.coverUrl,
+    coverFileId: primary.coverFileId || secondary.coverFileId,
+    mood: primary.mood || secondary.mood,
+  })
+}
+
+function mergeDocumentRecords(existing: StoredDocument, incoming: StoredDocument): StoredDocument {
+  const existingTime = existing.updatedAt ? new Date(existing.updatedAt).getTime() : 0
+  const incomingTime = incoming.updatedAt ? new Date(incoming.updatedAt).getTime() : 0
+  const primary = incomingTime >= existingTime ? incoming : existing
+  const secondary = incomingTime >= existingTime ? existing : incoming
+
+  return {
+    ...secondary,
+    ...primary,
+    driveFolderId: primary.driveFolderId || secondary.driveFolderId,
+    driveFolderUrl: primary.driveFolderUrl || secondary.driveFolderUrl,
+  }
+}
+
 export async function initAndSeedDriveStore() {
   const store = getStore()
-  if (store.isInitialized && store.users.length > 0 && store.documents.length >= 5) {
+  if (store.isInitialized && store.users.length > 0 && store.documents.length > 0) {
     return
   }
-
-  const defaultPasswordHash = await bcrypt.hash('Password123!', 10)
-  const now = new Date().toISOString()
-
-  // 1. Clean official users - Administrator Toto, Reviewer Luky, Requester Robert
-  const seedUsers: StoredUser[] = [
-    {
-      _id: 'usr_toto_admin_01',
-      id: 'usr_toto_admin_01',
-      employeeName: 'Toto Rubianto',
-      email: 'toto.rubianto.17@gmail.com',
-      passwordHash: defaultPasswordHash,
-      position: 'Head of Enterprise Legal & Governance',
-      division: 'Direktorat Legal & Governance',
-      role: 'System Administrator',
-      phone: '+62 812-3456-7890',
-      twoFactorEnabled: true,
-      isActive: true,
-      createdAt: now,
-      updatedAt: now,
-    },
-    {
-      _id: 'usr_luky_reviewer_01',
-      id: 'usr_luky_reviewer_01',
-      employeeName: 'Luky Tri Sasongko',
-      email: 'lukytrisasongko812@gmail.com',
-      passwordHash: defaultPasswordHash,
-      position: 'Senior Legal Counsel & Compliance Reviewer',
-      division: 'Direktorat Legal & Compliance',
-      role: 'Legal Officer',
-      phone: '+62 812-9876-5432',
-      twoFactorEnabled: true,
-      isActive: true,
-      createdAt: now,
-      updatedAt: now,
-    },
-    {
-      _id: 'usr_robert_requester_01',
-      id: 'usr_robert_requester_01',
-      employeeName: 'Robert Pamungkas',
-      email: 'robertpamungkas86@gmail.com',
-      passwordHash: defaultPasswordHash,
-      position: 'Staff Operasional & Pengadaan Lapangan',
-      division: 'Direktorat Operasi & Logistik',
-      role: 'User',
-      phone: '+62 813-1122-3344',
-      twoFactorEnabled: true,
-      isActive: true,
-      createdAt: now,
-      updatedAt: now,
-    },
-  ]
-
-  // Initialize store.users with seed users if currently empty
-  if (store.users.length === 0) {
-    store.users = [...seedUsers]
+  if (store.initPromise) {
+    return store.initPromise
   }
 
-  // 2. Load from local disk cache (/tmp)
-  const cachedUsers = readLocalUsersCache()
-  if (cachedUsers && cachedUsers.length > 0) {
-    for (const cu of cachedUsers) {
-      const idx = store.users.findIndex(
-        (u) => u.email.toLowerCase() === cu.email.toLowerCase() || u._id === cu._id
-      )
-      if (idx >= 0) {
-        store.users[idx] = { ...store.users[idx], ...cu }
-      } else {
-        store.users.push(cu)
+  store.initPromise = (async () => {
+    try {
+      const defaultPasswordHash = await bcrypt.hash('Password123!', 10)
+      const seedBaselineTime = '2026-01-01T00:00:00.000Z'
+      const now = new Date().toISOString()
+
+      // 1. Clean official users - Administrator Toto, Reviewer Luky, Requester Robert
+      const seedUsers: StoredUser[] = [
+        {
+          _id: 'usr_toto_admin_01',
+          id: 'usr_toto_admin_01',
+          employeeName: 'Toto Rubianto',
+          email: 'toto.rubianto.17@gmail.com',
+          passwordHash: defaultPasswordHash,
+          position: 'Head of Enterprise Legal & Governance',
+          division: 'Direktorat Legal & Governance',
+          role: 'System Administrator',
+          phone: '+62 812-3456-7890',
+          twoFactorEnabled: true,
+          isActive: true,
+          createdAt: seedBaselineTime,
+          updatedAt: seedBaselineTime,
+        },
+        {
+          _id: 'usr_luky_reviewer_01',
+          id: 'usr_luky_reviewer_01',
+          employeeName: 'Luky Tri Sasongko',
+          email: 'lukytrisasongko812@gmail.com',
+          passwordHash: defaultPasswordHash,
+          position: 'Senior Legal Counsel & Compliance Reviewer',
+          division: 'Direktorat Legal & Compliance',
+          role: 'Legal Officer',
+          phone: '+62 812-9876-5432',
+          twoFactorEnabled: true,
+          isActive: true,
+          createdAt: seedBaselineTime,
+          updatedAt: seedBaselineTime,
+        },
+        {
+          _id: 'usr_robert_requester_01',
+          id: 'usr_robert_requester_01',
+          employeeName: 'Robert Pamungkas',
+          email: 'robertpamungkas86@gmail.com',
+          passwordHash: defaultPasswordHash,
+          position: 'Staff Operasional & Pengadaan Lapangan',
+          division: 'Direktorat Operasi & Logistik',
+          role: 'User',
+          phone: '+62 813-1122-3344',
+          twoFactorEnabled: true,
+          isActive: true,
+          createdAt: seedBaselineTime,
+          updatedAt: seedBaselineTime,
+        },
+      ]
+
+      // Initialize store.users with seed users if currently empty
+      if (store.users.length === 0) {
+        store.users = [...seedUsers]
       }
-    }
-  }
 
-  // 3. Cloud Source of Truth: Google Drive User Registry
-  try {
-    const driveUsers = await getUsersFromGoogleDriveRegistry()
-    if (driveUsers && driveUsers.length > 0) {
-      for (const du of driveUsers) {
-        const idx = store.users.findIndex(
-          (u) =>
-            u.email.toLowerCase() === du.email.toLowerCase() ||
-            u._id === du._id ||
-            u.id === du.id ||
-            (du.email.toLowerCase() === 'luckytrisasongko812@gmail.com' && u.email.toLowerCase() === 'luckytrisasongko812@gmail.com')
-        )
-        if (idx >= 0) {
-          store.users[idx] = { ...store.users[idx], ...du }
-        } else {
-          store.users.push(du)
-        }
-      }
-      writeLocalUsersCache(store.users)
-    }
-  } catch (driveErr) {
-    console.warn('[GDrive initAndSeed restore warning]', driveErr)
-  }
-
-  // 4. Try MongoDB in try/catch (graceful fallback)
-  try {
-    await connectToDatabase()
-    const dbUsers = await User.find({}).lean()
-    if (dbUsers && dbUsers.length > 0) {
-      for (const u of dbUsers) {
-        const mappedUser: StoredUser = {
-          _id: u._id.toString(),
-          id: u._id.toString(),
-          employeeName: u.employeeName,
-          email: u.email,
-          passwordHash: u.passwordHash,
-          position: u.position || 'Reviewer',
-          division: u.division || 'Direktorat Umum',
-          role: (u.role || 'Reviewer') as UserRole,
-          phone: u.phone,
-          avatarUrl: u.avatarUrl || undefined,
-          coverUrl: u.coverUrl || undefined,
-          twoFactorEnabled: u.twoFactorEnabled ?? true,
-          isActive: u.isActive ?? true,
-          createdAt: u.createdAt ? new Date(u.createdAt).toISOString() : now,
-          updatedAt: u.updatedAt ? new Date(u.updatedAt).toISOString() : now,
-        }
-        const idx = store.users.findIndex((x) => x.email.toLowerCase() === mappedUser.email.toLowerCase())
-        if (idx >= 0) {
-          const prev = store.users[idx]
-          store.users[idx] = {
-            ...prev,
-            ...mappedUser,
-            avatarUrl: prev.avatarUrl || mappedUser.avatarUrl || (prev.avatarFileId ? `/api/users/${prev._id}/avatar` : undefined),
-            avatarFileId: prev.avatarFileId || undefined,
-            coverUrl: prev.coverUrl || mappedUser.coverUrl || undefined,
+      // 2. Load from local disk cache (/tmp)
+      const cachedUsers = readLocalUsersCache()
+      if (cachedUsers && cachedUsers.length > 0) {
+        for (const cu of cachedUsers) {
+          const idx = store.users.findIndex(
+            (u) => u.email.toLowerCase() === cu.email.toLowerCase() || u._id === cu._id
+          )
+          if (idx >= 0) {
+            store.users[idx] = mergeUserRecords(store.users[idx], cu)
+          } else {
+            store.users.push(normalizeUserMediaUrls(cu))
           }
-        } else {
-          store.users.push(mappedUser)
         }
       }
-      writeLocalUsersCache(store.users)
-    }
-  } catch (err) {
-    // MongoDB auth issues gracefully ignored; Google Drive is our primary cloud source of truth
-  }
 
-  writeLocalUsersCache(store.users)
+      // 3. Cloud Source of Truth: Google Drive User Registry
+      try {
+        const driveUsers = await getUsersFromGoogleDriveRegistry()
+        if (driveUsers && driveUsers.length > 0) {
+          for (const du of driveUsers) {
+            const idx = store.users.findIndex(
+              (u) =>
+                u.email.toLowerCase() === du.email.toLowerCase() ||
+                u._id === du._id ||
+                u.id === du.id ||
+                (du.email.toLowerCase() === 'luckytrisasongko812@gmail.com' && u.email.toLowerCase() === 'luckytrisasongko812@gmail.com')
+            )
+            if (idx >= 0) {
+              store.users[idx] = mergeUserRecords(store.users[idx], du)
+            } else {
+              store.users.push(normalizeUserMediaUrls(du))
+            }
+          }
+          writeLocalUsersCache(store.users)
+        }
+      } catch (driveErr) {
+        console.warn('[GDrive initAndSeed restore warning]', driveErr)
+      }
+
+      // 4. Try MongoDB in try/catch (graceful fallback)
+      try {
+        await connectToDatabase()
+        const dbUsers = await User.find({}).lean()
+        if (dbUsers && dbUsers.length > 0) {
+          for (const u of dbUsers) {
+            const mappedUser: StoredUser = {
+              _id: u._id.toString(),
+              id: u._id.toString(),
+              employeeName: u.employeeName,
+              email: u.email,
+              passwordHash: u.passwordHash,
+              position: u.position || 'Reviewer',
+              division: u.division || 'Direktorat Umum',
+              role: (u.role || 'Reviewer') as UserRole,
+              phone: u.phone,
+              avatarUrl: u.avatarUrl || undefined,
+              avatarFileId: u.avatarFileId || undefined,
+              coverUrl: u.coverUrl || undefined,
+              coverFileId: u.coverFileId || undefined,
+              mood: u.mood || undefined,
+              twoFactorEnabled: u.twoFactorEnabled ?? true,
+              isActive: u.isActive ?? true,
+              createdAt: u.createdAt ? new Date(u.createdAt).toISOString() : seedBaselineTime,
+              updatedAt: u.updatedAt ? new Date(u.updatedAt).toISOString() : seedBaselineTime,
+            }
+            const idx = store.users.findIndex((x) => x.email.toLowerCase() === mappedUser.email.toLowerCase())
+            if (idx >= 0) {
+              store.users[idx] = mergeUserRecords(store.users[idx], mappedUser)
+            } else {
+              store.users.push(normalizeUserMediaUrls(mappedUser))
+            }
+          }
+          writeLocalUsersCache(store.users)
+        }
+      } catch (err) {
+        // MongoDB auth issues gracefully ignored; Google Drive is our primary cloud source of truth
+      }
+
+      writeLocalUsersCache(store.users)
 
   // 2. Official Corporate Documents seeded directly with Google Drive Folder IDs & Versions
   store.documents = [
@@ -1118,174 +1191,199 @@ export async function initAndSeedDriveStore() {
     },
   ]
 
-  // Restore persistent deleted docs registry from Google Drive + local disk cache (/tmp)
-  let deletedDocIds = readLocalDeletedDocsCache()
-  try {
-    const driveDeleted = await getDeletedDocsFromGoogleDriveRegistry()
-    if (driveDeleted && driveDeleted.length > 0) {
-      deletedDocIds = Array.from(new Set([...deletedDocIds, ...driveDeleted]))
-      // Sanitize: never blacklist human-readable docNumbers (RIDE-XXXX) so future documents never get suppressed
-      deletedDocIds = deletedDocIds.filter((id) => !id.startsWith('RIDE-'))
-      writeLocalDeletedDocsCache(deletedDocIds)
-    }
-  } catch (e) {
-    console.warn('[GDrive getDeletedDocsRegistry in init warning]', e)
-  }
-
-  // Filter seed documents immediately against persistent deletion blacklist
-  store.documents = store.documents.filter(
-    (d) => !deletedDocIds.includes(d._id)
-  )
-
-  // Load active documents from Google Drive Registry (Cloud Source of Truth)
-  try {
-    const driveDocs = await getDocumentsFromGoogleDriveRegistry()
-    if (driveDocs && driveDocs.length > 0) {
-      for (const dd of driveDocs) {
-        // Any document stored in Google Drive's active documents registry is an active document!
-        // Never blacklist active documents from Google Drive registry:
-        if (deletedDocIds.includes(dd._id)) {
-          deletedDocIds = deletedDocIds.filter((x) => x !== dd._id)
+      // Restore persistent deleted docs registry from Google Drive + local disk cache (/tmp)
+      let deletedDocIds = readLocalDeletedDocsCache()
+      try {
+        const driveDeleted = await getDeletedDocsFromGoogleDriveRegistry()
+        if (driveDeleted && driveDeleted.length > 0) {
+          deletedDocIds = Array.from(new Set([...deletedDocIds, ...driveDeleted]))
+          // Sanitize: never blacklist human-readable docNumbers (RIDE-XXXX) so future documents never get suppressed
+          deletedDocIds = deletedDocIds.filter((id) => !id.startsWith('RIDE-'))
           writeLocalDeletedDocsCache(deletedDocIds)
         }
-        const idx = store.documents.findIndex(
-          (d) => d._id === dd._id || (dd.docNumber && d.docNumber === dd.docNumber)
-        )
-        if (idx >= 0) {
-          store.documents[idx] = { ...store.documents[idx], ...dd }
-        } else {
-          store.documents.unshift(dd)
-        }
+      } catch (e) {
+        console.warn('[GDrive getDeletedDocsRegistry in init warning]', e)
       }
-    }
-  } catch (e) {
-    console.warn('[GDrive getDocumentsRegistry in init warning]', e)
-  }
 
-  const cachedDocs = readLocalDocsCache()
-  if (cachedDocs && cachedDocs.length > 0) {
-    for (const cd of cachedDocs) {
-      if (deletedDocIds.includes(cd._id)) {
-        continue
-      }
-      const idx = store.documents.findIndex(
-        (d) => d._id === cd._id || (cd.docNumber && d.docNumber === cd.docNumber)
+      // Filter seed documents immediately against persistent deletion blacklist
+      store.documents = store.documents.filter(
+        (d) => !deletedDocIds.includes(d._id)
       )
-      if (idx >= 0) {
-        store.documents[idx] = { ...store.documents[idx], ...cd }
-      } else {
-        store.documents.unshift(cd)
-      }
-    }
-  }
 
-  // Gracefully load from MongoDB if available
-  try {
-    await connectToDatabase()
-    const dbDocs = await DocumentModel.find({}).lean()
-    if (dbDocs && dbDocs.length > 0) {
-      for (const d of dbDocs) {
-        const dId = (d as any)._id?.toString() || (d as any).id
-        if (deletedDocIds.includes(dId)) {
-          continue
+      // Load active documents from Google Drive Registry (Cloud Source of Truth)
+      try {
+        const driveDocs = await getDocumentsFromGoogleDriveRegistry()
+        if (driveDocs && driveDocs.length > 0) {
+          for (const dd of driveDocs) {
+            if (deletedDocIds.includes(dd._id)) {
+              deletedDocIds = deletedDocIds.filter((x) => x !== dd._id)
+              writeLocalDeletedDocsCache(deletedDocIds)
+            }
+            const idx = store.documents.findIndex(
+              (d) => d._id === dd._id || (dd.docNumber && d.docNumber === dd.docNumber)
+            )
+            if (idx >= 0) {
+              store.documents[idx] = mergeDocumentRecords(store.documents[idx], dd)
+            } else {
+              store.documents.unshift(dd)
+            }
+          }
         }
-        const mappedDoc: StoredDocument = {
-          _id: dId,
-          docNumber: d.docNumber,
-          name: d.name,
-          category: d.category,
-          division: d.division || 'Direktorat Umum',
-          priority: d.priority || 'Normal',
-          confidentiality: d.confidentiality || 'Internal',
-          contractStart: d.contractStart ? new Date(d.contractStart).toISOString() : null,
-          contractEnd: d.contractEnd ? new Date(d.contractEnd).toISOString() : null,
-          noDuration: Boolean(d.noDuration),
-          notes: d.notes || '',
-          stage: d.stage ?? 0,
-          stageStatus: d.stageStatus || 'active',
-          statusLabel: d.statusLabel || 'Pengajuan Baru',
-          pic: d.pic || 'Pengaju',
-          picEmail: d.picEmail || '',
-          revisionRequested: Boolean(d.revisionRequested),
-          rejected: Boolean(d.rejected),
-          files: (d.files || []) as any,
-          initialDocument: (d.initialDocument || null) as any,
-          revisionDocuments: (d.revisionDocuments || []) as any,
-          supportingDocuments: (d.supportingDocuments || []) as any,
-          finalDocument: (d.finalDocument || null) as any,
-          versions: (d.versions || []) as any,
-          decision: (d.decision || null) as any,
-          reminders: (d.reminders || null) as any,
-          history: (d.history || []) as any,
-          driveFolderId: d.driveFolderId,
-          driveFolderUrl: d.driveFolderUrl,
-          createdBy: d.createdBy?.toString(),
-          createdAt: d.createdAt ? new Date(d.createdAt).toISOString() : now,
-          updatedAt: d.updatedAt ? new Date(d.updatedAt).toISOString() : now,
-        }
-        const idx = store.documents.findIndex(
-          (x) => x.docNumber === mappedDoc.docNumber || x._id === mappedDoc._id
-        )
-        if (idx >= 0) {
-          store.documents[idx] = { ...store.documents[idx], ...mappedDoc }
-        } else {
-          store.documents.unshift(mappedDoc)
+      } catch (e) {
+        console.warn('[GDrive getDocumentsRegistry in init warning]', e)
+      }
+
+      const cachedDocs = readLocalDocsCache()
+      if (cachedDocs && cachedDocs.length > 0) {
+        for (const cd of cachedDocs) {
+          if (deletedDocIds.includes(cd._id)) {
+            continue
+          }
+          const idx = store.documents.findIndex(
+            (d) => d._id === cd._id || (cd.docNumber && d.docNumber === cd.docNumber)
+          )
+          if (idx >= 0) {
+            store.documents[idx] = mergeDocumentRecords(store.documents[idx], cd)
+          } else {
+            store.documents.unshift(cd)
+          }
         }
       }
+
+      // Gracefully load from MongoDB if available
+      try {
+        await connectToDatabase()
+        const dbDocs = await DocumentModel.find({}).lean()
+        if (dbDocs && dbDocs.length > 0) {
+          for (const d of dbDocs) {
+            const dId = (d as any)._id?.toString() || (d as any).id
+            if (deletedDocIds.includes(dId)) {
+              continue
+            }
+            const mappedDoc: StoredDocument = {
+              _id: dId,
+              docNumber: d.docNumber,
+              name: d.name,
+              category: d.category,
+              division: d.division || 'Direktorat Umum',
+              priority: d.priority || 'Normal',
+              confidentiality: d.confidentiality || 'Internal',
+              contractStart: d.contractStart ? new Date(d.contractStart).toISOString() : null,
+              contractEnd: d.contractEnd ? new Date(d.contractEnd).toISOString() : null,
+              noDuration: Boolean(d.noDuration),
+              notes: d.notes || '',
+              stage: d.stage ?? 0,
+              stageStatus: d.stageStatus || 'active',
+              statusLabel: d.statusLabel || 'Pengajuan Baru',
+              pic: d.pic || 'Pengaju',
+              picEmail: d.picEmail || '',
+              revisionRequested: Boolean(d.revisionRequested),
+              rejected: Boolean(d.rejected),
+              files: (d.files || []) as any,
+              initialDocument: (d.initialDocument || null) as any,
+              revisionDocuments: (d.revisionDocuments || []) as any,
+              supportingDocuments: (d.supportingDocuments || []) as any,
+              finalDocument: (d.finalDocument || null) as any,
+              versions: (d.versions || []) as any,
+              decision: (d.decision || null) as any,
+              reminders: (d.reminders || null) as any,
+              history: (d.history || []) as any,
+              driveFolderId: d.driveFolderId,
+              driveFolderUrl: d.driveFolderUrl,
+              createdBy: d.createdBy?.toString(),
+              createdAt: d.createdAt ? new Date(d.createdAt).toISOString() : now,
+              updatedAt: d.updatedAt ? new Date(d.updatedAt).toISOString() : now,
+            }
+            const idx = store.documents.findIndex(
+              (x) => x.docNumber === mappedDoc.docNumber || x._id === mappedDoc._id
+            )
+            if (idx >= 0) {
+              store.documents[idx] = mergeDocumentRecords(store.documents[idx], mappedDoc)
+            } else {
+              store.documents.unshift(mappedDoc)
+            }
+          }
+          writeLocalDocsCache(store.documents)
+        }
+      } catch (err) {
+        // MongoDB failure ignored safely
+      }
+
+      // Filter one final time against deletedDocIds
+      store.documents = store.documents.filter(
+        (d) => !deletedDocIds.includes(d._id)
+      )
+
       writeLocalDocsCache(store.documents)
+
+      if (store.notifications.length === 0) {
+        store.notifications = [
+          {
+            _id: 'notif_01',
+            userId: 'usr_toto_admin_01',
+            type: 'signed',
+            title: 'Dokumen Final Tersedia: RIDE-2026-0143',
+            description: 'Dokumen IUPK Pengolahan & Pemurnian telah diterbitkan versi FINAL.',
+            isRead: false,
+            createdAt: now,
+          },
+          {
+            _id: 'notif_02',
+            userId: 'usr_toto_admin_01',
+            type: 'revision',
+            title: 'Revisi Diperlukan: RIDE-2026-0144',
+            description: 'Draf Kontrak Pengadaan Ban Heavy Dump Truck perlu penyesuaian klausul garansi.',
+            isRead: false,
+            createdAt: now,
+          },
+          {
+            _id: 'notif_03',
+            userId: 'usr_toto_admin_01',
+            type: 'email_sent',
+            title: 'Google Drive File Store Aktif',
+            description: 'Sistem RIDE telah terintegrasi dengan Google Drive Enterprise Archive.',
+            isRead: false,
+            createdAt: now,
+          },
+        ]
+      }
+
+      store.isInitialized = true
+    } finally {
+      store.initPromise = null
     }
-  } catch (err) {
-    // MongoDB failure ignored safely
-  }
+  })()
 
-  // Filter one final time against deletedDocIds
-  store.documents = store.documents.filter(
-    (d) => !deletedDocIds.includes(d._id)
-  )
-
-  writeLocalDocsCache(store.documents)
-
-  store.notifications = [
-    {
-      _id: 'notif_01',
-      userId: 'usr_toto_admin_01',
-      type: 'signed',
-      title: 'Dokumen Final Tersedia: RIDE-2026-0143',
-      description: 'Dokumen IUPK Pengolahan & Pemurnian telah diterbitkan versi FINAL.',
-      isRead: false,
-      createdAt: now,
-    },
-    {
-      _id: 'notif_02',
-      userId: 'usr_toto_admin_01',
-      type: 'revision',
-      title: 'Revisi Diperlukan: RIDE-2026-0144',
-      description: 'Draf Kontrak Pengadaan Ban Heavy Dump Truck perlu penyesuaian klausul garansi.',
-      isRead: false,
-      createdAt: now,
-    },
-    {
-      _id: 'notif_03',
-      userId: 'usr_toto_admin_01',
-      type: 'email_sent',
-      title: 'Google Drive File Store Aktif',
-      description: 'Sistem RIDE telah terintegrasi dengan Google Drive Enterprise Archive.',
-      isRead: false,
-      createdAt: now,
-    },
-  ]
-
-  store.isInitialized = true
+  return store.initPromise
 }
 
 // ----------------------------------------------------
 // DOCUMENT STORE OPERATIONS
 // ----------------------------------------------------
 
+function syncDocsFromLocalDisk(store: GlobalDriveStore, deletedDocIds: string[]) {
+  const cachedDocs = readLocalDocsCache()
+  if (cachedDocs && cachedDocs.length > 0) {
+    for (const cd of cachedDocs) {
+      if (deletedDocIds.includes(cd._id)) continue
+      const idx = store.documents.findIndex(
+        (d) => d._id === cd._id || (cd.docNumber && d.docNumber === cd.docNumber)
+      )
+      if (idx >= 0) {
+        store.documents[idx] = mergeDocumentRecords(store.documents[idx], cd)
+      } else {
+        store.documents.unshift(cd)
+      }
+    }
+  }
+}
+
 export async function getDriveDocuments(query = '', status = '', category = '') {
   await initAndSeedDriveStore()
   const store = getStore()
   const deletedDocIds = readLocalDeletedDocsCache()
+  syncDocsFromLocalDisk(store, deletedDocIds)
+
   let docs = store.documents.filter(
     (d) => !deletedDocIds.includes(d._id)
   )
@@ -1319,6 +1417,7 @@ export async function getDriveDocumentById(id: string) {
   const store = getStore()
   const deletedDocIds = readLocalDeletedDocsCache()
   if (deletedDocIds.includes(id)) return null
+  syncDocsFromLocalDisk(store, deletedDocIds)
   return store.documents.find((d) => (d._id === id || d.docNumber === id) && !deletedDocIds.includes(d._id)) || null
 }
 
@@ -1335,9 +1434,11 @@ export async function saveDriveDocument(doc: StoredDocument) {
     )
   }
 
+  doc.updatedAt = new Date().toISOString()
+
   const idx = store.documents.findIndex((d) => d._id === doc._id || d.docNumber === doc.docNumber)
   if (idx >= 0) {
-    store.documents[idx] = { ...doc, updatedAt: new Date().toISOString() }
+    store.documents[idx] = doc
   } else {
     store.documents.unshift(doc)
   }
@@ -1351,14 +1452,25 @@ export async function saveDriveDocument(doc: StoredDocument) {
   } catch (e) {
     console.error('[GDrive Save Documents Registry Error]', e)
   }
-  syncDocumentToGoogleDrive(doc).catch((e) => console.error('[Background GDrive Sync Doc Error]', e))
 
-  // 3. Graceful MongoDB persistence
+  syncDocumentToGoogleDrive(doc)
+    .then(() => {
+      const currentIdx = store.documents.findIndex((d) => d._id === doc._id || d.docNumber === doc.docNumber)
+      if (currentIdx >= 0) {
+        store.documents[currentIdx] = mergeDocumentRecords(store.documents[currentIdx], doc)
+        writeLocalDocsCache(store.documents)
+        saveDocumentsToGoogleDriveRegistry(store.documents).catch(() => {})
+      }
+    })
+    .catch((e) => console.error('[Background GDrive Sync Doc Error]', e))
+
+  // 3. Graceful MongoDB persistence (strip custom string _id to avoid ObjectId CastError)
   try {
     await connectToDatabase()
+    const { _id, ...docWithoutId } = doc
     await DocumentModel.findOneAndUpdate(
       { docNumber: doc.docNumber },
-      { $set: doc },
+      { $set: docWithoutId },
       { upsert: true, new: true }
     )
   } catch (err) {
@@ -1407,10 +1519,15 @@ export async function deleteDriveDocument(id: string) {
     trashDocumentInGoogleDrive(id).catch(() => {})
   }
 
-  // 4. Delete from MongoDB
+  // 4. Delete from MongoDB safely
   try {
     await connectToDatabase()
-    await DocumentModel.deleteMany({ $or: [{ _id: id }, { docNumber: id }] })
+    const mongooseModule = await import('mongoose')
+    const orConditions: any[] = [{ docNumber: docToDelete?.docNumber || id }]
+    if (mongooseModule.default.Types.ObjectId.isValid(id)) {
+      orConditions.push({ _id: id })
+    }
+    await DocumentModel.deleteMany({ $or: orConditions })
   } catch {}
 
   return true
@@ -1420,9 +1537,36 @@ export async function deleteDriveDocument(id: string) {
 // USER STORE OPERATIONS
 // ----------------------------------------------------
 
+function syncUsersFromLocalDisk(store: GlobalDriveStore) {
+  const cachedUsers = readLocalUsersCache()
+  if (cachedUsers && cachedUsers.length > 0) {
+    for (const cu of cachedUsers) {
+      const idx = store.users.findIndex(
+        (u) => u._id === cu._id || u.id === cu.id || u.email.toLowerCase() === cu.email.toLowerCase()
+      )
+      if (idx >= 0) {
+        store.users[idx] = mergeUserRecords(store.users[idx], cu)
+      } else {
+        store.users.push(normalizeUserMediaUrls(cu))
+      }
+    }
+  }
+}
+
+function matchesEmailAlias(userEmail: string, targetEmail: string): boolean {
+  const u = userEmail.toLowerCase().trim()
+  const t = targetEmail.toLowerCase().trim()
+  if (u === t) return true
+  if (t === 'lukytrisasongko812@gmail.com' && u === 'lukytrissasongko812@gmail.com') return true
+  if (t === 'lukytrissasongko812@gmail.com' && u === 'lukytrisasongko812@gmail.com') return true
+  if (t === 'luckytrisasongko812@gmail.com' && u.includes('luckytrisasongko812')) return true
+  return false
+}
+
 export async function getDriveUsers() {
   await initAndSeedDriveStore()
   const store = getStore()
+  syncUsersFromLocalDisk(store)
 
   // If store only has the base seed users, trigger a fast refresh from Google Drive
   if (store.users.length <= 3) {
@@ -1430,11 +1574,13 @@ export async function getDriveUsers() {
       const driveUsers = await getUsersFromGoogleDriveRegistry()
       if (driveUsers && driveUsers.length > 0) {
         for (const du of driveUsers) {
-          const idx = store.users.findIndex((u) => u.email.toLowerCase() === du.email.toLowerCase())
+          const idx = store.users.findIndex(
+            (u) => u._id === du._id || matchesEmailAlias(u.email, du.email)
+          )
           if (idx >= 0) {
-            store.users[idx] = { ...store.users[idx], ...du }
+            store.users[idx] = mergeUserRecords(store.users[idx], du)
           } else {
-            store.users.push(du)
+            store.users.push(normalizeUserMediaUrls(du))
           }
         }
         writeLocalUsersCache(store.users)
@@ -1459,17 +1605,20 @@ export async function getDriveUsers() {
           role: (u.role || 'Reviewer') as UserRole,
           phone: u.phone,
           avatarUrl: u.avatarUrl || undefined,
+          avatarFileId: u.avatarFileId || undefined,
           coverUrl: u.coverUrl || undefined,
+          coverFileId: u.coverFileId || undefined,
+          mood: u.mood || undefined,
           twoFactorEnabled: u.twoFactorEnabled ?? true,
           isActive: u.isActive ?? true,
-          createdAt: u.createdAt ? new Date(u.createdAt).toISOString() : new Date().toISOString(),
-          updatedAt: u.updatedAt ? new Date(u.updatedAt).toISOString() : new Date().toISOString(),
+          createdAt: u.createdAt ? new Date(u.createdAt).toISOString() : '2026-01-01T00:00:00.000Z',
+          updatedAt: u.updatedAt ? new Date(u.updatedAt).toISOString() : '2026-01-01T00:00:00.000Z',
         }
-        const idx = store.users.findIndex((x) => x.email.toLowerCase() === mappedUser.email.toLowerCase())
+        const idx = store.users.findIndex((x) => matchesEmailAlias(x.email, mappedUser.email))
         if (idx >= 0) {
-          store.users[idx] = { ...store.users[idx], ...mappedUser }
+          store.users[idx] = mergeUserRecords(store.users[idx], mappedUser)
         } else {
-          store.users.push(mappedUser)
+          store.users.push(normalizeUserMediaUrls(mappedUser))
         }
       }
       writeLocalUsersCache(store.users)
@@ -1483,58 +1632,44 @@ export async function getDriveUsers() {
 
 export async function getDriveUserByEmail(email: string) {
   if (!email) return null
+  await initAndSeedDriveStore()
   const clean = email.toLowerCase().trim()
   const store = getStore()
 
-  // 1. In-memory lookup
-  let user = store.users.find(
-    (u) =>
-      u.email.toLowerCase() === clean ||
-      (clean === 'lukytrisasongko812@gmail.com' && u.email.toLowerCase() === 'lukytrissasongko812@gmail.com') ||
-      (clean === 'lukytrissasongko812@gmail.com' && u.email.toLowerCase() === 'lukytrisasongko812@gmail.com') ||
-      (clean === 'luckytrisasongko812@gmail.com' && u.email.toLowerCase().includes('luckytrisasongko812'))
-  )
-  if (user && (user.avatarUrl || user.avatarFileId)) return user
+  // 1. Sync latest local disk cache (/tmp) into memory with timestamp-aware merge
+  syncUsersFromLocalDisk(store)
 
-  // 2. Local disk cache lookup
-  const cachedUsers = readLocalUsersCache()
-  if (cachedUsers && cachedUsers.length > 0) {
-    const cachedUser = cachedUsers.find(
-      (u) =>
-        u.email.toLowerCase() === clean ||
-        (clean === 'lukytrisasongko812@gmail.com' && u.email.toLowerCase() === 'lukytrissasongko812@gmail.com') ||
-        (clean === 'lukytrissasongko812@gmail.com' && u.email.toLowerCase() === 'lukytrisasongko812@gmail.com') ||
-        (clean === 'luckytrisasongko812@gmail.com' && u.email.toLowerCase().includes('luckytrisasongko812'))
-    )
-    if (cachedUser) {
-      if (!store.users.some((u) => u.email.toLowerCase() === cachedUser.email.toLowerCase())) {
-        store.users.push(cachedUser)
-      }
-      if (cachedUser.avatarUrl || cachedUser.avatarFileId) return cachedUser
-      user = cachedUser
-    }
+  let user = store.users.find((u) => matchesEmailAlias(u.email, clean))
+
+  // 2. If user is already in memory and was updated recently (< 15s ago), return immediately without slow cloud roundtrip
+  const userUpdatedMs = user?.updatedAt ? new Date(user.updatedAt).getTime() : 0
+  if (user && Date.now() - userUpdatedMs < 15000) {
+    return normalizeUserMediaUrls(user)
   }
 
-  // 3. Live Google Drive query (authoritative for multi-device avatar changes)
+  // 3. Live Google Drive query (authoritative for cross-device / cross-instance profile updates)
   try {
     const driveUser = await getUserFromGoogleDriveByEmail(clean)
     if (driveUser) {
-      const idx = store.users.findIndex((u) => u.email.toLowerCase() === driveUser.email.toLowerCase())
+      const idx = store.users.findIndex((u) => u._id === driveUser._id || matchesEmailAlias(u.email, driveUser.email))
       if (idx >= 0) {
-        store.users[idx] = driveUser
+        store.users[idx] = mergeUserRecords(store.users[idx], driveUser)
+        user = store.users[idx]
       } else {
-        store.users.push(driveUser)
+        const normalized = normalizeUserMediaUrls(driveUser)
+        store.users.push(normalized)
+        user = normalized
       }
       writeLocalUsersCache(store.users)
-      return driveUser
+      return user
     }
   } catch (driveErr) {
     console.warn('[GDrive live getDriveUserByEmail warning]', driveErr)
   }
 
-  if (user) return user
+  if (user) return normalizeUserMediaUrls(user)
 
-  // 4. Try MongoDB
+  // 4. Try MongoDB fallback
   try {
     await connectToDatabase()
     const dbUser: any = await User.findOne({
@@ -1543,10 +1678,10 @@ export async function getDriveUserByEmail(email: string) {
         { email: clean === 'lukytrisasongko812@gmail.com' ? 'lukytrissasongko812@gmail.com' : clean },
         { email: clean === 'lukytrissasongko812@gmail.com' ? 'lukytrisasongko812@gmail.com' : clean },
         { email: clean === 'luckytrisasongko812@gmail.com' ? 'luckytrisasongko812@gmail.com' : clean },
-      ]
+      ],
     }).lean()
     if (dbUser) {
-      const u: StoredUser = {
+      const u: StoredUser = normalizeUserMediaUrls({
         _id: dbUser._id.toString(),
         id: dbUser._id.toString(),
         employeeName: dbUser.employeeName,
@@ -1557,83 +1692,77 @@ export async function getDriveUserByEmail(email: string) {
         role: (dbUser.role || 'Reviewer') as UserRole,
         phone: dbUser.phone,
         avatarUrl: dbUser.avatarUrl || undefined,
+        avatarFileId: dbUser.avatarFileId || undefined,
         coverUrl: dbUser.coverUrl || undefined,
+        coverFileId: dbUser.coverFileId || undefined,
+        mood: dbUser.mood || undefined,
         twoFactorEnabled: dbUser.twoFactorEnabled ?? true,
         twoFactorSecret: dbUser.twoFactorCode || undefined,
         twoFactorExpires: dbUser.twoFactorExpires ? new Date(dbUser.twoFactorExpires).toISOString() : null,
         isActive: dbUser.isActive ?? true,
         createdAt: dbUser.createdAt ? new Date(dbUser.createdAt).toISOString() : new Date().toISOString(),
         updatedAt: dbUser.updatedAt ? new Date(dbUser.updatedAt).toISOString() : new Date().toISOString(),
-      }
-      const idx = store.users.findIndex((x) => x.email.toLowerCase() === u.email.toLowerCase())
+      })
+      const idx = store.users.findIndex((x) => matchesEmailAlias(x.email, u.email))
       if (idx >= 0) {
-        store.users[idx] = u
+        store.users[idx] = mergeUserRecords(store.users[idx], u)
+        user = store.users[idx]
       } else {
         store.users.push(u)
+        user = u
       }
       writeLocalUsersCache(store.users)
-      return u
+      return user
     }
   } catch (err) {
     // ignore
   }
 
-  await initAndSeedDriveStore()
-  return (
-    store.users.find(
-      (u) =>
-        u.email.toLowerCase() === clean ||
-        (clean === 'lukytrisasongko812@gmail.com' && u.email.toLowerCase() === 'lukytrissasongko812@gmail.com') ||
-        (clean === 'lukytrissasongko812@gmail.com' && u.email.toLowerCase() === 'lukytrisasongko812@gmail.com') ||
-        (clean === 'luckytrisasongko812@gmail.com' && u.email.toLowerCase().includes('luckytrisasongko812'))
-    ) || null
-  )
+  return store.users.find((u) => matchesEmailAlias(u.email, clean)) || null
 }
 
 export async function getDriveUserById(id: string) {
   if (!id) return null
+  await initAndSeedDriveStore()
   const cleanId = id.trim()
   const store = getStore()
 
-  // 1. In-memory check
-  let user = store.users.find(
-    (u) => u._id === cleanId || u.id === cleanId || u.email.toLowerCase() === cleanId.toLowerCase()
-  )
-  if (user && (user.avatarUrl || user.avatarFileId)) return user
+  // 1. Sync latest local disk cache (/tmp) into memory with timestamp-aware merge
+  syncUsersFromLocalDisk(store)
 
-  // 2. Local disk cache check
-  const cachedUsers = readLocalUsersCache()
-  if (cachedUsers && cachedUsers.length > 0) {
-    const cachedUser = cachedUsers.find(
-      (u) => u._id === cleanId || u.id === cleanId || u.email.toLowerCase() === cleanId.toLowerCase()
-    )
-    if (cachedUser) {
-      if (!store.users.some((u) => u._id === cachedUser._id)) {
-        store.users.push(cachedUser)
-      }
-      if (cachedUser.avatarUrl || cachedUser.avatarFileId) return cachedUser
-      user = cachedUser
-    }
+  let user = store.users.find(
+    (u) => u._id === cleanId || u.id === cleanId || matchesEmailAlias(u.email, cleanId)
+  )
+
+  // 2. If user was updated very recently in this instance (< 15s ago), return immediately
+  const userUpdatedMs = user?.updatedAt ? new Date(user.updatedAt).getTime() : 0
+  if (user && Date.now() - userUpdatedMs < 15000) {
+    return normalizeUserMediaUrls(user)
   }
 
-  // 3. Live Google Drive query (authoritative for multi-device avatar changes)
+  // 3. Live Google Drive query (authoritative for multi-device changes)
   try {
     const driveUser = await getUserFromGoogleDriveById(cleanId)
     if (driveUser) {
-      const idx = store.users.findIndex((u) => u._id === driveUser._id || u.email.toLowerCase() === driveUser.email.toLowerCase())
+      const idx = store.users.findIndex(
+        (u) => u._id === driveUser._id || u.id === driveUser.id || matchesEmailAlias(u.email, driveUser.email)
+      )
       if (idx >= 0) {
-        store.users[idx] = driveUser
+        store.users[idx] = mergeUserRecords(store.users[idx], driveUser)
+        user = store.users[idx]
       } else {
-        store.users.push(driveUser)
+        const normalized = normalizeUserMediaUrls(driveUser)
+        store.users.push(normalized)
+        user = normalized
       }
       writeLocalUsersCache(store.users)
-      return driveUser
+      return user
     }
   } catch (driveErr) {
     console.warn('[GDrive live getDriveUserById warning]', driveErr)
   }
 
-  if (user) return user
+  if (user) return normalizeUserMediaUrls(user)
 
   // 4. Try MongoDB
   try {
@@ -1651,11 +1780,11 @@ export async function getDriveUserById(id: string) {
           { email: cleanId.toLowerCase() },
           { email: cleanId.toLowerCase() === 'lukytrisasongko812@gmail.com' ? 'lukytrissasongko812@gmail.com' : cleanId.toLowerCase() },
           { email: cleanId.toLowerCase() === 'luckytrisasongko812@gmail.com' ? 'luckytrisasongko812@gmail.com' : cleanId.toLowerCase() },
-        ]
+        ],
       }).lean()
     }
     if (dbUser) {
-      const u: StoredUser = {
+      const u: StoredUser = normalizeUserMediaUrls({
         _id: dbUser._id.toString(),
         id: dbUser._id.toString(),
         employeeName: dbUser.employeeName,
@@ -1666,55 +1795,100 @@ export async function getDriveUserById(id: string) {
         role: (dbUser.role || 'Reviewer') as UserRole,
         phone: dbUser.phone,
         avatarUrl: dbUser.avatarUrl || undefined,
+        avatarFileId: dbUser.avatarFileId || undefined,
         coverUrl: dbUser.coverUrl || undefined,
+        coverFileId: dbUser.coverFileId || undefined,
+        mood: dbUser.mood || undefined,
         twoFactorEnabled: dbUser.twoFactorEnabled ?? true,
         twoFactorSecret: dbUser.twoFactorCode || undefined,
         twoFactorExpires: dbUser.twoFactorExpires ? new Date(dbUser.twoFactorExpires).toISOString() : null,
         isActive: dbUser.isActive ?? true,
         createdAt: dbUser.createdAt ? new Date(dbUser.createdAt).toISOString() : new Date().toISOString(),
         updatedAt: dbUser.updatedAt ? new Date(dbUser.updatedAt).toISOString() : new Date().toISOString(),
-      }
-      const idx = store.users.findIndex((x) => x._id === u._id)
+      })
+      const idx = store.users.findIndex((x) => x._id === u._id || matchesEmailAlias(x.email, u.email))
       if (idx >= 0) {
-        store.users[idx] = u
+        store.users[idx] = mergeUserRecords(store.users[idx], u)
+        user = store.users[idx]
       } else {
         store.users.push(u)
+        user = u
       }
       writeLocalUsersCache(store.users)
-      return u
+      return user
     }
   } catch (err) {
     // ignore
   }
 
-  await initAndSeedDriveStore()
-  return store.users.find((u) => u._id === cleanId || u.id === cleanId || u.email.toLowerCase() === cleanId.toLowerCase()) || null
+  return (
+    store.users.find(
+      (u) => u._id === cleanId || u.id === cleanId || matchesEmailAlias(u.email, cleanId)
+    ) || null
+  )
 }
 
 export async function saveDriveUser(user: StoredUser) {
   await initAndSeedDriveStore()
   const store = getStore()
-  const idx = store.users.findIndex((u) => u._id === user._id || u.email.toLowerCase() === user.email.toLowerCase())
+  user.updatedAt = new Date().toISOString()
+
+  const idx = store.users.findIndex(
+    (u) => u._id === user._id || u.id === user.id || matchesEmailAlias(u.email, user.email)
+  )
+  let targetUser: StoredUser
   if (idx >= 0) {
     const existing = store.users[idx]
-    store.users[idx] = {
+    targetUser = {
       ...existing,
       ...user,
+      _id: existing._id || user._id,
+      id: existing.id || existing._id || user.id || user._id,
       avatarUrl: user.avatarUrl !== undefined ? user.avatarUrl : existing.avatarUrl,
       avatarFileId: user.avatarFileId !== undefined ? user.avatarFileId : existing.avatarFileId,
       coverUrl: user.coverUrl !== undefined ? user.coverUrl : existing.coverUrl,
-      updatedAt: new Date().toISOString(),
+      coverFileId: user.coverFileId !== undefined ? user.coverFileId : existing.coverFileId,
+      mood: user.mood !== undefined ? user.mood : existing.mood,
+      updatedAt: user.updatedAt,
     }
+    store.users[idx] = targetUser
   } else {
-    store.users.push(user)
+    targetUser = { ...user, id: user.id || user._id }
+    store.users.push(targetUser)
+  }
+
+  // Keep document PIC names synchronized when a user updates their employeeName
+  let docsUpdated = false
+  for (const doc of store.documents) {
+    if (
+      doc.createdBy === targetUser._id ||
+      (doc.picEmail && matchesEmailAlias(doc.picEmail, targetUser.email))
+    ) {
+      if (doc.pic !== targetUser.employeeName) {
+        doc.pic = targetUser.employeeName
+        docsUpdated = true
+      }
+    }
+  }
+  if (docsUpdated) {
+    writeLocalDocsCache(store.documents)
+    saveDocumentsToGoogleDriveRegistry(store.documents).catch(() => {})
   }
 
   // 1. Immediately persist to local disk cache (/tmp)
   writeLocalUsersCache(store.users)
 
-  // 2. Synchronously persist to Google Drive User Registry (Cloud source of truth)
+  // 2. Synchronously persist to Google Drive User Folder & User Registry (Cloud source of truth)
   try {
-    await syncUserToGoogleDrive(user)
+    await syncUserToGoogleDrive(targetUser)
+    const updatedIdx = store.users.findIndex(
+      (u) => u._id === targetUser._id || matchesEmailAlias(u.email, targetUser.email)
+    )
+    if (updatedIdx >= 0) {
+      store.users[updatedIdx] = normalizeUserMediaUrls(targetUser)
+    }
+    writeLocalUsersCache(store.users)
+    await saveUsersToGoogleDriveRegistry(store.users)
   } catch (e) {
     console.error('[GDrive Sync User Exception]', e)
   }
@@ -1723,28 +1897,27 @@ export async function saveDriveUser(user: StoredUser) {
   try {
     await connectToDatabase()
     const updateFields: any = {
-      employeeName: user.employeeName,
-      position: user.position,
-      division: user.division,
-      role: user.role,
-      phone: user.phone,
-      twoFactorEnabled: user.twoFactorEnabled,
-      twoFactorCode: user.twoFactorSecret !== undefined ? user.twoFactorSecret : null,
-      twoFactorExpires: user.twoFactorExpires ? new Date(user.twoFactorExpires) : null,
-      passwordHash: user.passwordHash,
-      isActive: user.isActive,
-      updatedAt: new Date(),
+      employeeName: targetUser.employeeName,
+      position: targetUser.position,
+      division: targetUser.division,
+      role: targetUser.role,
+      phone: targetUser.phone,
+      twoFactorEnabled: targetUser.twoFactorEnabled,
+      twoFactorCode: targetUser.twoFactorSecret !== undefined ? targetUser.twoFactorSecret : null,
+      twoFactorExpires: targetUser.twoFactorExpires ? new Date(targetUser.twoFactorExpires) : null,
+      passwordHash: targetUser.passwordHash,
+      isActive: targetUser.isActive,
+      updatedAt: new Date(targetUser.updatedAt),
     }
 
-    if (user.avatarUrl !== undefined) {
-      updateFields.avatarUrl = user.avatarUrl
-    }
-    if (user.coverUrl !== undefined) {
-      updateFields.coverUrl = user.coverUrl
-    }
+    if (targetUser.avatarUrl !== undefined) updateFields.avatarUrl = targetUser.avatarUrl
+    if (targetUser.avatarFileId !== undefined) updateFields.avatarFileId = targetUser.avatarFileId
+    if (targetUser.coverUrl !== undefined) updateFields.coverUrl = targetUser.coverUrl
+    if (targetUser.coverFileId !== undefined) updateFields.coverFileId = targetUser.coverFileId
+    if (targetUser.mood !== undefined) updateFields.mood = targetUser.mood
 
     await User.findOneAndUpdate(
-      { email: user.email.toLowerCase() },
+      { email: targetUser.email.toLowerCase() },
       { $set: updateFields },
       { upsert: true, new: true }
     )
@@ -1752,14 +1925,15 @@ export async function saveDriveUser(user: StoredUser) {
     // ignore
   }
 
-  return user
+  Object.assign(user, targetUser)
+  return targetUser
 }
 
 export async function deleteDriveUser(id: string) {
   await initAndSeedDriveStore()
   const store = getStore()
   const idx = store.users.findIndex(
-    (u) => u._id === id || u.id === id || u.email.toLowerCase() === id.toLowerCase()
+    (u) => u._id === id || u.id === id || matchesEmailAlias(u.email, id)
   )
   let removedUser: StoredUser | null = null
   if (idx >= 0) {
@@ -1767,22 +1941,24 @@ export async function deleteDriveUser(id: string) {
     writeLocalUsersCache(store.users)
   }
 
-  // 1. Delete from Google Drive User Registry
+  // 1. Delete from Google Drive User Folder & Update Registry
   try {
-    await deleteUserFromGoogleDrive(id, removedUser?.email)
+    await Promise.all([
+      deleteUserFromGoogleDrive(id, removedUser?.email),
+      saveUsersToGoogleDriveRegistry(store.users),
+    ])
   } catch (e) {
     console.error('[GDrive Delete User Exception]', e)
   }
 
-  // 2. Try MongoDB delete
+  // 2. Try MongoDB delete safely
   try {
     await connectToDatabase()
-    try {
+    const mongooseModule = await import('mongoose')
+    if (mongooseModule.default.Types.ObjectId.isValid(id)) {
       await User.findByIdAndDelete(id)
-    } catch {}
-    await User.deleteOne({ _id: id })
-    await User.deleteOne({ id: id })
-    await User.deleteOne({ email: id.toLowerCase() })
+    }
+    await User.deleteOne({ email: (removedUser?.email || id).toLowerCase() })
   } catch (err) {
     // ignore
   }

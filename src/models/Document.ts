@@ -19,7 +19,7 @@ export interface IDocVersion {
   uploadedBy: string
   uploadedAt: Date
   isFinal: boolean
-  fileType: 'initial' | 'revision' | 'supporting' | 'final'
+  fileType: 'initial' | 'revision' | 'supporting' | 'final' | 'legal_draft' | 'legal_approval' | 'bod_signed'
 }
 
 export interface IDocDecision {
@@ -78,7 +78,7 @@ export interface IDocumentRecord extends MongooseDocument {
   history: IDocHistory[]
   driveFolderId?: string
   driveFolderUrl?: string
-  createdBy?: mongoose.Types.ObjectId
+  createdBy?: string
   createdAt: Date
   updatedAt: Date
 }
@@ -108,7 +108,7 @@ const DocVersionSchema = new Schema<IDocVersion>(
     isFinal: { type: Boolean, default: false },
     fileType: {
       type: String,
-      enum: ['initial', 'revision', 'supporting', 'final'],
+      enum: ['initial', 'revision', 'supporting', 'final', 'legal_draft', 'legal_approval', 'bod_signed'],
       default: 'initial',
     },
   },
@@ -192,7 +192,7 @@ const DocumentSchema = new Schema<IDocumentRecord>(
     history: [DocHistorySchema],
     driveFolderId: { type: String, default: '' },
     driveFolderUrl: { type: String, default: '' },
-    createdBy: { type: Schema.Types.ObjectId, ref: 'User' },
+    createdBy: { type: String, default: '' },
   },
   { timestamps: true }
 )

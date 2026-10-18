@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getDriveDocumentById, saveDriveDocument } from '@/lib/drive-store'
 import { getUserFromRequest } from '@/lib/auth'
+import { canUserAccessDocument } from '@/lib/roles'
 
 export const dynamic = 'force-dynamic'
 
@@ -21,6 +22,13 @@ export async function POST(
     const doc = await getDriveDocumentById(id)
     if (!doc) {
       return NextResponse.json({ error: 'Dokumen tidak ditemukan.' }, { status: 404 })
+    }
+
+    if (!canUserAccessDocument(tokenUser, doc)) {
+      return NextResponse.json(
+        { error: 'Akses ditolak: Anda tidak memiliki kewenangan untuk mengubah pengingat dokumen ini.' },
+        { status: 403 }
+      )
     }
 
     doc.reminders = {

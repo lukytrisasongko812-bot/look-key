@@ -270,6 +270,13 @@ export async function syncDocumentToGoogleDrive(doc: StoredDocument): Promise<{
           }
         }
       }
+      if (doc.versions && doc.versions.length > 0) {
+        for (const ver of doc.versions) {
+          if (ver.file && !filesToSync.some((x) => x.originalName === ver.file.originalName)) {
+            filesToSync.push(ver.file)
+          }
+        }
+      }
 
       // Upload actual intact binary file for each file that contains dataUrl
       for (const f of filesToSync) {
@@ -302,6 +309,23 @@ export async function syncDocumentToGoogleDrive(doc: StoredDocument): Promise<{
           }
         } else {
           f.url = appDownloadUrl
+        }
+
+        // Propagate resolved driveFileId & driveViewUrl to all matching file objects on doc
+        if (f.driveFileId) {
+          const matchByName = (target?: StoredFile | null) => {
+            if (target && (target.originalName === fileName || target.filename === fileName)) {
+              target.driveFileId = f.driveFileId
+              target.driveViewUrl = f.driveViewUrl
+              target.url = appDownloadUrl
+            }
+          }
+          matchByName(doc.initialDocument)
+          matchByName(doc.finalDocument)
+          doc.files?.forEach(matchByName)
+          doc.supportingDocuments?.forEach(matchByName)
+          doc.revisionDocuments?.forEach((r) => matchByName(r.file))
+          doc.versions?.forEach((v) => matchByName(v.file))
         }
       }
     }
@@ -477,6 +501,17 @@ export async function downloadFileFromGoogleDrive(
   }
 }
 
+declare global {
+  var __rideMediaCache: Map<string, { buffer: Buffer; mimeType: string }> | undefined
+}
+
+export function getMediaCache(): Map<string, { buffer: Buffer; mimeType: string }> {
+  if (!globalThis.__rideMediaCache) {
+    globalThis.__rideMediaCache = new Map()
+  }
+  return globalThis.__rideMediaCache
+}
+
 /**
  * Sync user profile to Google Drive User Registry folder
  */
@@ -494,8 +529,39 @@ async function getDefaultPasswordHash(): Promise<string> {
  */
 export async function syncUserToGoogleDrive(user: StoredUser): Promise<boolean> {
   try {
-    const drive = getDriveClient()
+    const mediaCache = getMediaCache()
     const cleanEmail = user.email.toLowerCase().trim()
+
+    // Pre-cache any base64 avatar or cover immediately in memory so /api/users/[id]/avatar serves it in 0ms
+    let pendingAvatarUpload: { ext: string; mime: string; buf: Buffer } | null = null
+    if (user.avatarUrl && user.avatarUrl.startsWith('data:image/')) {
+      const matches = user.avatarUrl.match(/^data:image\/([a-zA-Z0-9+]+);base64,(.+)$/)
+      if (matches) {
+        const ext = matches[1] === 'jpeg' ? 'jpg' : matches[1]
+        const mime = `image/${matches[1]}`
+        const buf = Buffer.from(matches[2], 'base64')
+        pendingAvatarUpload = { ext, mime, buf }
+        mediaCache.set(`${user._id}:avatar`, { buffer: buf, mimeType: mime })
+        mediaCache.set(`${cleanEmail}:avatar`, { buffer: buf, mimeType: mime })
+        user.avatarUrl = `/api/users/${user._id}/avatar?v=${Date.now()}`
+      }
+    }
+
+    let pendingCoverUpload: { ext: string; mime: string; buf: Buffer } | null = null
+    if (user.coverUrl && user.coverUrl.startsWith('data:image/')) {
+      const matches = user.coverUrl.match(/^data:image\/([a-zA-Z0-9+]+);base64,(.+)$/)
+      if (matches) {
+        const ext = matches[1] === 'jpeg' ? 'jpg' : matches[1]
+        const mime = `image/${matches[1]}`
+        const buf = Buffer.from(matches[2], 'base64')
+        pendingCoverUpload = { ext, mime, buf }
+        mediaCache.set(`${user._id}:cover`, { buffer: buf, mimeType: mime })
+        mediaCache.set(`${cleanEmail}:cover`, { buffer: buf, mimeType: mime })
+        user.coverUrl = `/api/users/${user._id}/avatar?type=cover&v=${Date.now()}`
+      }
+    }
+
+    const drive = getDriveClient()
     const folderName = `👤 [${cleanEmail}] ${user.employeeName} (${user.role})`
 
     // Search for any existing folder in USERS_REGISTRY_FOLDER_ID matching this user
@@ -560,84 +626,63 @@ export async function syncUserToGoogleDrive(user: StoredUser): Promise<boolean> 
       folderId = created.data.id!
     }
 
-    let avatarDriveLink = ''
-    let coverDriveLink = ''
-
     if (folderId) {
-      // 1. Upload User Summary Text Log
-      const profileTxt = `================================================================================
-RIDE — PROFIL PENGGUNA TERDAFTAR
-================================================================================
-Nama Lengkap      : ${user.employeeName}
-Email             : ${cleanEmail}
-Peran (Role)      : ${user.role}
-Jabatan/Posisi    : ${user.position || '-'}
-Divisi/Direktorat : ${user.division || '-'}
-No. Handphone     : ${user.phone || '-'}
-Status Akun       : ${user.isActive ? 'Aktif' : 'Nonaktif'}
-Keamanan 2FA      : ${user.twoFactorEnabled ? 'Aktif (Wajib OTP)' : 'Nonaktif'}
-Terakhir Diupdate : ${new Date().toLocaleString('id-ID')}
-================================================================================
-Tautan Portal     : https://risetrack.id
-`
-      await uploadOrUpdateFileInFolder(
-        folderId,
-        'ringkasan_profil_pengguna.txt',
-        'text/plain',
-        Buffer.from(profileTxt, 'utf-8')
-      )
-
-      // 2. Upload Profile Picture (avatarUrl)
+      // 1. Upload Profile Picture (avatarUrl) if newly updated
       let avatarFileId = user.avatarFileId
-      if (user.avatarUrl && user.avatarUrl.startsWith('data:image/')) {
-        const matches = user.avatarUrl.match(/^data:image\/([a-zA-Z0-9+]+);base64,(.+)$/)
-        if (matches) {
-          const ext = matches[1] === 'jpeg' ? 'jpg' : matches[1]
-          const mime = `image/${matches[1]}`
-          const buf = Buffer.from(matches[2], 'base64')
-          const upRes = await uploadOrUpdateFileInFolder(folderId, `foto_profil.${ext}`, mime, buf)
-          if (upRes) {
-            avatarFileId = upRes.fileId
-            try {
-              await drive.permissions.create({
-                fileId: upRes.fileId,
-                requestBody: { role: 'reader', type: 'anyone' },
-                supportsAllDrives: true,
-              })
-            } catch {}
-            avatarDriveLink = `/api/users/${user._id}/avatar`
-            user.avatarFileId = avatarFileId
-            user.avatarUrl = avatarDriveLink
-          }
+      if (pendingAvatarUpload) {
+        const upRes = await uploadOrUpdateFileInFolder(
+          folderId,
+          `foto_profil.${pendingAvatarUpload.ext}`,
+          pendingAvatarUpload.mime,
+          pendingAvatarUpload.buf
+        )
+        if (upRes) {
+          avatarFileId = upRes.fileId
+          user.avatarFileId = avatarFileId
+          mediaCache.set(avatarFileId, {
+            buffer: pendingAvatarUpload.buf,
+            mimeType: pendingAvatarUpload.mime,
+          })
         }
-      } else if (user.avatarUrl && !user.avatarUrl.startsWith('data:')) {
-        avatarDriveLink = user.avatarUrl
       }
 
-      // 3. Upload Cover Photo (coverUrl)
-      if (user.coverUrl && user.coverUrl.startsWith('data:image/')) {
-        const matches = user.coverUrl.match(/^data:image\/([a-zA-Z0-9+]+);base64,(.+)$/)
-        if (matches) {
-          const ext = matches[1] === 'jpeg' ? 'jpg' : matches[1]
-          const mime = `image/${matches[1]}`
-          const buf = Buffer.from(matches[2], 'base64')
-          const upRes = await uploadOrUpdateFileInFolder(folderId, `foto_sampul.${ext}`, mime, buf)
-          if (upRes) {
-            try {
-              await drive.permissions.create({
-                fileId: upRes.fileId,
-                requestBody: { role: 'reader', type: 'anyone' },
-                supportsAllDrives: true,
-              })
-            } catch {}
-            coverDriveLink = upRes.webViewLink || ''
-          }
+      // 2. Upload Cover Photo (coverUrl) if newly updated
+      let coverFileId = user.coverFileId
+      if (pendingCoverUpload) {
+        const upRes = await uploadOrUpdateFileInFolder(
+          folderId,
+          `foto_sampul.${pendingCoverUpload.ext}`,
+          pendingCoverUpload.mime,
+          pendingCoverUpload.buf
+        )
+        if (upRes) {
+          coverFileId = upRes.fileId
+          user.coverFileId = coverFileId
+          mediaCache.set(coverFileId, {
+            buffer: pendingCoverUpload.buf,
+            mimeType: pendingCoverUpload.mime,
+          })
         }
-      } else if (user.coverUrl && !user.coverUrl.startsWith('data:')) {
-        coverDriveLink = user.coverUrl
       }
 
-      // Compact user metadata (excluding huge base64 strings so description is always < 800 bytes)
+      const resolvedAvatarUrl =
+        user.avatarUrl && !user.avatarUrl.startsWith('data:')
+          ? user.avatarUrl
+          : avatarFileId
+          ? `/api/users/${user._id}/avatar`
+          : ''
+
+      const resolvedCoverUrl =
+        user.coverUrl && !user.coverUrl.startsWith('data:') && !user.coverUrl.includes('drive.google.com')
+          ? user.coverUrl
+          : coverFileId
+          ? `/api/users/${user._id}/avatar?type=cover`
+          : ''
+
+      user.avatarUrl = resolvedAvatarUrl || undefined
+      user.coverUrl = resolvedCoverUrl || undefined
+
+      // 3. Compact user metadata (excluding huge base64 strings so description is always < 800 bytes)
       const fallbackHash = await getDefaultPasswordHash()
       const userMetadata = JSON.stringify({
         _id: user._id,
@@ -649,15 +694,17 @@ Tautan Portal     : https://risetrack.id
         division: user.division || 'Direktorat Umum',
         role: user.role,
         phone: user.phone || '',
-        avatarUrl: avatarDriveLink || (avatarFileId ? `/api/users/${user._id}/avatar` : (user.avatarUrl?.startsWith('data:') ? `/api/users/${user._id}/avatar` : user.avatarUrl)) || '',
+        avatarUrl: resolvedAvatarUrl,
         avatarFileId: avatarFileId || undefined,
-        coverUrl: coverDriveLink || (user.coverUrl?.startsWith('data:') ? '' : user.coverUrl) || '',
+        coverUrl: resolvedCoverUrl,
+        coverFileId: coverFileId || undefined,
+        mood: user.mood || 'bahagia',
         twoFactorEnabled: user.twoFactorEnabled ?? true,
         twoFactorSecret: user.twoFactorSecret || null,
         twoFactorExpires: user.twoFactorExpires || null,
         isActive: user.isActive ?? true,
         createdAt: user.createdAt || new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+        updatedAt: user.updatedAt || new Date().toISOString(),
       })
 
       await drive.files.update({
@@ -668,6 +715,25 @@ Tautan Portal     : https://risetrack.id
         },
         supportsAllDrives: true,
       })
+
+      // 4. Upload User Summary Text Log in background so response is fast
+      const profileTxt = `================================================================================
+RIDE — PROFIL PENGGUNA TERDAFTAR
+================================================================================
+Nama Lengkap      : ${user.employeeName}
+Email             : ${cleanEmail}
+Peran (Role)      : ${user.role}
+Jabatan/Posisi    : ${user.position || '-'}
+Divisi/Direktorat : ${user.division || '-'}
+No. Handphone     : ${user.phone || '-'}
+Suasana Hati      : ${user.mood || 'bahagia'}
+Status Akun       : ${user.isActive ? 'Aktif' : 'Nonaktif'}
+Keamanan 2FA      : ${user.twoFactorEnabled ? 'Aktif (Wajib OTP)' : 'Nonaktif'}
+Terakhir Diupdate : ${new Date().toLocaleString('id-ID')}
+================================================================================
+Tautan Portal     : https://risetrack.id
+`
+      uploadFileViaGasWebhook(folderId, 'ringkasan_profil_pengguna.txt', profileTxt).catch(() => {})
     }
 
     return true
@@ -725,12 +791,104 @@ export async function trashDocumentInGoogleDrive(folderIdOrDocNumber: string): P
   }
 }
 
+const USERS_REGISTRY_FILE = '__ride_users_registry.json'
+
+/**
+ * Save all users metadata to a fast consolidated JSON file on Google Drive
+ */
+export async function saveUsersToGoogleDriveRegistry(users: StoredUser[]): Promise<boolean> {
+  try {
+    const sanitized = users.map((u) => ({
+      ...u,
+      avatarUrl:
+        u.avatarUrl && !u.avatarUrl.startsWith('data:')
+          ? u.avatarUrl
+          : u.avatarFileId
+          ? `/api/users/${u._id}/avatar`
+          : undefined,
+      coverUrl:
+        u.coverUrl && !u.coverUrl.startsWith('data:') && !u.coverUrl.includes('drive.google.com')
+          ? u.coverUrl
+          : u.coverFileId
+          ? `/api/users/${u._id}/avatar?type=cover`
+          : undefined,
+    }))
+    const buf = Buffer.from(JSON.stringify(sanitized, null, 2), 'utf-8')
+    await uploadOrUpdateFileInFolder(
+      USERS_REGISTRY_FOLDER_ID,
+      USERS_REGISTRY_FILE,
+      'application/json',
+      buf
+    )
+    return true
+  } catch (e) {
+    console.warn('[GDrive saveUsersRegistry Warning]', e)
+    return false
+  }
+}
+
 /**
  * Retrieve all registered users directly from Google Drive User Registry
  */
 export async function getUsersFromGoogleDriveRegistry(): Promise<StoredUser[]> {
   try {
     const drive = getDriveClient()
+    const usersMap = new Map<string, StoredUser>()
+    const fallbackHash = await getDefaultPasswordHash()
+
+    // 1. Check consolidated __ride_users_registry.json first if present
+    try {
+      const regRes = await drive.files.list({
+        q: `'${USERS_REGISTRY_FOLDER_ID}' in parents and name = '${USERS_REGISTRY_FILE}' and trashed = false`,
+        fields: 'files(id, name)',
+        supportsAllDrives: true,
+        includeItemsFromAllDrives: true,
+      })
+      const regFile = regRes.data.files?.[0]
+      if (regFile?.id) {
+        const dl = await downloadFileFromGoogleDrive(regFile.id)
+        if (dl && dl.buffer) {
+          const parsed = JSON.parse(dl.buffer.toString('utf-8'))
+          if (Array.isArray(parsed)) {
+            for (const data of parsed) {
+              if (!data?.email) continue
+              const email = data.email.toLowerCase().trim()
+              const id = data._id || data.id
+              const stored: StoredUser = {
+                _id: id,
+                id: id,
+                employeeName: data.employeeName || 'Pengguna RIDE',
+                email,
+                passwordHash: data.passwordHash || fallbackHash,
+                position: data.position || 'Reviewer',
+                division: data.division || 'Direktorat Umum',
+                role: data.role || 'Reviewer',
+                phone: data.phone || '',
+                avatarUrl: data.avatarUrl || (data.avatarFileId ? `/api/users/${id}/avatar` : undefined),
+                avatarFileId: data.avatarFileId || undefined,
+                coverUrl:
+                  data.coverUrl && !data.coverUrl.includes('drive.google.com')
+                    ? data.coverUrl
+                    : data.coverFileId
+                    ? `/api/users/${id}/avatar?type=cover`
+                    : undefined,
+                coverFileId: data.coverFileId || undefined,
+                mood: data.mood || 'bahagia',
+                twoFactorEnabled: data.twoFactorEnabled ?? true,
+                twoFactorSecret: data.twoFactorSecret || undefined,
+                twoFactorExpires: data.twoFactorExpires || null,
+                isActive: data.isActive ?? true,
+                createdAt: data.createdAt || new Date().toISOString(),
+                updatedAt: data.updatedAt || new Date().toISOString(),
+              }
+              usersMap.set(email, stored)
+            }
+          }
+        }
+      }
+    } catch {}
+
+    // 2. Also read individual user folders and merge by latest updatedAt timestamp
     const res = await drive.files.list({
       q: `'${USERS_REGISTRY_FOLDER_ID}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
       fields: 'files(id, name, description)',
@@ -738,9 +896,7 @@ export async function getUsersFromGoogleDriveRegistry(): Promise<StoredUser[]> {
       includeItemsFromAllDrives: true,
     })
 
-    const usersMap = new Map<string, StoredUser>()
     const files = res.data.files || []
-    const fallbackHash = await getDefaultPasswordHash()
 
     for (const f of files) {
       if (!f.description) continue
@@ -762,7 +918,14 @@ export async function getUsersFromGoogleDriveRegistry(): Promise<StoredUser[]> {
           phone: data.phone || '',
           avatarUrl: data.avatarUrl || (data.avatarFileId ? `/api/users/${id}/avatar` : undefined),
           avatarFileId: data.avatarFileId || undefined,
-          coverUrl: data.coverUrl || undefined,
+          coverUrl:
+            data.coverUrl && !data.coverUrl.includes('drive.google.com')
+              ? data.coverUrl
+              : data.coverFileId
+              ? `/api/users/${id}/avatar?type=cover`
+              : undefined,
+          coverFileId: data.coverFileId || undefined,
+          mood: data.mood || 'bahagia',
           twoFactorEnabled: data.twoFactorEnabled ?? true,
           twoFactorSecret: data.twoFactorSecret || undefined,
           twoFactorExpires: data.twoFactorExpires || null,
@@ -776,7 +939,12 @@ export async function getUsersFromGoogleDriveRegistry(): Promise<StoredUser[]> {
           const prevTime = new Date(prev.updatedAt).getTime()
           const currTime = new Date(stored.updatedAt).getTime()
           if (currTime >= prevTime) {
-            usersMap.set(email, stored)
+            usersMap.set(email, {
+              ...prev,
+              ...stored,
+              avatarFileId: stored.avatarFileId || prev.avatarFileId,
+              coverFileId: stored.coverFileId || prev.coverFileId,
+            })
           }
         } else {
           usersMap.set(email, stored)
@@ -877,22 +1045,38 @@ export async function deleteUserFromGoogleDrive(id: string, email?: string): Pro
 }
 
 /**
- * Fetch direct image binary buffer of user avatar from Google Drive
+ * Fetch direct image binary buffer of user avatar or cover from Google Drive / memory cache
  */
-export async function getUserAvatarBufferFromGoogleDrive(
+export async function getUserMediaBufferFromGoogleDrive(
   userIdOrEmail: string,
-  avatarFileId?: string
+  mediaType: 'avatar' | 'cover' = 'avatar',
+  fileId?: string
 ): Promise<{ buffer: Buffer; mimeType: string } | null> {
   try {
-    if (avatarFileId) {
-      const downloaded = await downloadFileFromGoogleDrive(avatarFileId)
+    const mediaCache = getMediaCache()
+    const clean = userIdOrEmail.toLowerCase().trim()
+
+    if (fileId && mediaCache.has(fileId)) {
+      return mediaCache.get(fileId)!
+    }
+    if (mediaCache.has(`${userIdOrEmail}:${mediaType}`)) {
+      return mediaCache.get(`${userIdOrEmail}:${mediaType}`)!
+    }
+    if (mediaCache.has(`${clean}:${mediaType}`)) {
+      return mediaCache.get(`${clean}:${mediaType}`)!
+    }
+
+    if (fileId) {
+      const downloaded = await downloadFileFromGoogleDrive(fileId)
       if (downloaded && downloaded.buffer.length > 0) {
-        return downloaded
+        const entry = { buffer: downloaded.buffer, mimeType: downloaded.mimeType }
+        mediaCache.set(fileId, entry)
+        mediaCache.set(`${clean}:${mediaType}`, entry)
+        return entry
       }
     }
 
     const drive = getDriveClient()
-    const clean = userIdOrEmail.toLowerCase().trim()
 
     // Find the user's folder in USERS_REGISTRY_FOLDER_ID
     const listRes = await drive.files.list({
@@ -906,46 +1090,74 @@ export async function getUserAvatarBufferFromGoogleDrive(
     for (const f of listRes.data.files || []) {
       if (f.name && f.name.toLowerCase().includes(clean)) {
         userFolderId = f.id || undefined
-        break
       }
       if (f.description) {
         try {
           const d = JSON.parse(f.description)
           if (
+            d._id === userIdOrEmail ||
+            d.id === userIdOrEmail ||
             d._id === clean ||
             d.id === clean ||
             (d.email && d.email.toLowerCase() === clean)
           ) {
             userFolderId = f.id || undefined
-            if (d.avatarFileId) {
-              const dl = await downloadFileFromGoogleDrive(d.avatarFileId)
-              if (dl && dl.buffer.length > 0) return dl
+            const targetFileId = mediaType === 'cover' ? d.coverFileId : d.avatarFileId
+            if (targetFileId) {
+              const dl = await downloadFileFromGoogleDrive(targetFileId)
+              if (dl && dl.buffer.length > 0) {
+                const entry = { buffer: dl.buffer, mimeType: dl.mimeType }
+                mediaCache.set(targetFileId, entry)
+                mediaCache.set(`${clean}:${mediaType}`, entry)
+                return entry
+              }
             }
             break
           }
         } catch {}
       }
+      if (userFolderId) break
     }
 
     if (!userFolderId) return null
 
-    // Look for foto_profil.* inside user folder
+    // Look for foto_profil.* or foto_sampul.* inside user folder
+    const filePrefix = mediaType === 'cover' ? 'foto_sampul' : 'foto_profil'
     const filesRes = await drive.files.list({
-      q: `'${userFolderId}' in parents and name contains 'foto_profil' and trashed = false`,
+      q: `'${userFolderId}' in parents and name contains '${filePrefix}' and trashed = false`,
       fields: 'files(id, name, mimeType)',
       supportsAllDrives: true,
       includeItemsFromAllDrives: true,
     })
 
-    const avatarFile = filesRes.data.files?.[0]
-    if (avatarFile && avatarFile.id) {
-      const dl = await downloadFileFromGoogleDrive(avatarFile.id)
-      if (dl && dl.buffer.length > 0) return dl
+    const targetFile = filesRes.data.files?.[0]
+    if (targetFile && targetFile.id) {
+      const dl = await downloadFileFromGoogleDrive(targetFile.id)
+      if (dl && dl.buffer.length > 0) {
+        const entry = { buffer: dl.buffer, mimeType: dl.mimeType }
+        mediaCache.set(targetFile.id, entry)
+        mediaCache.set(`${clean}:${mediaType}`, entry)
+        return entry
+      }
     }
   } catch (err) {
-    console.warn('[getUserAvatarBufferFromGoogleDrive Warning]', err)
+    console.warn(`[getUserMediaBufferFromGoogleDrive (${mediaType}) Warning]`, err)
   }
   return null
+}
+
+export async function getUserAvatarBufferFromGoogleDrive(
+  userIdOrEmail: string,
+  avatarFileId?: string
+): Promise<{ buffer: Buffer; mimeType: string } | null> {
+  return getUserMediaBufferFromGoogleDrive(userIdOrEmail, 'avatar', avatarFileId)
+}
+
+export async function getUserCoverBufferFromGoogleDrive(
+  userIdOrEmail: string,
+  coverFileId?: string
+): Promise<{ buffer: Buffer; mimeType: string } | null> {
+  return getUserMediaBufferFromGoogleDrive(userIdOrEmail, 'cover', coverFileId)
 }
 
 const DELETED_DOCS_REGISTRY_FILE = '__ride_deleted_docs_registry.json'

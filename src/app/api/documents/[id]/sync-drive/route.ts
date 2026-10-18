@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getDriveDocumentById, saveDriveDocument } from '@/lib/drive-store'
 import { generateDocumentTxtLog, syncDocumentToGoogleDrive } from '@/lib/gdrive'
+import { getUserFromRequest } from '@/lib/auth'
+import { canUserAccessDocument } from '@/lib/roles'
 
 export const dynamic = 'force-dynamic'
 
@@ -10,9 +12,18 @@ export async function POST(
 ) {
   try {
     const { id } = await params
+    const tokenUser = getUserFromRequest(req)
+    if (!tokenUser) {
+      return NextResponse.json({ error: 'Tidak terotentikasi' }, { status: 401 })
+    }
+
     const doc = await getDriveDocumentById(id)
     if (!doc) {
       return NextResponse.json({ error: 'Dokumen tidak ditemukan' }, { status: 404 })
+    }
+
+    if (!canUserAccessDocument(tokenUser, doc)) {
+      return NextResponse.json({ error: 'Akses ditolak' }, { status: 403 })
     }
 
     const gdriveResult = await syncDocumentToGoogleDrive(doc)
@@ -45,9 +56,18 @@ export async function GET(
 ) {
   try {
     const { id } = await params
+    const tokenUser = getUserFromRequest(req)
+    if (!tokenUser) {
+      return NextResponse.json({ error: 'Tidak terotentikasi' }, { status: 401 })
+    }
+
     const doc = await getDriveDocumentById(id)
     if (!doc) {
       return NextResponse.json({ error: 'Dokumen tidak ditemukan' }, { status: 404 })
+    }
+
+    if (!canUserAccessDocument(tokenUser, doc)) {
+      return NextResponse.json({ error: 'Akses ditolak' }, { status: 403 })
     }
 
     const txtLog = generateDocumentTxtLog(doc as any)

@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
       division: user.division,
     })
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       token,
       user: {
@@ -41,9 +41,20 @@ export async function GET(request: NextRequest) {
         phone: user.phone,
         avatarUrl: user.avatarUrl,
         coverUrl: user.coverUrl,
+        mood: user.mood,
         twoFactorEnabled: user.twoFactorEnabled,
       },
     })
+
+    response.cookies.set('ride_token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 7 * 24 * 60 * 60,
+    })
+
+    return response
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed to fetch user'
     return NextResponse.json({ error: message }, { status: 500 })
@@ -58,9 +69,12 @@ export async function PATCH(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { employeeName, position, division, phone, twoFactorEnabled, avatarUrl, coverUrl } = body
+    const { employeeName, position, division, phone, twoFactorEnabled, avatarUrl, coverUrl, mood } = body
 
-    const user = await getDriveUserById(tokenUser.userId)
+    let user = await getDriveUserById(tokenUser.userId)
+    if (!user && tokenUser.email) {
+      user = await getDriveUserById(tokenUser.email)
+    }
     if (!user) {
       return NextResponse.json({ error: 'Pengguna tidak ditemukan' }, { status: 404 })
     }
@@ -72,33 +86,45 @@ export async function PATCH(request: NextRequest) {
     if (twoFactorEnabled !== undefined) user.twoFactorEnabled = Boolean(twoFactorEnabled)
     if (avatarUrl !== undefined) user.avatarUrl = avatarUrl
     if (coverUrl !== undefined) user.coverUrl = coverUrl
+    if (mood !== undefined && typeof mood === 'string') user.mood = mood.trim()
 
-    await saveDriveUser(user)
+    const savedUser = await saveDriveUser(user)
 
     const token = signToken({
-      userId: user._id,
-      email: user.email,
-      role: user.role,
-      employeeName: user.employeeName,
-      division: user.division,
+      userId: savedUser._id,
+      email: savedUser.email,
+      role: savedUser.role,
+      employeeName: savedUser.employeeName,
+      division: savedUser.division,
     })
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       token,
       user: {
-        id: user._id,
-        employeeName: user.employeeName,
-        email: user.email,
-        position: user.position,
-        division: user.division,
-        role: user.role,
-        phone: user.phone,
-        avatarUrl: user.avatarUrl,
-        coverUrl: user.coverUrl,
-        twoFactorEnabled: user.twoFactorEnabled,
+        id: savedUser._id,
+        employeeName: savedUser.employeeName,
+        email: savedUser.email,
+        position: savedUser.position,
+        division: savedUser.division,
+        role: savedUser.role,
+        phone: savedUser.phone,
+        avatarUrl: savedUser.avatarUrl,
+        coverUrl: savedUser.coverUrl,
+        mood: savedUser.mood,
+        twoFactorEnabled: savedUser.twoFactorEnabled,
       },
     })
+
+    response.cookies.set('ride_token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 7 * 24 * 60 * 60,
+    })
+
+    return response
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed to update profile'
     return NextResponse.json({ error: message }, { status: 500 })

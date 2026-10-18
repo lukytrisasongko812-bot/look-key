@@ -1,4 +1,3 @@
-import bcrypt from 'bcryptjs'
 import {
   initAndSeedDriveStore,
   getDriveDocuments,
@@ -30,44 +29,86 @@ async function runTests() {
   }
 
   // -------------------------------------------------------------
-  // TEST 1: User Avatar & Multi-device Storage Consistency
+  // TEST 1: Cross-Device User Profile, Avatar, Cover Photo & Mood Sync
   // -------------------------------------------------------------
-  console.log('--- TEST 1: Avatar Storage & Multi-Device Sync ---')
+  console.log('--- TEST 1: Cross-Device Profile, Avatar, Cover Photo & Mood Sync ---')
   await initAndSeedDriveStore()
   const user = await getDriveUserByEmail('toto.rubianto.17@gmail.com')
   assert(!!user, 'User Toto retrieved from drive store')
 
   if (user) {
-    const sampleAvatar = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=='
+    const origName = user.employeeName
+    const origDivision = user.division
+    const origPosition = user.position
+    const origPhone = user.phone
+
+    const sampleAvatar =
+      'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=='
+    const sampleCover =
+      'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAEklEQVR42mNk+M9QzwAEjDAGACCMAv89263LAAAAAElFTkSuQmCC'
+
+    user.employeeName = 'Toto Rubianto, S.H., M.H.'
+    user.division = 'Corporate Legal'
+    user.position = 'Head of Enterprise Legal & Governance'
+    user.phone = '+62 812-3456-7899'
     user.avatarUrl = sampleAvatar
+    user.coverUrl = sampleCover
+    user.mood = 'semangat'
+
     await saveDriveUser(user)
 
-    // Simulate Device B: retrieving user by ID freshly
-    const deviceBUser = await getDriveUserById(user._id)
-    assert(!!deviceBUser, 'Device B retrieves user by ID')
-    assert(deviceBUser?.avatarUrl === sampleAvatar, 'Device B sees the exact same avatarUrl as Device A')
+    // Simulate Device B: retrieving user by ID and by Email freshly
+    const deviceBById = await getDriveUserById(user._id)
+    const deviceBByEmail = await getDriveUserByEmail('toto.rubianto.17@gmail.com')
+
+    assert(!!deviceBById, 'Device B retrieves user by ID')
+    assert(!!deviceBByEmail, 'Device B retrieves user by Email')
+    assert(
+      deviceBById?.employeeName === 'Toto Rubianto, S.H., M.H.' &&
+        deviceBByEmail?.employeeName === 'Toto Rubianto, S.H., M.H.',
+      'Device B sees updated employeeName across ID and Email lookups'
+    )
+    assert(
+      deviceBById?.division === 'Corporate Legal' && deviceBById?.mood === 'semangat',
+      'Device B sees updated division and mood across devices'
+    )
+    assert(
+      Boolean(deviceBById?.avatarUrl) && !deviceBById!.avatarUrl!.includes('drive.google.com/file/d/'),
+      'Device B avatarUrl is a valid streamable endpoint or data URL (never a broken Drive HTML viewer link)'
+    )
+    assert(
+      Boolean(deviceBById?.coverUrl) && !deviceBById!.coverUrl!.includes('drive.google.com/file/d/'),
+      'Device B coverUrl is a valid streamable endpoint or data URL (never a broken Drive HTML viewer link)'
+    )
+
+    // Restore original name/division/phone after test
+    user.employeeName = origName
+    user.division = origDivision
+    user.position = origPosition
+    user.phone = origPhone
+    await saveDriveUser(user)
   }
 
   // -------------------------------------------------------------
-  // TEST 2: Document Creation & Upload Stability
+  // TEST 2: Document Creation, 7-Stage Workflow, Revision & Final Archiving
   // -------------------------------------------------------------
-  console.log('\n--- TEST 2: Document Creation & Upload Stability ---')
+  console.log('\n--- TEST 2: Document Creation, 7-Stage Workflow, Revision & Final Archiving ---')
   const testDocNumber = 'RIDE-2026-TEST-' + Math.floor(Math.random() * 9000 + 1000)
   const newDoc = {
     _id: 'doc_test_' + Math.random().toString(36).substring(2, 9),
     docNumber: testDocNumber,
-    name: 'Dokumen Pengujian Stabilitas Upload',
+    name: 'Dokumen Pengujian End-to-End 7 Tahap',
     category: 'Kontrak Hukum',
-    division: 'Direktorat Legal & Governance',
+    division: 'Corporate Legal',
     priority: 'Urgent' as const,
     confidentiality: 'Internal' as const,
     contractStart: new Date().toISOString(),
     contractEnd: new Date(Date.now() + 30 * 86400000).toISOString(),
     noDuration: false,
-    notes: 'Pengujian upload stabil tanpa 413 payload limit.',
+    notes: 'Pengujian siklus hidup penuh 7 tahapan alur kontrak.',
     stage: 0,
     stageStatus: 'active' as const,
-    statusLabel: 'Pengajuan Baru (V0)',
+    statusLabel: 'Pengajuan',
     pic: 'Toto Rubianto',
     picEmail: 'toto.rubianto.17@gmail.com',
     revisionRequested: false,
@@ -90,9 +131,9 @@ async function runTests() {
       url: '/files/Draft_Kontrak_Uji.pdf',
       uploadedAt: new Date().toISOString(),
     },
-    revisionDocuments: [],
-    supportingDocuments: [],
-    finalDocument: null,
+    revisionDocuments: [] as any[],
+    supportingDocuments: [] as any[],
+    finalDocument: null as any,
     versions: [
       {
         version: 'V0',
@@ -126,16 +167,97 @@ async function runTests() {
   }
 
   await saveDriveDocument(newDoc)
-  const retrievedDoc = await getDriveDocumentById(newDoc._id)
-  assert(!!retrievedDoc, `Document ${testDocNumber} successfully created & retrieved`)
-  assert(retrievedDoc?.versions.length === 1, 'Document version history preserved intact')
+  let retrievedDoc = await getDriveDocumentById(newDoc._id)
+  assert(!!retrievedDoc, `Document ${testDocNumber} created at Stage 0 (Pengajuan)`)
+  assert(retrievedDoc?.versions.length === 1, 'Initial version V0 recorded')
+
+  // Simulate Stage 1 (Drafting) & Stage 2 (Revisi Draft) + Revision upload
+  newDoc.stage = 2
+  newDoc.statusLabel = 'Revisi Draft'
+  const revVersion = {
+    version: 'Rev.01',
+    file: {
+      originalName: 'Draft_Kontrak_Uji_Rev01.pdf',
+      filename: 'draft_kontrak_uji_rev01.pdf',
+      size: 1620000,
+      mimeType: 'application/pdf',
+      url: '/files/Draft_Kontrak_Uji_Rev01.pdf',
+      uploadedAt: new Date().toISOString(),
+    },
+    notes: 'Revisi klausul SLA disepakati.',
+    uploadedBy: 'Luky Tri Sasongko',
+    uploadedAt: new Date().toISOString(),
+    isFinal: false,
+    fileType: 'legal_draft' as const,
+  }
+  newDoc.revisionDocuments.push(revVersion)
+  newDoc.versions.push(revVersion as any)
+  newDoc.history.push({
+    stage: 2,
+    action: 'Unggah Draf Revisi (Rev.01)',
+    actor: 'Luky Tri Sasongko',
+    notes: 'Revisi klausul SLA disepakati.',
+    versionTag: 'Rev.01',
+    timestamp: new Date().toISOString(),
+  })
+  await saveDriveDocument(newDoc)
+
+  retrievedDoc = await getDriveDocumentById(newDoc._id)
+  assert(retrievedDoc?.stage === 2 && retrievedDoc?.versions.length === 2, 'Stage 2 (Revisi Draft) & Rev.01 persisted')
+
+  // Simulate Stage 3 (Persetujuan Legal) -> Stage 4 (Tanda Tangan Direksi) -> Stage 5 (Pengarsipan Final)
+  newDoc.stage = 5
+  newDoc.stageStatus = 'completed' as any
+  newDoc.statusLabel = 'Pengarsipan'
+  newDoc.finalDocument = {
+    originalName: 'Kontrak_Uji_Final_Signed.pdf',
+    filename: 'kontrak_uji_final_signed.pdf',
+    size: 1800000,
+    mimeType: 'application/pdf',
+    url: '/files/Kontrak_Uji_Final_Signed.pdf',
+    uploadedAt: new Date().toISOString(),
+  }
+  newDoc.versions.push({
+    version: 'FINAL',
+    file: newDoc.finalDocument,
+    notes: 'Dokumen final ditandatangani Direksi.',
+    uploadedBy: 'Toto Rubianto',
+    uploadedAt: new Date().toISOString(),
+    isFinal: true,
+    fileType: 'final' as any,
+  })
+  await saveDriveDocument(newDoc)
+
+  retrievedDoc = await getDriveDocumentById(newDoc._id)
+  assert(
+    retrievedDoc?.stage === 5 && retrievedDoc?.stageStatus === 'completed' && !!retrievedDoc?.finalDocument,
+    'Stage 5 (Pengarsipan Final) completed & finalDocument stored'
+  )
 
   // -------------------------------------------------------------
-  // TEST 3: Document Deletion Persistence (No Reappearing on Refresh)
+  // TEST 3: Concurrent Document Submissions & Deletion Persistence
   // -------------------------------------------------------------
-  console.log('\n--- TEST 3: Document Deletion Persistence ---')
+  console.log('\n--- TEST 3: Concurrent Document Operations & Deletion Persistence ---')
+  const concurrentDocs = [1, 2, 3].map((idx) => ({
+    ...newDoc,
+    _id: `doc_conc_${Date.now()}_${idx}`,
+    docNumber: `${testDocNumber}-C${idx}`,
+    name: `Dokumen Uji Konkurensi #${idx}`,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  }))
+
+  await Promise.all(concurrentDocs.map((d) => saveDriveDocument(d)))
+
+  for (const cd of concurrentDocs) {
+    const found = await getDriveDocumentById(cd._id)
+    assert(!!found && found.docNumber === cd.docNumber, `Concurrent document ${cd.docNumber} saved without race loss`)
+  }
+
+  // Delete main test doc and concurrent test docs
   const deleteOk = await deleteDriveDocument(newDoc._id)
   assert(deleteOk, `Document ${testDocNumber} deleted from store`)
+  await Promise.all(concurrentDocs.map((d) => deleteDriveDocument(d._id)))
 
   // Simulate cold start / store re-init
   await initAndSeedDriveStore()
@@ -143,8 +265,13 @@ async function runTests() {
   assert(checkDeleted === null, 'Deleted document does NOT exist in getDriveDocumentById after re-init')
 
   const allDocs = await getDriveDocuments()
-  const foundInList = allDocs.some((d) => d._id === newDoc._id || d.docNumber === testDocNumber)
-  assert(!foundInList, 'Deleted document does NOT reappear in getDriveDocuments after re-init / refresh')
+  const foundInList = allDocs.some(
+    (d) =>
+      d._id === newDoc._id ||
+      d.docNumber === testDocNumber ||
+      concurrentDocs.some((cd) => cd._id === d._id)
+  )
+  assert(!foundInList, 'Deleted documents do NOT reappear in getDriveDocuments after re-init / refresh')
 
   // -------------------------------------------------------------
   // TEST 4: Strict Session & Auth Verification
@@ -167,17 +294,19 @@ async function runTests() {
   // TEST 5: Google Drive Cloud Registry Persistence
   // -------------------------------------------------------------
   console.log('\n--- TEST 5: Google Drive Cloud Registry Persistence ---')
-  const { getDeletedDocsFromGoogleDriveRegistry, addDeletedDocsToGoogleDriveRegistry } = await import('../lib/gdrive')
+  const { getDeletedDocsFromGoogleDriveRegistry } = await import('../lib/gdrive')
   const gdriveDeleted = await getDeletedDocsFromGoogleDriveRegistry()
   assert(Array.isArray(gdriveDeleted), 'Google Drive deleted docs registry accessible as array')
 
   // -------------------------------------------------------------
-  // TEST 6: User Avatar Streaming & Initials Fallback
+  // TEST 6: User Avatar & Cover Binary Streaming
   // -------------------------------------------------------------
-  console.log('\n--- TEST 6: User Avatar Binary Streaming & Initials ---')
-  const { getUserAvatarBufferFromGoogleDrive } = await import('../lib/gdrive')
-  const avatarRes = await getUserAvatarBufferFromGoogleDrive('toto.rubianto.17@gmail.com')
-  assert(avatarRes === null || (!!avatarRes && avatarRes.buffer.length > 0), 'Avatar lookup from Google Drive completes cleanly')
+  console.log('\n--- TEST 6: User Avatar & Cover Binary Streaming ---')
+  const { getUserAvatarBufferFromGoogleDrive, getUserCoverBufferFromGoogleDrive } = await import('../lib/gdrive')
+  const avatarRes = await getUserAvatarBufferFromGoogleDrive('usr_toto_admin_01')
+  const coverRes = await getUserCoverBufferFromGoogleDrive('usr_toto_admin_01')
+  assert(avatarRes === null || (!!avatarRes && avatarRes.buffer.length > 0), 'Avatar binary stream lookup completes cleanly')
+  assert(coverRes === null || (!!coverRes && coverRes.buffer.length > 0), 'Cover photo binary stream lookup completes cleanly')
 
   // -------------------------------------------------------------
   // TEST 7: Strict User Document Isolation & Full Legal/Admin Control
@@ -188,7 +317,6 @@ async function runTests() {
     canUserEditDocument,
     canUserDeleteDocument,
     canUserProcessWorkflow,
-    isDocumentOwnerOrPic,
     canUploadLegalDraft,
     canUploadLegalApproval,
     canUploadBodSigned,

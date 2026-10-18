@@ -37,6 +37,9 @@ export async function POST(
   try {
     const { id } = await params
     const tokenUser = getUserFromRequest(request)
+    if (!tokenUser) {
+      return NextResponse.json({ error: 'Tidak terotentikasi.' }, { status: 401 })
+    }
     const body = await request.json()
     const { file, notes, isFinal, versionTag, actionLabel: customActionLabel, advanceStage, fileType } = body
 

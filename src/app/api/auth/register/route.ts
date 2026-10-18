@@ -1,10 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
 import { getDriveUserByEmail, saveDriveUser, StoredUser } from '@/lib/drive-store'
-import { signToken } from '@/lib/auth'
+import { signToken, getUserFromRequest } from '@/lib/auth'
+import { isSystemAdmin } from '@/lib/roles'
 import { sendInviteEmail } from '@/lib/email'
+import { UserRole } from '@/context/AppContext'
 
 export const dynamic = 'force-dynamic'
+
+const SELF_REGISTER_ALLOWED_ROLES: UserRole[] = [
+  'User',
+  'Requester',
+  'Reviewer',
+  'Legal Officer',
+]
 
 export async function POST(request: NextRequest) {
   try {
@@ -19,6 +28,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Email sudah terdaftar dalam sistem.' }, { status: 400 })
     }
 
+    const caller = getUserFromRequest(request)
+    const callerIsAdmin = caller && isSystemAdmin(caller.role)
+
+    // Prevent unauthenticated privilege escalation to System Administrator or Board of Directors
+    const safeRole: UserRole =
+      callerIsAdmin && role
+        ? (role as UserRole)
+        : role && SELF_REGISTER_ALLOWED_ROLES.includes(role as UserRole)
+        ? (role as UserRole)
+        : 'User'
+
     const passwordHash = await bcrypt.hash(password, 10)
     const now = new Date().toISOString()
     const id = 'usr_' + Math.random().toString(36).substring(2, 9)
@@ -26,13 +46,13 @@ export async function POST(request: NextRequest) {
     const newUser: StoredUser = {
       _id: id,
       id,
-      employeeName,
+      employeeName: employeeName.trim(),
       email: email.toLowerCase().trim(),
       passwordHash,
-      position: position || 'Staff Anggota',
-      division: division || 'Direktorat Operasi',
-      role: role || 'Requester',
-      phone: phone || '',
+      position: position ? position.trim() : 'Staff Anggota',
+      division: division ? division.trim() : 'Direktorat Operasi',
+      role: safeRole,
+      phone: phone ? phone.trim() : '',
       twoFactorEnabled: true,
       isActive: true,
       createdAt: now,
@@ -59,7 +79,7 @@ export async function POST(request: NextRequest) {
       division: newUser.division,
     })
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       token,
       user: {
@@ -69,9 +89,20 @@ export async function POST(request: NextRequest) {
         position: newUser.position,
         division: newUser.division,
         role: newUser.role,
+        phone: newUser.phone,
         twoFactorEnabled: newUser.twoFactorEnabled,
       },
     }, { status: 201 })
+
+    response.cookies.set('ride_token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 7 * 24 * 60 * 60,
+    })
+
+    return response
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Registration failed'
     return NextResponse.json({ error: message }, { status: 500 })

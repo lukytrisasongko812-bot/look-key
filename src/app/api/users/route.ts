@@ -3,11 +3,16 @@ import bcrypt from 'bcryptjs'
 import { getDriveUsers, getDriveUserByEmail, saveDriveUser, StoredUser } from '@/lib/drive-store'
 import { sendInviteEmail } from '@/lib/email'
 import { getUserFromRequest } from '@/lib/auth'
+import { isSystemAdmin, isBoardOfDirectors } from '@/lib/roles'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   try {
+    const tokenUser = getUserFromRequest(request)
+    if (!tokenUser) {
+      return NextResponse.json({ error: 'Tidak terotentikasi.' }, { status: 401 })
+    }
     const users = await getDriveUsers()
     return NextResponse.json(users)
   } catch (error: unknown) {
@@ -19,6 +24,16 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const tokenUser = getUserFromRequest(request)
+    if (!tokenUser) {
+      return NextResponse.json({ error: 'Tidak terotentikasi.' }, { status: 401 })
+    }
+    if (!isSystemAdmin(tokenUser.role) && !isBoardOfDirectors(tokenUser.role)) {
+      return NextResponse.json(
+        { error: 'Akses ditolak: Hanya Administrator atau Direksi yang dapat menambahkan pengguna baru.' },
+        { status: 403 }
+      )
+    }
+
     const body = await request.json()
     const { employeeName, email, position, division, role, phone, password } = body
 
@@ -39,13 +54,13 @@ export async function POST(request: NextRequest) {
     const newUser: StoredUser = {
       _id: id,
       id,
-      employeeName,
+      employeeName: employeeName.trim(),
       email: email.toLowerCase().trim(),
       passwordHash,
-      position: position || 'Staff Anggota',
-      division: division || 'Direktorat Operasi',
-      role: role || 'Requester',
-      phone: phone || '',
+      position: position ? position.trim() : 'Staff Anggota',
+      division: division ? division.trim() : 'Direktorat Operasi',
+      role: role || 'User',
+      phone: phone ? phone.trim() : '',
       twoFactorEnabled: true,
       isActive: true,
       createdAt: now,
@@ -74,6 +89,7 @@ export async function POST(request: NextRequest) {
         position: newUser.position,
         division: newUser.division,
         role: newUser.role,
+        phone: newUser.phone,
         twoFactorEnabled: newUser.twoFactorEnabled,
       },
       { status: 201 }

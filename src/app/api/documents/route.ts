@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getDriveDocuments, saveDriveDocument, StoredDocument } from '@/lib/drive-store'
 import { sendNotificationEmail } from '@/lib/email'
-import { generateDocumentTxtLog, syncDocumentToGoogleDrive, getDocumentsFromGoogleDriveRegistry } from '@/lib/gdrive'
 import { getUserFromRequest } from '@/lib/auth'
 import { canUserAccessDocument, isDocumentOwnerOrPic } from '@/lib/roles'
 
 export const dynamic = 'force-dynamic'
+
+declare global {
+  var __rideNextDocSeq: number | undefined
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -40,6 +43,13 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const tokenUser = getUserFromRequest(request)
+    if (!tokenUser) {
+      return NextResponse.json(
+        { error: 'Tidak terotentikasi. Silakan login terlebih dahulu.' },
+        { status: 401 }
+      )
+    }
+
     const body = await request.json()
 
     const {
@@ -63,20 +73,16 @@ export async function POST(request: NextRequest) {
     }
 
     const now = new Date().toISOString()
-    const actorName = tokenUser?.employeeName || pic || 'Pengaju'
-    const creatorEmail = tokenUser?.email || picEmail || 'support@risetrack.id'
-    const creatorId = tokenUser?.userId || createdBy || tokenUser?.email || 'usr_' + Math.random().toString(36).substring(2, 8)
+    const actorName = tokenUser.employeeName || pic || 'Pengaju'
+    const creatorEmail = tokenUser.email || picEmail || 'support@risetrack.id'
+    const creatorId = tokenUser.userId || createdBy || tokenUser.email
 
     const existingDocs = await getDriveDocuments()
-    let driveDocs: StoredDocument[] = []
-    try {
-      driveDocs = await getDocumentsFromGoogleDriveRegistry()
-    } catch {}
-    const allKnownDocs = [...existingDocs, ...driveDocs]
 
-    let maxNum = 149
-    for (const d of allKnownDocs) {
-      const match = d.docNumber?.match(/RIDE-\d{4}-(\d+)/)
+    // Atomic synchronous docNumber sequence allocation (prevents race condition on concurrent submissions)
+    let maxNum = globalThis.__rideNextDocSeq || 151
+    for (const d of existingDocs) {
+      const match = d.docNumber?.match(/^RIDE-2026-(\d{4})$/)
       if (match) {
         const num = parseInt(match[1], 10)
         if (!isNaN(num) && num > maxNum) maxNum = num
@@ -84,10 +90,11 @@ export async function POST(request: NextRequest) {
     }
     let nextNum = maxNum + 1
     let docNumber = `RIDE-2026-${nextNum.toString().padStart(4, '0')}`
-    while (allKnownDocs.some((d) => d.docNumber === docNumber)) {
+    while (existingDocs.some((d) => d.docNumber === docNumber)) {
       nextNum++
       docNumber = `RIDE-2026-${nextNum.toString().padStart(4, '0')}`
     }
+    globalThis.__rideNextDocSeq = nextNum
 
     // Sanitize file records (strip heavy raw base64 if large)
     const sanitizeFile = (f: any) => {
@@ -142,11 +149,11 @@ export async function POST(request: NextRequest) {
     ]
 
     const newDoc: StoredDocument = {
-      _id: 'doc_' + Math.random().toString(36).substring(2, 9),
+      _id: 'doc_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 7),
       docNumber,
-      name,
+      name: name.trim(),
       category,
-      division: division || tokenUser?.division || 'Direktorat Umum',
+      division: division || tokenUser.division || 'Direktorat Umum',
       priority: priority || 'Normal',
       confidentiality: confidentiality || 'Internal',
       contractStart: noDuration ? null : contractStart ? new Date(contractStart).toISOString() : null,
@@ -172,16 +179,6 @@ export async function POST(request: NextRequest) {
       createdBy: creatorId,
       createdAt: now,
       updatedAt: now,
-    }
-
-    try {
-      const gdriveResult = await syncDocumentToGoogleDrive(newDoc)
-      if (gdriveResult.folderId) {
-        newDoc.driveFolderId = gdriveResult.folderId
-        newDoc.driveFolderUrl = gdriveResult.folderUrl
-      }
-    } catch (gErr) {
-      console.error('[Google Drive Live Folder Creation Error]', gErr)
     }
 
     await saveDriveDocument(newDoc)

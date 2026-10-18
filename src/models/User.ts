@@ -27,7 +27,10 @@ export interface IUser extends MongooseDocument {
   role: UserRole
   phone?: string
   avatarUrl?: string
+  avatarFileId?: string
   coverUrl?: string
+  coverFileId?: string
+  mood?: string
   twoFactorEnabled: boolean
   twoFactorCode?: string | null
   twoFactorExpires?: Date | null
@@ -66,7 +69,10 @@ const UserSchema = new Schema<IUser>(
     },
     phone: { type: String, default: '+62 812-9876-5432' },
     avatarUrl: { type: String, default: '' },
+    avatarFileId: { type: String, default: '' },
     coverUrl: { type: String, default: '' },
+    coverFileId: { type: String, default: '' },
+    mood: { type: String, default: 'bahagia' },
     twoFactorEnabled: { type: Boolean, default: true },
     twoFactorCode: { type: String, default: null },
     twoFactorExpires: { type: Date, default: null },

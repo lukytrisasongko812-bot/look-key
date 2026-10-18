@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getDriveDocumentById, saveDriveDocument, addDriveNotification } from '@/lib/drive-store'
 import { sendNotificationEmail } from '@/lib/email'
 import { getUserFromRequest } from '@/lib/auth'
+import { canUserEditDocument, isBoardOfDirectors } from '@/lib/roles'
 
 export const dynamic = 'force-dynamic'
 
@@ -12,7 +13,10 @@ export async function POST(
   try {
     const { id } = await params
     const tokenUser = getUserFromRequest(request)
-    const actorName = tokenUser?.employeeName || 'BOD / Decision Maker'
+    if (!tokenUser) {
+      return NextResponse.json({ error: 'Tidak terotentikasi.' }, { status: 401 })
+    }
+    const actorName = tokenUser.employeeName || 'BOD / Decision Maker'
 
     const body = await request.json()
     const { type, justification, considerations } = body
@@ -27,6 +31,13 @@ export async function POST(
     const doc = await getDriveDocumentById(id)
     if (!doc) {
       return NextResponse.json({ error: 'Dokumen tidak ditemukan.' }, { status: 404 })
+    }
+
+    if (!canUserEditDocument(tokenUser, doc) && !isBoardOfDirectors(tokenUser.role)) {
+      return NextResponse.json(
+        { error: 'Akses ditolak: Anda tidak memiliki kewenangan untuk menetapkan keputusan pada dokumen ini.' },
+        { status: 403 }
+      )
     }
 
     const now = new Date().toISOString()

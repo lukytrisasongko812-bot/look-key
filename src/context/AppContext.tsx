@@ -39,6 +39,7 @@ export interface UserProfile {
   phone?: string
   avatarUrl?: string
   coverUrl?: string
+  mood?: string
   twoFactorEnabled?: boolean
 }
 
@@ -61,7 +62,7 @@ export interface DocumentVersionItem {
   uploadedBy: string
   uploadedAt: string
   isFinal: boolean
-  fileType: 'initial' | 'revision' | 'supporting' | 'final'
+  fileType: 'initial' | 'revision' | 'supporting' | 'final' | 'legal_draft' | 'legal_approval' | 'bod_signed'
 }
 
 export interface DocumentDecision {
@@ -180,7 +181,7 @@ interface AppContextType {
     options?: {
       actionLabel?: string
       advanceStage?: boolean
-      fileType?: 'initial' | 'revision' | 'supporting' | 'final'
+      fileType?: 'initial' | 'revision' | 'supporting' | 'final' | 'legal_draft' | 'legal_approval' | 'bod_signed'
     }
   ) => Promise<boolean>
   uploadFinalDocument: (id: string, file: DocumentFile, notes: string) => Promise<boolean>
@@ -234,6 +235,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   tokenRef.current = token
 
   const lastSyncRef = useRef<number>(Date.now())
+  const mutationSeqRef = useRef<number>(0)
 
   const getStoredAuthToken = useCallback((): string | null => {
     if (typeof window === 'undefined') return null
@@ -258,9 +260,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     sessionStorage.removeItem('rise_user')
   }, [])
 
-  // Fetch documents
+  // Fetch documents with anti-flicker sequence guard
   const fetchDocuments = useCallback(
     async (query = '', status = '', category = '') => {
+      const seqAtStart = mutationSeqRef.current
       try {
         const params = new URLSearchParams()
         if (query) params.append('q', query)
@@ -274,6 +277,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const res = await fetch(`/api/documents?${params.toString()}`, { headers })
         if (res.ok) {
           const data: DocumentItem[] = await res.json()
+          // Discard stale response if a document mutation occurred while this fetch was in-flight
+          if (seqAtStart !== mutationSeqRef.current) return
           setDocuments((prev) => {
             if (prev.length === data.length) {
               const isSame = prev.every((p, idx) => {
@@ -447,8 +452,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
                   role: d.user.role || prev.role,
                   avatarUrl: d.user.avatarUrl || prev.avatarUrl,
                   coverUrl: d.user.coverUrl || prev.coverUrl,
+                  mood: d.user.mood || prev.mood,
                 }
                 userRef.current = updated
+                if (localStorage.getItem('ride_token')) {
+                  localStorage.setItem('ride_user', JSON.stringify(updated))
+                } else {
+                  sessionStorage.setItem('ride_user', JSON.stringify(updated))
+                }
                 return updated
               })
             }
@@ -612,6 +623,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const createDocument = async (docData: Partial<DocumentItem>): Promise<DocumentItem | null> => {
     try {
+      mutationSeqRef.current += 1
       const headers: Record<string, string> = { 'Content-Type': 'application/json' }
       const currentToken = token || tokenRef.current || getStoredAuthToken()
       if (currentToken) headers['Authorization'] = `Bearer ${currentToken}`
@@ -630,6 +642,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       })
       if (res.ok) {
         const created: DocumentItem = await res.json()
+        mutationSeqRef.current += 1
         setDocuments((prev) => [created, ...prev.filter((d) => d._id !== created._id && d.docNumber !== created.docNumber)])
         await fetchDocuments()
         await fetchNotifications()
@@ -647,6 +660,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const updateDocument = async (id: string, updates: Partial<DocumentItem>): Promise<boolean> => {
     try {
+      mutationSeqRef.current += 1
       // Optimistic update
       setDocuments((prev) =>
         prev.map((d) => (d._id === id || d.docNumber === id ? { ...d, ...updates } : d))
@@ -662,6 +676,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         body: JSON.stringify(updates),
       })
       if (res.ok) {
+        const updatedDoc = await res.json().catch(() => null)
+        mutationSeqRef.current += 1
+        if (updatedDoc && updatedDoc._id) {
+          setDocuments((prev) =>
+            prev.map((d) => (d._id === id || d.docNumber === id ? updatedDoc : d))
+          )
+        }
         await fetchDocuments()
         return true
       }
@@ -676,6 +697,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const deleteDocument = async (id: string): Promise<boolean> => {
     try {
+      mutationSeqRef.current += 1
       // 1. Optimistically update local document list so UI doesn't flicker or wait
       setDocuments((prev) => prev.filter((d) => d._id !== id && d.docNumber !== id))
 
@@ -688,6 +710,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         headers,
       })
       if (res.ok) {
+        mutationSeqRef.current += 1
         return true
       }
       // If delete failed on backend, restore list
@@ -702,6 +725,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const transitionDocument = async (id: string, action: string, notes?: string): Promise<boolean> => {
     try {
+      mutationSeqRef.current += 1
       const headers: Record<string, string> = { 'Content-Type': 'application/json' }
       const currentToken = token || tokenRef.current || getStoredAuthToken()
       if (currentToken) headers['Authorization'] = `Bearer ${currentToken}`
@@ -713,6 +737,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       })
       if (res.ok) {
         const data = await res.json()
+        mutationSeqRef.current += 1
         if (data.document) {
           setDocuments((prev) => [data.document, ...prev.filter((d) => d._id !== data.document._id && d.docNumber !== data.document.docNumber)])
         }
@@ -735,10 +760,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     options?: {
       actionLabel?: string
       advanceStage?: boolean
-      fileType?: 'initial' | 'revision' | 'supporting' | 'final'
+      fileType?: 'initial' | 'revision' | 'supporting' | 'final' | 'legal_draft' | 'legal_approval' | 'bod_signed'
     }
   ): Promise<boolean> => {
     try {
+      mutationSeqRef.current += 1
       const headers: Record<string, string> = { 'Content-Type': 'application/json' }
       const currentToken = token || tokenRef.current || getStoredAuthToken()
       if (currentToken) headers['Authorization'] = `Bearer ${currentToken}`
@@ -758,6 +784,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       })
       if (res.ok) {
         const data = await res.json()
+        mutationSeqRef.current += 1
         if (data.document) {
           setDocuments((prev) => [data.document, ...prev.filter((d) => d._id !== data.document._id && d.docNumber !== data.document.docNumber)])
         }
@@ -774,6 +801,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const uploadFinalDocument = async (id: string, file: DocumentFile, notes: string): Promise<boolean> => {
     try {
+      mutationSeqRef.current += 1
       const headers: Record<string, string> = { 'Content-Type': 'application/json' }
       const currentToken = token || tokenRef.current || getStoredAuthToken()
       if (currentToken) headers['Authorization'] = `Bearer ${currentToken}`
@@ -785,6 +813,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       })
       if (res.ok) {
         const data = await res.json()
+        mutationSeqRef.current += 1
         if (data.document) {
           setDocuments((prev) => [data.document, ...prev.filter((d) => d._id !== data.document._id && d.docNumber !== data.document.docNumber)])
         }
@@ -804,6 +833,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     decision: { type: 'renew' | 'terminate' | 'amendment'; justification: string; considerations: string[] }
   ): Promise<boolean> => {
     try {
+      mutationSeqRef.current += 1
       const headers: Record<string, string> = { 'Content-Type': 'application/json' }
       const currentToken = token || tokenRef.current || getStoredAuthToken()
       if (currentToken) headers['Authorization'] = `Bearer ${currentToken}`
@@ -814,6 +844,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         body: JSON.stringify(decision),
       })
       if (res.ok) {
+        mutationSeqRef.current += 1
         await fetchDocuments()
         await fetchNotifications()
         return true
@@ -830,6 +861,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     reminders: Partial<ContractReminderConfig>
   ): Promise<boolean> => {
     try {
+      mutationSeqRef.current += 1
       const headers: Record<string, string> = { 'Content-Type': 'application/json' }
       const currentToken = token || tokenRef.current || getStoredAuthToken()
       if (currentToken) headers['Authorization'] = `Bearer ${currentToken}`
@@ -840,6 +872,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         body: JSON.stringify(reminders),
       })
       if (res.ok) {
+        mutationSeqRef.current += 1
         await fetchDocuments()
         return true
       }
@@ -900,6 +933,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           }
         }
         await fetchAllUsers()
+        if (profileData.employeeName) {
+          await fetchDocuments()
+        }
         return true
       }
       return false
