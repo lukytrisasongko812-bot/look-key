@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getDriveDocumentById, getDriveDocuments, StoredDocument, StoredFile } from '@/lib/drive-store'
-import { downloadFileFromGoogleDrive } from '@/lib/gdrive'
+import { getDriveClient, uploadOrUpdateFileInFolder } from '@/lib/gdrive'
 import { getUserFromRequest, verifyToken } from '@/lib/auth'
 import { canUserAccessDocument } from '@/lib/roles'
 import fs from 'fs'
@@ -153,73 +153,110 @@ export async function GET(
       (doc ? `${doc.docNumber}_dokumen.pdf` : 'dokumen.pdf')
 
     const mimeType = foundFile?.mimeType || getMimeType(viewFileName)
+    const lowerName = viewFileName.toLowerCase()
 
-    // Option 1: Base64 dataUrl (stream directly to browser)
-    if (foundFile?.dataUrl && foundFile.dataUrl.includes('base64,')) {
-      const base64Data = foundFile.dataUrl.split('base64,')[1]
-      const buffer = Buffer.from(base64Data, 'base64')
-      return new NextResponse(new Uint8Array(buffer), {
-        headers: {
-          'Content-Type': mimeType,
-          'Content-Disposition': `inline; filename="${encodeURIComponent(viewFileName)}"`,
-          'Content-Length': buffer.length.toString(),
-        },
-      })
-    }
-
-    // Option 2: Download directly from Google Drive via Service Account and stream inline
-    const targetDriveId = foundFile?.driveFileId || fileIdParam
-    if (targetDriveId) {
-      const driveFile = await downloadFileFromGoogleDrive(targetDriveId)
-      if (driveFile && driveFile.buffer.length > 0) {
-        return new NextResponse(new Uint8Array(driveFile.buffer), {
-          headers: {
-            'Content-Type': driveFile.mimeType || mimeType,
-            'Content-Disposition': `inline; filename="${encodeURIComponent(viewFileName)}"`,
-            'Content-Length': driveFile.buffer.length.toString(),
-          },
-        })
+    const buildDriveViewerUrl = (driveId: string, name: string, existingLink?: string) => {
+      if (existingLink && existingLink.startsWith('https://')) {
+        return existingLink
       }
+      const lower = name.toLowerCase()
+      if (lower.endsWith('.docx') || lower.endsWith('.doc')) {
+        return `https://docs.google.com/document/d/${driveId}/edit`
+      }
+      if (lower.endsWith('.xlsx') || lower.endsWith('.xls')) {
+        return `https://docs.google.com/spreadsheets/d/${driveId}/edit`
+      }
+      return `https://drive.google.com/file/d/${driveId}/view`
     }
 
-    // Option 3: If driveViewUrl exists, fallback redirect to Drive preview
+    // Priority 1: Direct redirect if driveViewUrl is already stored
     if (foundFile?.driveViewUrl && foundFile.driveViewUrl.startsWith('https://')) {
       return NextResponse.redirect(foundFile.driveViewUrl)
     }
 
-    // Option 3: Local file in public/files
-    const diskPath = path.join(process.cwd(), 'public', 'files', viewFileName)
-    if (fs.existsSync(diskPath)) {
-      const fileBuffer = await fs.promises.readFile(diskPath)
-      return new NextResponse(new Uint8Array(fileBuffer), {
-        headers: {
-          'Content-Type': mimeType,
-          'Content-Disposition': `inline; filename="${encodeURIComponent(viewFileName)}"`,
-          'Content-Length': fileBuffer.length.toString(),
-        },
-      })
+    // Priority 2: Direct redirect if driveFileId is stored
+    const targetDriveId = foundFile?.driveFileId || fileIdParam
+    if (targetDriveId) {
+      return NextResponse.redirect(buildDriveViewerUrl(targetDriveId, viewFileName))
     }
 
-    // Option 4: Case-insensitive search in public/files
-    const publicFilesDir = path.join(process.cwd(), 'public', 'files')
-    if (fs.existsSync(publicFilesDir)) {
-      const dirItems = await fs.promises.readdir(publicFilesDir)
-      const matched = dirItems.find(
-        (f) => f.toLowerCase() === viewFileName.toLowerCase()
-      )
-      if (matched) {
-        const fileBuffer = await fs.promises.readFile(path.join(publicFilesDir, matched))
-        return new NextResponse(new Uint8Array(fileBuffer), {
+    // Priority 3: Check if file already exists inside document's Google Drive folder
+    const folderId = doc?.driveFolderId || process.env.GOOGLE_DRIVE_FOLDER_ID || '1S8ifA-RtvGB0JGFPZSfsaL_IX65Nc16F'
+    try {
+      const drive = getDriveClient()
+      const sanitizedSearch = viewFileName.replace(/'/g, "\\'")
+      const existing = await drive.files.list({
+        q: `'${folderId}' in parents and name = '${sanitizedSearch}' and trashed = false`,
+        supportsAllDrives: true,
+        includeItemsFromAllDrives: true,
+        fields: 'files(id, name, webViewLink)',
+      })
+      const driveMatch = existing.data.files?.[0]
+      if (driveMatch?.id) {
+        return NextResponse.redirect(
+          buildDriveViewerUrl(driveMatch.id, viewFileName, driveMatch.webViewLink || undefined)
+        )
+      }
+    } catch (searchErr) {
+      console.warn('[View Route GDrive Search Warning]', searchErr)
+    }
+
+    // Priority 4: If file has base64 dataUrl, sync to Google Drive & redirect to Drive/Docs Viewer
+    if (foundFile?.dataUrl && foundFile.dataUrl.includes('base64,')) {
+      const base64Data = foundFile.dataUrl.split('base64,')[1]
+      const buffer = Buffer.from(base64Data, 'base64')
+      try {
+        const upRes = await uploadOrUpdateFileInFolder(folderId, viewFileName, mimeType, buffer)
+        if (upRes?.fileId) {
+          return NextResponse.redirect(buildDriveViewerUrl(upRes.fileId, viewFileName, upRes.webViewLink))
+        }
+      } catch {}
+
+      if (lowerName.endsWith('.pdf') || lowerName.endsWith('.png') || lowerName.endsWith('.jpg') || lowerName.endsWith('.jpeg')) {
+        return new NextResponse(new Uint8Array(buffer), {
           headers: {
             'Content-Type': mimeType,
             'Content-Disposition': `inline; filename="${encodeURIComponent(viewFileName)}"`,
-            'Content-Length': fileBuffer.length.toString(),
+            'Content-Length': buffer.length.toString(),
           },
         })
       }
     }
 
-    // Option 5: Fallback PDF
+    // Priority 5: Local file in public/files -> sync to Google Drive & redirect to Drive/Docs Viewer
+    let localBuffer: Buffer | null = null
+    const diskPath = path.join(process.cwd(), 'public', 'files', viewFileName)
+    if (fs.existsSync(diskPath)) {
+      localBuffer = await fs.promises.readFile(diskPath)
+    } else {
+      const publicFilesDir = path.join(process.cwd(), 'public', 'files')
+      if (fs.existsSync(publicFilesDir)) {
+        const dirItems = await fs.promises.readdir(publicFilesDir)
+        const matched = dirItems.find((f) => f.toLowerCase() === viewFileName.toLowerCase())
+        if (matched) {
+          localBuffer = await fs.promises.readFile(path.join(publicFilesDir, matched))
+        }
+      }
+    }
+
+    if (localBuffer) {
+      try {
+        const upRes = await uploadOrUpdateFileInFolder(folderId, viewFileName, mimeType, localBuffer)
+        if (upRes?.fileId) {
+          return NextResponse.redirect(buildDriveViewerUrl(upRes.fileId, viewFileName, upRes.webViewLink))
+        }
+      } catch {}
+
+      return new NextResponse(new Uint8Array(localBuffer), {
+        headers: {
+          'Content-Type': mimeType,
+          'Content-Disposition': `inline; filename="${encodeURIComponent(viewFileName)}"`,
+          'Content-Length': localBuffer.length.toString(),
+        },
+      })
+    }
+
+    // Priority 6: Fallback PDF inline viewer
     const fallbackBuffer = generateFallbackPdf(
       doc?.name || 'Dokumen Resmi RIDE',
       viewFileName,

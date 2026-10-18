@@ -396,6 +396,10 @@ export async function uploadOrUpdateFileInFolder(
 
     const updated = await drive.files.update({
       fileId,
+      requestBody: {
+        name: fileName,
+        mimeType: mimeType || 'application/octet-stream',
+      },
       media: {
         mimeType: mimeType || 'application/octet-stream',
         body: stream,
@@ -404,7 +408,15 @@ export async function uploadOrUpdateFileInFolder(
       fields: 'id, name, mimeType, size, webViewLink',
     })
 
-    const webViewLink = updated.data.webViewLink || `https://drive.google.com/file/d/${fileId}/view`
+    const lowerFileName = fileName.toLowerCase()
+    const defaultViewerLink =
+      lowerFileName.endsWith('.docx') || lowerFileName.endsWith('.doc')
+        ? `https://docs.google.com/document/d/${fileId}/edit`
+        : lowerFileName.endsWith('.xlsx') || lowerFileName.endsWith('.xls')
+        ? `https://docs.google.com/spreadsheets/d/${fileId}/edit`
+        : `https://drive.google.com/file/d/${fileId}/view`
+
+    const webViewLink = updated.data.webViewLink || defaultViewerLink
 
     // Set permission to anyone reader so it can be previewed without Google account barrier
     try {

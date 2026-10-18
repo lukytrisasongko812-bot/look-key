@@ -106,9 +106,9 @@ export async function POST(
       }
     }
 
-    // Upload raw base64 to Google Drive if present
-    let driveFileId: string | undefined
-    let driveViewUrl: string | undefined
+    // Upload raw base64 to Google Drive if present, or preserve existing Drive link from /api/upload
+    let driveFileId: string | undefined = file.driveFileId || undefined
+    let driveViewUrl: string | undefined = file.driveViewUrl || undefined
 
     if (file.dataUrl && file.dataUrl.includes('base64,') && doc.driveFolderId) {
       try {

@@ -162,9 +162,26 @@ export function MyDocumentsView() {
   }
 
   const handleViewFile = (doc: DocumentItem, file: DocumentFile) => {
+    if (file.driveViewUrl && file.driveViewUrl.startsWith('https://')) {
+      window.open(file.driveViewUrl, '_blank', 'noopener,noreferrer')
+      return
+    }
+    if (file.driveFileId) {
+      const ext = (file.originalName || file.filename || '').toLowerCase()
+      if (ext.endsWith('.docx') || ext.endsWith('.doc')) {
+        window.open(`https://docs.google.com/document/d/${file.driveFileId}/edit`, '_blank', 'noopener,noreferrer')
+        return
+      }
+      if (ext.endsWith('.xlsx') || ext.endsWith('.xls')) {
+        window.open(`https://docs.google.com/spreadsheets/d/${file.driveFileId}/edit`, '_blank', 'noopener,noreferrer')
+        return
+      }
+      window.open(`https://drive.google.com/file/d/${file.driveFileId}/view`, '_blank', 'noopener,noreferrer')
+      return
+    }
     const fileName = file.originalName || file.filename || 'dokumen'
     const viewUrl = `/api/documents/${doc.docNumber || doc._id}/view?name=${encodeURIComponent(fileName)}`
-    window.open(viewUrl, '_blank')
+    window.open(viewUrl, '_blank', 'noopener,noreferrer')
   }
 
   return (
