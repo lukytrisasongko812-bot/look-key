@@ -7,6 +7,12 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
+  MoodMascot,
+  MoodGreetingOverlay,
+  MOOD_OPTIONS,
+  MoodOption,
+} from '@/components/common/MoodMascot'
+import {
   Inbox,
   Search,
   FileCheck2,
@@ -188,82 +194,6 @@ const CONSIDERATION_OPTIONS = [
   'Perlu adendum klausul / nilai / jangka waktu',
 ]
 
-export interface MoodOption {
-  id: string
-  emoji: string
-  label: string
-  desc: string
-  animation: string
-  color: string
-}
-
-const MOOD_OPTIONS: MoodOption[] = [
-  {
-    id: 'semangat',
-    emoji: '🔥',
-    label: 'Semangat',
-    desc: 'Siap tuntaskan target',
-    animation: 'animate-mood-bounce',
-    color: 'bg-orange-500/20 text-orange-200 border-orange-400/40',
-  },
-  {
-    id: 'fokus',
-    emoji: '🎯',
-    label: 'Fokus',
-    desc: 'Konsentrasi penuh',
-    animation: 'animate-mood-float',
-    color: 'bg-blue-500/20 text-blue-200 border-blue-400/40',
-  },
-  {
-    id: 'kopi',
-    emoji: '☕',
-    label: 'Butuh Kopi',
-    desc: 'Perlu kafein tambahan',
-    animation: 'animate-mood-float',
-    color: 'bg-amber-600/20 text-amber-200 border-amber-500/40',
-  },
-  {
-    id: 'bahagia',
-    emoji: '😊',
-    label: 'Bahagia',
-    desc: 'Hari menyenangkan',
-    animation: 'animate-mood-bounce',
-    color: 'bg-emerald-500/20 text-emerald-200 border-emerald-400/40',
-  },
-  {
-    id: 'santai',
-    emoji: '😎',
-    label: 'Santai',
-    desc: 'Semua terkendali',
-    animation: 'animate-mood-float',
-    color: 'bg-cyan-500/20 text-cyan-200 border-cyan-400/40',
-  },
-  {
-    id: 'gaspol',
-    emoji: '🚀',
-    label: 'Gaspol',
-    desc: 'Kecepatan penuh',
-    animation: 'animate-mood-bounce',
-    color: 'bg-purple-500/20 text-purple-200 border-purple-400/40',
-  },
-  {
-    id: 'ide',
-    emoji: '💡',
-    label: 'Kreatif',
-    desc: 'Banyak ide baru',
-    animation: 'animate-mood-float',
-    color: 'bg-yellow-500/20 text-yellow-200 border-yellow-400/40',
-  },
-  {
-    id: 'lelah',
-    emoji: '😴',
-    label: 'Lelah',
-    desc: 'Butuh jeda istirahat',
-    animation: 'animate-mood-float',
-    color: 'bg-slate-500/20 text-slate-200 border-slate-400/40',
-  },
-]
-
 export function DashboardView() {
   const {
     user,
@@ -277,6 +207,7 @@ export function DashboardView() {
 
   // Mood state
   const [isMoodModalOpen, setIsMoodModalOpen] = useState(false)
+  const [greetingMood, setGreetingMood] = useState<MoodOption | null>(null)
   const userMoodKey = `ride_user_mood_${user?.id || user?.email || 'default'}`
   const [currentMood, setCurrentMood] = useState<MoodOption>(MOOD_OPTIONS[0])
 
@@ -296,7 +227,7 @@ export function DashboardView() {
       localStorage.setItem(userMoodKey, mood.id)
     } catch {}
     setIsMoodModalOpen(false)
-    toast.success(`Suasana hati diperbarui: ${mood.emoji} ${mood.label}`)
+    setGreetingMood(mood)
   }
 
   // State for Decision Modal
@@ -512,10 +443,10 @@ export function DashboardView() {
               <button
                 type="button"
                 onClick={() => setIsMoodModalOpen(true)}
-                className="inline-flex items-center gap-1 rounded-full bg-white/15 hover:bg-white/25 active:scale-95 transition-all px-2 py-0.5 border border-white/25 text-white cursor-pointer shadow-2xs"
+                className="inline-flex items-center gap-1 rounded-full bg-white/15 hover:bg-white/25 active:scale-95 transition-all pl-1 pr-2 py-0.5 border border-white/25 text-white cursor-pointer shadow-2xs"
                 title="Pilih Suasana Hati Anda Hari Ini"
               >
-                <span className={`text-sm ${currentMood.animation}`}>{currentMood.emoji}</span>
+                <MoodMascot mood={currentMood.id} size="xs" />
                 <span className="text-[9.5px] font-medium text-white/95">{currentMood.label}</span>
                 <Sparkles className="h-2 w-2 text-amber-300 shrink-0 opacity-80" />
               </button>
@@ -580,10 +511,10 @@ export function DashboardView() {
               <button
                 type="button"
                 onClick={() => setIsMoodModalOpen(true)}
-                className="inline-flex items-center gap-1.5 rounded-full bg-white/15 hover:bg-white/25 hover:border-white/35 active:scale-95 transition-all px-2.5 py-0.5 border border-white/25 text-white cursor-pointer shadow-2xs group ml-1"
+                className="inline-flex items-center gap-1.5 rounded-full bg-white/15 hover:bg-white/25 hover:border-white/35 active:scale-95 transition-all pl-1.5 pr-2.5 py-0.5 border border-white/25 text-white cursor-pointer shadow-2xs group ml-1"
                 title="Klik untuk memilih suasana hati Anda hari ini"
               >
-                <span className={`text-base ${currentMood.animation}`}>{currentMood.emoji}</span>
+                <MoodMascot mood={currentMood.id} size="xs" />
                 <span className="text-[10.5px] font-medium text-white/95 group-hover:text-white">{currentMood.label}</span>
                 <Sparkles className="h-2.5 w-2.5 text-amber-300 shrink-0 opacity-80 group-hover:opacity-100 transition-opacity" />
               </button>
@@ -1116,15 +1047,17 @@ export function DashboardView() {
       <Dialog open={isMoodModalOpen} onOpenChange={setIsMoodModalOpen}>
         <DialogContent className="max-w-lg rounded-2xl sm:rounded-3xl p-5 sm:p-6 bg-white shadow-2xl border border-slate-100">
           <DialogHeader className="space-y-1.5 text-left">
-            <div className="flex items-center gap-2">
-              <span className="text-2xl animate-mood-bounce inline-block">✨</span>
-              <DialogTitle className="text-base sm:text-lg font-bold text-[#0B2147] font-display">
-                Suasana Hati Hari Ini
-              </DialogTitle>
+            <div className="flex items-center gap-2.5">
+              <MoodMascot mood={currentMood.id} size="sm" />
+              <div>
+                <DialogTitle className="text-base sm:text-lg font-bold text-[#0B2147] font-display">
+                  Suasana Hati Hari Ini
+                </DialogTitle>
+                <DialogDescription className="text-xs text-slate-500 mt-0.5">
+                  Pilih maskot suasana hati Anda untuk menyapa hari ini!
+                </DialogDescription>
+              </div>
             </div>
-            <DialogDescription className="text-xs text-slate-500">
-              Pilih suasana hati Anda hari ini untuk ditampilkan di profil.
-            </DialogDescription>
           </DialogHeader>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 py-3">
@@ -1137,8 +1070,8 @@ export function DashboardView() {
                   onClick={() => handleSelectMood(mood)}
                   className={`flex flex-col items-center justify-center text-center p-3 rounded-2xl border transition-all cursor-pointer relative group ${
                     isSelected
-                      ? 'border-[#163A70] bg-[#163A70]/8 ring-2 ring-[#163A70]/25 shadow-sm'
-                      : 'border-slate-200 bg-slate-50/70 hover:bg-slate-100 hover:border-slate-300'
+                      ? 'border-[#163A70] bg-amber-50/80 ring-2 ring-[#163A70]/25 shadow-sm'
+                      : 'border-slate-200 bg-slate-50/70 hover:bg-amber-50/40 hover:border-amber-300'
                   }`}
                 >
                   {isSelected && (
@@ -1146,9 +1079,9 @@ export function DashboardView() {
                       ✓
                     </span>
                   )}
-                  <span className={`text-3xl sm:text-4xl mb-1.5 ${mood.animation}`}>
-                    {mood.emoji}
-                  </span>
+                  <div className="mb-1.5 group-hover:scale-105 transition-transform">
+                    <MoodMascot mood={mood.id} size="md" />
+                  </div>
                   <span className="font-bold text-xs text-[#0B2147] group-hover:text-[#163A70]">
                     {mood.label}
                   </span>
@@ -1172,6 +1105,13 @@ export function DashboardView() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Full-Screen Mascot Greeting Overlay when Mood is Selected */}
+      <MoodGreetingOverlay
+        mood={greetingMood}
+        userName={user?.employeeName || 'Pengguna'}
+        onClose={() => setGreetingMood(null)}
+      />
     </div>
   )
 }

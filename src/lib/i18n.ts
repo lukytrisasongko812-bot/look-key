@@ -137,24 +137,55 @@ export const EXACT_PHRASE_DICTIONARY: Record<string, string> = {
   'Pilih Suasana Hati Anda Hari Ini': 'Choose Your Mood Today',
   'Klik untuk memilih suasana hati Anda hari ini': 'Click to choose your mood today',
   'Pilih Mood Hari Ini': 'Select Today’s Mood',
+  'Suasana Hati Hari Ini': 'Today’s Mood',
+  'Pilih maskot suasana hati Anda untuk menyapa hari ini!': 'Pick your mood mascot to greet you today!',
   'Mood Hari Ini': 'Today’s Mood',
   'Ganti Mood': 'Change Mood',
   'Semangat': 'Energized',
   'Siap tuntaskan target': 'Ready to crush targets',
+  'Siap tuntaskan target hari ini': 'Ready to crush today’s targets',
   'Fokus': 'Focused',
   'Konsentrasi penuh': 'Full concentration',
+  'Konsentrasi penuh & teliti': 'Full concentration & precision',
   'Butuh Kopi': 'Need Coffee',
   'Perlu kafein tambahan': 'Need extra caffeine',
+  'Perlu asupan kafein hangat': 'Need a warm caffeine boost',
   'Bahagia': 'Happy',
   'Hari menyenangkan': 'Having a great day',
+  'Hati gembira & senyum cerah': 'Joyful heart & bright smile',
   'Santai': 'Relaxed',
   'Semua terkendali': 'Everything under control',
+  'Tenang, semua terkendali': 'Calm, everything under control',
+  'Lelah': 'Tired',
+  'Butuh jeda istirahat': 'Need a short break',
+  'Butuh jeda & tarik napas': 'Need a pause & deep breath',
+  'Sedih': 'Sad',
+  'Perlu dukungan & semangat baru': 'Need support & fresh encouragement',
+  'Marah': 'Frustrated',
+  'Sedang kesal & butuh ruang tenang': 'Feeling upset & need a calm space',
   'Gaspol': 'Full Speed',
   'Kecepatan penuh': 'Maximum velocity',
   'Penuh Ide': 'Inspired',
   'Kreativitas mengalir': 'Creativity flowing',
   'Waktunya Istirahat': 'Need a Break',
   'Jaga kesehatan': 'Take care of your health',
+  'Terima Kasih, Lanjut Bekerja!': 'Thank You, Back to Work!',
+  'Energi positifmu hari ini luar biasa! Semoga seluruh aktivitas dan pengajuan dokumenmu berjalan lancar penuh senyuman.':
+    'Your positive energy today is amazing! May all your activities and document submissions go smoothly with a big smile.',
+  'Tidak ada target yang terlalu sulit hari ini! Ayo kita tuntaskan setiap proses kontrak dengan cepat dan presisi.':
+    'No target is too tough today! Let’s complete every contract workflow with speed and precision.',
+  'Pikiran yang tenang menghasilkan keputusan terbaik. Nikmati ritme kerjamu hari ini dengan nyaman dan teratur.':
+    'A calm mind makes the best decisions. Enjoy your work rhythm today comfortably and steadily.',
+  'Ketelitianmu adalah kunci! Setiap klausul dan dokumen pasti tuntas dengan rapi dan akurat hari ini.':
+    'Your precision is key! Every clause and document will be completed neatly and accurately today.',
+  'Kamu sudah bekerja keras! Ambil napas dalam-dalam, minum air putih, dan kerjakan satu per satu dengan tenang.':
+    'You have worked hard! Take a deep breath, drink some water, and take things one step at a time.',
+  'Tidak apa-apa jika hari ini terasa berat. Kamu tidak sendirian, pelan-pelan saja ya—besok pasti akan lebih cerah!':
+    'It is okay if today feels heavy. You are not alone—take it gently, tomorrow will surely be brighter!',
+  'Wajar kok kalau ada hal yang bikin kesal. Tenangkan hati sejenak, biar kepalamu kembali adem sebelum lanjut lagi!':
+    'It is natural to feel frustrated sometimes. Take a moment to cool down and clear your mind before continuing!',
+  'Secangkir kopi hangat siap mengembalikan fokus dan mood kerjamu. Nikmati seruputan pertamamu hari ini!':
+    'A warm cup of coffee is ready to restore your focus and work mood. Enjoy your first sip today!',
   'Cerah': 'Clear',
   'Cerah Berawan': 'Partly Cloudy',
   'Berawan': 'Cloudy',
@@ -619,6 +650,42 @@ const DYNAMIC_PATTERNS: Array<{ regex: RegExp; replace: (...args: string[]) => s
   {
     regex: /^Berakhir:\s*(.+)$/i,
     replace: (_, dt) => `Expires: ${dt}`,
+  },
+  {
+    regex: /^Suasana Hati:\s*(.+)$/i,
+    replace: (_, m) => `Current Mood: ${EXACT_PHRASE_DICTIONARY[m.trim()] || m.trim()}`,
+  },
+  {
+    regex: /^Halo,\s*(.+?)!\s*Senangnya melihatmu bahagia!\s*✨$/i,
+    replace: (_, n) => `Hello, ${n}! So happy to see you smiling! ✨`,
+  },
+  {
+    regex: /^Gaspol,\s*(.+?)!\s*Semangatmu menyala!\s*🔥$/i,
+    replace: (_, n) => `Full speed ahead, ${n}! Your energy is on fire! 🔥`,
+  },
+  {
+    regex: /^Stay cool,\s*(.+?)!\s*Semua terkendali!\s*😎$/i,
+    replace: (_, n) => `Stay cool, ${n}! Everything is under control! 😎`,
+  },
+  {
+    regex: /^Mode Fokus Aktif,\s*(.+?)!\s*🎯$/i,
+    replace: (_, n) => `Focus Mode Activated, ${n}! 🎯`,
+  },
+  {
+    regex: /^Hai\s+(.+?),\s*jangan lupa istirahat sejenak ya!\s*🌙$/i,
+    replace: (_, n) => `Hi ${n}, don’t forget to take a short rest! 🌙`,
+  },
+  {
+    regex: /^Peluk hangat untukmu,\s*(.+?)!\s*💛$/i,
+    replace: (_, n) => `A warm hug for you, ${n}! 💛`,
+  },
+  {
+    regex: /^Tarik napas dulu ya,\s*(.+?)!\s*Huft!\s*😤$/i,
+    replace: (_, n) => `Take a deep breath first, ${n}! Phew! 😤`,
+  },
+  {
+    regex: /^Waktunya ngopi dulu,\s*(.+?)!\s*☕$/i,
+    replace: (_, n) => `Time for a coffee break, ${n}! ☕`,
   },
 ]
 
