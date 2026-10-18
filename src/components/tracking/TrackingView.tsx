@@ -77,13 +77,13 @@ import { ContractReminderConfig } from '@/context/AppContext'
 import { RideSpinner } from '@/components/common/RideSpinner'
 
 const STAGES = [
-  { key: 'submitted', label: 'Inisiasi Kontrak', desc: 'Registrasi permohonan & kelengkapan berkas pendukung dari Divisi Pemohon.', icon: Send },
-  { key: 'review', label: 'Penyusunan Draf Legal', desc: 'Penyusunan klausul hukum & draf kontrak awal oleh Legal Counsel.', icon: PenTool },
-  { key: 'drafting', label: 'Harmonisasi & Review', desc: 'Peninjauan draf kontrak antara Divisi Pemohon & Mitra sebelum finalisasi ke Legal.', icon: Search },
-  { key: 'approval', label: 'Legal Clearance (Paraf)', desc: 'Validasi kepatuhan hukum & pemberian paraf persetujuan oleh Legal Manager.', icon: FileCheck2 },
-  { key: 'bod', label: 'Eksekusi Direksi (TTD)', desc: 'Pengesahan & penandatanganan resmi kontrak oleh Dewan Direksi.', icon: FileSignature },
-  { key: 'archived', label: 'Registrasi Arsip Resmi', desc: 'Penyimpanan salinan kontrak final ke dalam repositori arsip hukum korporat.', icon: Archive },
-  { key: 'renewal', label: 'Monitoring Masa Berlaku', desc: 'Pemantauan aktif masa berlaku perjanjian & notifikasi pengingat jatuh tempo.', icon: Clock },
+  { key: 'submitted', label: 'Pengajuan', desc: 'Pengajuan kontrak / dokumen awal beserta lampiran berkas pendukung oleh User.', icon: Send },
+  { key: 'review', label: 'Drafting', desc: 'Penyusunan draf kontrak oleh Divisi Legal.', icon: PenTool },
+  { key: 'drafting', label: 'Revisi Draft', desc: 'Pengecekan draf kontrak antara User dan pihak terkait serta pengembalian draf revisi ke Legal.', icon: Search },
+  { key: 'approval', label: 'Persetujuan Legal', desc: 'Proses paraf & persetujuan oleh Legal Manager.', icon: FileCheck2 },
+  { key: 'bod', label: 'Tanda Tangan Direksi', desc: 'Penandatanganan kontrak resmi oleh Direksi.', icon: FileSignature },
+  { key: 'archived', label: 'Pengarsipan', desc: 'Penyimpanan kontrak resmi ke dalam arsip perusahaan.', icon: Archive },
+  { key: 'renewal', label: 'Pengingat', desc: 'Notifikasi pengingat jangka waktu & jatuh tempo kontrak.', icon: Clock },
 ]
 
 const CONSIDERATION_OPTIONS = [
@@ -1199,7 +1199,7 @@ export function TrackingView() {
                               )}
                             </div>
                             <span
-                              className={`text-[9px] sm:text-[10px] font-bold truncate max-w-full px-0.5 ${
+                              className={`text-[9px] sm:text-[10px] font-bold leading-tight max-w-full px-0.5 ${
                                 isCurrent
                                   ? 'text-[#163A70]'
                                   : isCompleted
@@ -1220,9 +1220,9 @@ export function TrackingView() {
                 <div className="p-3 sm:p-4 bg-[#F8FAFC] border-t border-[#E2E8F0] flex flex-wrap items-center justify-between gap-2.5">
                   <div className="space-y-0.5">
                     <div className="flex items-center gap-2">
-                      <span className="text-[11px] font-semibold text-[#64748B]">Tahapan Hukum Aktif:</span>
+                      <span className="text-[11px] font-semibold text-[#64748B]">Tahapan Aktif:</span>
                       <Badge className="bg-[#163A70] text-white text-[10.5px] font-bold">
-                        {STAGES[activeDoc.stage ?? 0]?.label || 'Inisiasi Kontrak'}
+                        {STAGES[activeDoc.stage ?? 0]?.label || 'Pengajuan'}
                       </Badge>
                     </div>
                     {STAGES[activeDoc.stage ?? 0]?.desc && (
@@ -1243,14 +1243,14 @@ export function TrackingView() {
                             className="h-7 text-[11px] bg-[#D97706] hover:bg-[#B45309] text-white font-bold rounded-lg cursor-pointer"
                           >
                             <FileUp className="h-3 w-3 mr-1" />
-                            Unggah Draf Hasil Revisi
+                            Unggah Revisi Draft
                           </Button>
                         )}
                         {userCanReview && (
                           <Button
                             size="sm"
                             disabled={transitionLoading}
-                            onClick={() => handleStageTransition(activeDoc._id, 'approve', 'Perbaikan draf kontrak terverifikasi, proses hukum dilanjutkan')}
+                            onClick={() => handleStageTransition(activeDoc._id, 'approve', 'Revisi draft terverifikasi, proses dilanjutkan')}
                             className="h-7 text-[11px] bg-[#059669] hover:bg-[#047857] text-white font-bold rounded-lg cursor-pointer"
                           >
                             {transitionLoading ? <RideSpinner size="xs" speed="fast" showGlow={false} className="mr-1.5" /> : <Check className="h-3 w-3 mr-1" />}
@@ -1260,20 +1260,20 @@ export function TrackingView() {
                       </>
                     )}
 
-                    {/* 2. Kondisi Normal Berdasarkan Tahap Alur Kontrak Corporate Legal */}
+                    {/* 2. Kondisi Normal Berdasarkan 7 Tahap Alur Kontrak */}
                     {!activeDoc.revisionRequested && activeDoc.stage < 5 && (
                       <>
-                        {/* Tahap 0: Inisiasi Kontrak -> Penyusunan Draf Legal */}
+                        {/* Tahap 0: Pengajuan -> Drafting */}
                         {activeDoc.stage === 0 && userCanLegalDraft && (
                           <>
                             <Button
                               size="sm"
                               disabled={transitionLoading}
-                              onClick={() => handleStageTransition(activeDoc._id, 'approve', 'Inisiasi kontrak diverifikasi oleh Divisi Legal untuk tahap Penyusunan Draf Legal')}
+                              onClick={() => handleStageTransition(activeDoc._id, 'approve', 'Pengajuan diterima oleh Divisi Legal untuk proses Drafting')}
                               className="h-7 text-[11px] bg-[#163A70] hover:bg-[#0B2147] text-white font-bold rounded-lg cursor-pointer"
                             >
                               {transitionLoading ? <RideSpinner size="xs" speed="fast" showGlow={false} className="mr-1.5" /> : <PenTool className="h-3 w-3 mr-1" />}
-                              {transitionLoading ? 'Memproses...' : 'Mulai Penyusunan Draf Legal'}
+                              {transitionLoading ? 'Memproses...' : 'Mulai Drafting'}
                             </Button>
                             <Button
                               size="sm"
@@ -1282,12 +1282,12 @@ export function TrackingView() {
                               className="h-7 text-[11px] border-[#163A70] text-[#163A70] hover:bg-[#EBF2FF] font-bold rounded-lg cursor-pointer"
                             >
                               <FileEdit className="h-3 w-3 mr-1" />
-                              Unggah Draf Hukum
+                              Unggah Draft
                             </Button>
                           </>
                         )}
 
-                        {/* Tahap 1: Penyusunan Draf Legal -> Harmonisasi & Review */}
+                        {/* Tahap 1: Drafting -> Revisi Draft */}
                         {activeDoc.stage === 1 && userCanLegalDraft && (
                           <>
                             <Button
@@ -1296,21 +1296,21 @@ export function TrackingView() {
                               className="h-7 text-[11px] bg-[#163A70] hover:bg-[#0B2147] text-white font-bold rounded-lg cursor-pointer"
                             >
                               <FileEdit className="h-3 w-3 mr-1" />
-                              Unggah Draf Hukum
+                              Unggah Draft
                             </Button>
                             <Button
                               size="sm"
                               disabled={transitionLoading}
-                              onClick={() => handleStageTransition(activeDoc._id, 'approve', 'Draf hukum diteruskan ke tahap Harmonisasi & Review bersama Divisi Pemohon dan Mitra')}
+                              onClick={() => handleStageTransition(activeDoc._id, 'approve', 'Draft kontrak diteruskan ke tahap Revisi Draft bersama User & pihak terkait')}
                               className="h-7 text-[11px] bg-[#059669] hover:bg-[#047857] text-white font-bold rounded-lg cursor-pointer"
                             >
                               {transitionLoading ? <RideSpinner size="xs" speed="fast" showGlow={false} className="mr-1.5" /> : <Check className="h-3 w-3 mr-1" />}
-                              {transitionLoading ? 'Memproses...' : 'Teruskan ke Harmonisasi & Review'}
+                              {transitionLoading ? 'Memproses...' : 'Lanjut ke Revisi Draft'}
                             </Button>
                           </>
                         )}
 
-                        {/* Tahap 2: Harmonisasi & Review -> Legal Clearance (Paraf) */}
+                        {/* Tahap 2: Revisi Draft -> Persetujuan Legal */}
                         {activeDoc.stage === 2 && (isDocOwner || userCanLegalDraft) && (
                           <>
                             <Button
@@ -1319,21 +1319,21 @@ export function TrackingView() {
                               className="h-7 text-[11px] bg-[#163A70] hover:bg-[#0B2147] text-white font-bold rounded-lg cursor-pointer"
                             >
                               <FileUp className="h-3 w-3 mr-1" />
-                              Unggah Draf Hasil Harmonisasi
+                              Unggah Revisi Draft
                             </Button>
                             <Button
                               size="sm"
                               disabled={transitionLoading}
-                              onClick={() => handleStageTransition(activeDoc._id, 'approve', 'Harmonisasi klausul selesai, draf dikembalikan ke Divisi Legal untuk proses Legal Clearance (Paraf Legal Manager)')}
+                              onClick={() => handleStageTransition(activeDoc._id, 'approve', 'Revisi draft selesai, dikembalikan ke Divisi Legal untuk Persetujuan Legal')}
                               className="h-7 text-[11px] bg-[#059669] hover:bg-[#047857] text-white font-bold rounded-lg cursor-pointer"
                             >
                               {transitionLoading ? <RideSpinner size="xs" speed="fast" showGlow={false} className="mr-1.5" /> : <Check className="h-3 w-3 mr-1" />}
-                              {transitionLoading ? 'Memproses...' : 'Ajukan Legal Clearance (Paraf)'}
+                              {transitionLoading ? 'Memproses...' : 'Lanjut ke Persetujuan Legal'}
                             </Button>
                           </>
                         )}
 
-                        {/* Tahap 3: Legal Clearance (Paraf) -> Eksekusi Direksi (TTD) */}
+                        {/* Tahap 3: Persetujuan Legal -> Tanda Tangan Direksi */}
                         {activeDoc.stage === 3 && userCanLegalApproval && (
                           <>
                             <Button
@@ -1342,21 +1342,21 @@ export function TrackingView() {
                               className="h-7 text-[11px] bg-[#4338CA] hover:bg-[#3730A3] text-white font-bold rounded-lg cursor-pointer"
                             >
                               <FileCheck2 className="h-3 w-3 mr-1" />
-                              Unggah Draf Berparaf Legal
+                              Unggah Paraf Legal
                             </Button>
                             <Button
                               size="sm"
                               disabled={transitionLoading}
-                              onClick={() => handleStageTransition(activeDoc._id, 'approve', 'Legal Clearance (Paraf Legal Manager) disetujui, diteruskan ke tahap Eksekusi Direksi (TTD)')}
+                              onClick={() => handleStageTransition(activeDoc._id, 'approve', 'Persetujuan Legal selesai, diteruskan ke tahap Tanda Tangan Direksi')}
                               className="h-7 text-[11px] bg-[#059669] hover:bg-[#047857] text-white font-bold rounded-lg cursor-pointer"
                             >
                               {transitionLoading ? <RideSpinner size="xs" speed="fast" showGlow={false} className="mr-1.5" /> : <Check className="h-3 w-3 mr-1" />}
-                              {transitionLoading ? 'Memproses...' : 'Setujui Paraf & Ajukan ke Direksi'}
+                              {transitionLoading ? 'Memproses...' : 'Lanjut ke Tanda Tangan Direksi'}
                             </Button>
                           </>
                         )}
 
-                        {/* Tahap 4: Eksekusi Direksi (TTD) -> Registrasi Arsip Resmi */}
+                        {/* Tahap 4: Tanda Tangan Direksi -> Pengarsipan */}
                         {activeDoc.stage === 4 && (userCanBodSign || userCanLegalApproval) && (
                           <>
                             <Button
@@ -1365,16 +1365,16 @@ export function TrackingView() {
                               className="h-7 text-[11px] bg-[#7C3AED] hover:bg-[#6D28D9] text-white font-bold rounded-lg cursor-pointer"
                             >
                               <FileSignature className="h-3 w-3 mr-1" />
-                              Unggah Kontrak Eksekusi Direksi
+                              Unggah Tanda Tangan Direksi
                             </Button>
                             <Button
                               size="sm"
                               disabled={transitionLoading}
-                              onClick={() => handleStageTransition(activeDoc._id, 'approve', 'Eksekusi tanda tangan Dewan Direksi selesai, kontrak dicatat ke Registrasi Arsip Resmi')}
+                              onClick={() => handleStageTransition(activeDoc._id, 'approve', 'Tanda Tangan Direksi selesai, kontrak masuk ke tahap Pengarsipan')}
                               className="h-7 text-[11px] bg-[#059669] hover:bg-[#047857] text-white font-bold rounded-lg cursor-pointer"
                             >
                               {transitionLoading ? <RideSpinner size="xs" speed="fast" showGlow={false} className="mr-1.5" /> : <Check className="h-3 w-3 mr-1" />}
-                              {transitionLoading ? 'Memproses...' : 'Sahkan & Registrasi Arsip'}
+                              {transitionLoading ? 'Memproses...' : 'Selesai & Arsipkan'}
                             </Button>
                           </>
                         )}
