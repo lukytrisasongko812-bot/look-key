@@ -370,5 +370,12 @@ export function canUserProcessWorkflow(
     return false
   }
 
+  // User (Pemohon): Pada Tahap 2 (Cek Draf & Revisi), pemohon dapat mengembalikan draf ke Divisi Legal untuk Paraf Legal Manager
+  if (role === 'User' && isDocumentOwnerOrPic(user, doc)) {
+    if (['approve', 'advance', 'resolve_revision'].includes(action) && (doc.stage ?? 0) === 2) {
+      return true
+    }
+  }
+
   return false
 }

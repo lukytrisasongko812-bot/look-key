@@ -21,13 +21,13 @@ import {
 export const dynamic = 'force-dynamic'
 
 const STAGE_NAMES = [
-  'Pengajuan Baru',
-  'Review Kelayakan',
-  'Penyusunan Draf (Drafting)',
-  'Persetujuan Legal (Approval)',
-  'Persetujuan Direksi (BOD Signed)',
-  'Selesai & Diarsipkan',
-  'Jatuh Tempo / Perpanjangan',
+  'Pengajuan User',
+  'Drafting Legal',
+  'Cek Draf & Revisi',
+  'Paraf Legal Manager',
+  'TTD Direksi',
+  'Arsip Kontrak',
+  'Notifikasi Masa Berlaku',
 ]
 
 export async function POST(
@@ -225,7 +225,8 @@ export async function POST(
       doc.revisionRequested = false
       doc.rejected = false
 
-      if (advanceStage && canApproveCurrentStage(userRole, doc.stage) && doc.stage < 5) {
+      const canOwnerReturnDraft = doc.stage === 2 && isDocumentOwnerOrPic(tokenUser, doc)
+      if (advanceStage && (canApproveCurrentStage(userRole, doc.stage) || canOwnerReturnDraft) && doc.stage < 5) {
         doc.stage += 1
         doc.stageStatus = doc.stage >= 5 ? 'completed' : 'active'
         doc.statusLabel = STAGE_NAMES[doc.stage]

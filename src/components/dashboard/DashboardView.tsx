@@ -168,13 +168,13 @@ import { Textarea } from '@/components/ui/textarea'
 import { toast } from 'sonner'
 
 const STAGES = [
-  { key: 'submitted', label: 'Pengajuan Baru', icon: Send },
-  { key: 'review', label: 'Peninjauan Kelayakan', icon: Search },
-  { key: 'drafting', label: 'Penyusunan Draf', icon: PenTool },
-  { key: 'approval', label: 'Persetujuan Legal', icon: FileCheck2 },
-  { key: 'bod', label: 'Persetujuan Direksi', icon: FileSignature },
-  { key: 'archived', label: 'Selesai & Arsip', icon: Archive },
-  { key: 'renewal', label: 'Jatuh Tempo', icon: Clock },
+  { key: 'submitted', label: 'Pengajuan User', icon: Send },
+  { key: 'review', label: 'Drafting Legal', icon: PenTool },
+  { key: 'drafting', label: 'Cek Draf & Revisi', icon: Search },
+  { key: 'approval', label: 'Paraf Legal Manager', icon: FileCheck2 },
+  { key: 'bod', label: 'TTD Direksi', icon: FileSignature },
+  { key: 'archived', label: 'Arsip Kontrak', icon: Archive },
+  { key: 'renewal', label: 'Jangka Waktu', icon: Clock },
 ]
 
 const CONSIDERATION_OPTIONS = [
